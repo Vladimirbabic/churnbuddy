@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     baseUrl: '${baseUrl}'
   };
 
-  // Styles matching the actual modal designs
+  // Styles matching the actual modal designs exactly
   var STYLES = \`
     .cb-overlay {
       position: fixed;
@@ -55,200 +55,248 @@ export async function GET(request: NextRequest) {
       z-index: 999999;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       backdrop-filter: blur(4px);
+      padding: 16px;
     }
     .cb-modal {
       background: white;
-      border-radius: 24px;
-      max-width: 440px;
-      width: 90%;
+      border-radius: 16px;
+      max-width: 448px;
+      width: 100%;
       max-height: 90vh;
       overflow-y: auto;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       position: relative;
     }
+    .cb-modal.cb-modal-lg {
+      max-width: 512px;
+    }
+
+    /* Header bar - matching React components */
+    .cb-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+    }
+    .cb-header-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cb-header-bar-left svg {
+      width: 16px;
+      height: 16px;
+    }
+    .cb-header-bar-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
     .cb-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 32px;
-      height: 32px;
+      padding: 4px;
       border: none;
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 50%;
+      background: transparent;
+      border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #6b7280;
-      font-size: 18px;
-      z-index: 10;
       transition: background 0.2s;
     }
-    .cb-close:hover {
-      background: rgba(0, 0, 0, 0.1);
+    .cb-close svg {
+      width: 16px;
+      height: 16px;
     }
 
     /* Feedback Step - Purple Theme */
-    .cb-feedback .cb-header {
-      padding: 32px 24px 24px;
-      text-align: center;
+    .cb-feedback .cb-header-bar {
+      background: #F5F3FF;
     }
-    .cb-feedback .cb-icon {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #9333EA, #7C3AED);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
+    .cb-feedback .cb-header-bar-left svg {
+      color: #9333EA;
+      fill: #9333EA;
     }
-    .cb-feedback .cb-icon svg {
-      width: 32px;
-      height: 32px;
-      color: white;
+    .cb-feedback .cb-header-bar-title {
+      color: #9333EA;
     }
-    .cb-feedback h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      font-weight: 700;
-      color: #1f2937;
+    .cb-feedback .cb-close {
+      color: #9333EA;
     }
-    .cb-feedback .cb-subtitle {
-      margin: 0;
-      color: #6b7280;
-      font-size: 15px;
+    .cb-feedback .cb-close:hover {
+      background: #EDE9FE;
     }
     .cb-content {
-      padding: 0 24px 24px;
+      padding: 16px 24px 24px;
+    }
+    .cb-feedback h2 {
+      margin: 8px 0 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .cb-feedback .cb-subtitle {
+      margin: 4px 0 24px;
+      color: #4B5563;
+      font-size: 14px;
+    }
+    .cb-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .cb-option {
       display: flex;
       align-items: center;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      border: 2px solid #E5E7EB;
-      border-radius: 12px;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid #E9D5FF;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
-      background: white;
+      background: #F3E8FF;
+      text-align: left;
     }
     .cb-option:hover {
-      border-color: #9333EA;
-      background: #FAF5FF;
+      border-color: #D8B4FE;
     }
     .cb-option.selected {
       border-color: #9333EA;
-      background: #FAF5FF;
+      border-width: 2px;
+      padding: 15px;
     }
     .cb-option-letter {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: #F3E8FF;
+      background: white;
+      border: 1px solid #E9D5FF;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      font-size: 13px;
-      color: #9333EA;
-      margin-right: 12px;
+      font-size: 14px;
+      color: #4B5563;
       flex-shrink: 0;
       transition: all 0.2s;
     }
     .cb-option.selected .cb-option-letter {
       background: #9333EA;
+      border-color: #9333EA;
       color: white;
     }
     .cb-option-text {
       flex: 1;
       font-size: 15px;
-      color: #374151;
+      font-weight: 500;
+      color: #1F2937;
+    }
+    .cb-option-check {
+      width: 20px;
+      height: 20px;
+      color: #9333EA;
+      display: none;
+    }
+    .cb-option.selected .cb-option-check {
+      display: block;
     }
     .cb-footer {
-      padding: 0 24px 24px;
       display: flex;
-      gap: 12px;
+      justify-content: space-between;
+      margin-top: 24px;
     }
     .cb-btn {
-      flex: 1;
-      padding: 14px 20px;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
       border: none;
     }
-    .cb-btn-secondary {
-      background: #F3F4F6;
-      color: #374151;
+    .cb-btn-back-purple {
+      background: #EDE9FE;
+      color: #581C87;
     }
-    .cb-btn-secondary:hover {
+    .cb-btn-back-purple:hover {
+      background: #DDD6FE;
+    }
+    .cb-btn-back-gray {
+      background: #F3F4F6;
+      color: #1F2937;
+    }
+    .cb-btn-back-gray:hover {
       background: #E5E7EB;
     }
-    .cb-btn-primary {
-      background: #9333EA;
+    .cb-btn-primary-black {
+      background: #000000;
       color: white;
+      padding: 8px 24px;
     }
-    .cb-btn-primary:hover {
-      background: #7C3AED;
+    .cb-btn-primary-black:hover {
+      background: #1F2937;
     }
-    .cb-btn-primary:disabled {
-      background: #D1D5DB;
+    .cb-btn-primary-black:disabled {
+      background: #9CA3AF;
       cursor: not-allowed;
+      opacity: 0.5;
     }
 
     /* Plans Step - Gray/Slate Theme */
-    .cb-plans .cb-header {
-      padding: 32px 24px 24px;
-      text-align: center;
+    .cb-plans .cb-header-bar {
+      background: #F0F4FF;
     }
-    .cb-plans .cb-icon {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #475569, #64748B);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
+    .cb-plans .cb-header-bar-left svg {
+      color: #606C80;
+    }
+    .cb-plans .cb-header-bar-title {
+      color: #606C80;
+    }
+    .cb-plans .cb-close {
+      color: #606C80;
+    }
+    .cb-plans .cb-close:hover {
+      background: #DBEAFE;
     }
     .cb-plans h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
+      margin: 16px 0 0;
+      font-size: 22px;
       font-weight: 700;
-      color: #1f2937;
+      color: #1F2D3D;
+      text-align: center;
+    }
+    .cb-plans .cb-subtitle {
+      margin: 8px 0 24px;
+      color: #6B7280;
+      font-size: 14px;
+      text-align: center;
     }
     .cb-plans-grid {
-      display: flex;
-      gap: 12px;
-      padding: 0 24px 24px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 480px) {
+      .cb-plans-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .cb-plan {
-      flex: 1;
-      border: 2px solid #E5E7EB;
+      border: 1px solid #F3F4F6;
       border-radius: 16px;
-      padding: 20px;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding: 16px;
       background: white;
-    }
-    .cb-plan:hover {
-      border-color: #475569;
-      background: #F8FAFC;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     .cb-plan-name {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 18px;
-      color: #1f2937;
+      color: #111827;
       margin-bottom: 8px;
     }
     .cb-plan-price {
       display: flex;
       align-items: baseline;
-      gap: 4px;
-      margin-bottom: 4px;
+      gap: 8px;
+      margin-bottom: 16px;
     }
     .cb-plan-price-old {
       font-size: 14px;
@@ -256,107 +304,118 @@ export async function GET(request: NextRequest) {
       text-decoration: line-through;
     }
     .cb-plan-price-new {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 700;
-      color: #10B981;
+      color: #2563EB;
     }
     .cb-plan-period {
       font-size: 14px;
       color: #6B7280;
     }
     .cb-plan-features {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #E5E7EB;
+      margin-bottom: 16px;
+    }
+    .cb-plan-features-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
     }
     .cb-plan-feature {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: #6B7280;
-      margin-bottom: 6px;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 4px;
     }
-    .cb-plan-feature svg {
-      width: 14px;
-      height: 14px;
-      color: #10B981;
-      flex-shrink: 0;
-    }
-    .cb-btn-slate {
-      background: #475569;
+    .cb-btn-plan {
+      width: 100%;
+      background: #2563EB;
       color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
     }
-    .cb-btn-slate:hover {
-      background: #334155;
+    .cb-btn-plan:hover {
+      background: #1D4ED8;
     }
 
     /* Offer Step - Red Theme */
-    .cb-offer .cb-header {
-      padding: 32px 24px 24px;
-      text-align: center;
+    .cb-offer .cb-header-bar {
+      background: #FEF2F2;
     }
-    .cb-offer .cb-icon {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #DC2626, #EF4444);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
+    .cb-offer .cb-header-bar-left svg {
+      color: #DC2626;
+    }
+    .cb-offer .cb-header-bar-title {
+      color: #DC2626;
+    }
+    .cb-offer .cb-close {
+      color: #DC2626;
+    }
+    .cb-offer .cb-close:hover {
+      background: #FEE2E2;
     }
     .cb-offer h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
+      margin: 8px 0 0;
+      font-size: 22px;
       font-weight: 700;
-      color: #1f2937;
+      color: #111827;
+    }
+    .cb-offer .cb-subtitle {
+      margin: 4px 0 24px;
+      color: #4B5563;
+      font-size: 14px;
     }
     .cb-offer-card {
-      margin: 0 24px 24px;
-      background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
-      border: 2px solid #FECACA;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
       border-radius: 16px;
       padding: 24px;
       text-align: center;
     }
     .cb-offer-badge {
-      display: inline-block;
-      background: #DC2626;
-      color: white;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .cb-offer-badge svg {
+      width: 16px;
+      height: 16px;
+      color: #B91C1C;
+    }
+    .cb-offer-badge-text {
+      font-size: 10px;
       font-weight: 700;
+      color: #B91C1C;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
+      letter-spacing: 0.05em;
     }
     .cb-offer-discount {
-      font-size: 56px;
-      font-weight: 800;
-      color: #DC2626;
-      line-height: 1;
-      margin-bottom: 8px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 16px;
     }
-    .cb-offer-duration {
-      color: #6B7280;
-      font-size: 16px;
-    }
-    .cb-btn-danger {
-      background: white;
-      color: #DC2626;
-      border: 2px solid #FECACA;
-    }
-    .cb-btn-danger:hover {
-      background: #FEF2F2;
-    }
-    .cb-btn-success {
-      background: #DC2626;
+    .cb-btn-offer {
+      width: 100%;
+      background: #EF4444;
       color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
     }
-    .cb-btn-success:hover {
-      background: #B91C1C;
+    .cb-btn-offer:hover {
+      background: #DC2626;
     }
 
     /* Loading state */
@@ -395,12 +454,14 @@ export async function GET(request: NextRequest) {
     onPlanSwitch: null
   };
 
-  // SVG Icons
+  // SVG Icons - matching Lucide icons used in React components
   var ICONS = {
-    heart: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>',
-    refresh: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>',
-    tag: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>',
-    check: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>'
+    heart: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+    rotateCcw: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+    tag: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>',
+    x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+    check: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    clock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
   };
 
   function injectStyles() {
@@ -503,7 +564,6 @@ export async function GET(request: NextRequest) {
     var cfg = state.config || {};
     var html = '<div class="cb-overlay" onclick="if(event.target===this)ChurnBuddy.close()">';
     html += '<div class="cb-modal">';
-    html += '<button class="cb-close" onclick="ChurnBuddy.close()">&times;</button>';
 
     if (state.isLoading) {
       html += '<div class="cb-loading"><div class="cb-spinner"></div>Loading...</div>';
@@ -512,12 +572,15 @@ export async function GET(request: NextRequest) {
     } else if (state.step === 'feedback' && cfg.showFeedback !== false) {
       var options = cfg.feedbackOptions || [];
       html += '<div class="cb-feedback">';
-      html += '<div class="cb-header">';
-      html += '<div class="cb-icon">' + ICONS.heart + '</div>';
-      html += '<h2>' + (cfg.headerTitle || 'Your Feedback') + '</h2>';
-      html += '<p class="cb-subtitle">' + (cfg.headerDescription || 'Please help us improve') + '</p>';
+      // Header bar matching YourFeedbackModal
+      html += '<div class="cb-header-bar">';
+      html += '<div class="cb-header-bar-left">' + ICONS.heart + '<span class="cb-header-bar-title">Your Feedback</span></div>';
+      html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
       html += '<div class="cb-content">';
+      html += '<h2>Sorry to see you go.</h2>';
+      html += '<p class="cb-subtitle">Please be honest about why you\\'re leaving. It\\'s the only way we can improve.</p>';
+      html += '<div class="cb-options">';
 
       options.forEach(function(opt, idx) {
         var letter = opt.letter || String.fromCharCode(65 + idx);
@@ -525,28 +588,36 @@ export async function GET(request: NextRequest) {
         html += '<div class="cb-option' + selected + '" onclick="ChurnBuddy.selectReason(\\'' + opt.id + '\\')">';
         html += '<div class="cb-option-letter">' + letter + '</div>';
         html += '<div class="cb-option-text">' + opt.label + '</div>';
+        if (state.selectedReason === opt.id) {
+          html += '<div class="cb-option-check">' + ICONS.check + '</div>';
+        }
         html += '</div>';
       });
 
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-secondary" onclick="ChurnBuddy.close()">Keep Subscription</button>';
-      html += '<button class="cb-btn cb-btn-primary" onclick="ChurnBuddy.nextStep()"' + (state.selectedReason ? '' : ' disabled') + '>Continue</button>';
+      html += '<button class="cb-btn cb-btn-back-purple" onclick="ChurnBuddy.close()">Back</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.selectedReason ? '' : ' disabled') + '>Next</button>';
+      html += '</div>';
       html += '</div>';
       html += '</div>';
 
     } else if (state.step === 'plans' && cfg.showPlans !== false) {
       var plans = cfg.alternativePlans || [];
       html += '<div class="cb-plans">';
-      html += '<div class="cb-header">';
-      html += '<div class="cb-icon">' + ICONS.refresh + '</div>';
-      html += '<h2>Consider Other Plans</h2>';
-      html += '<p class="cb-subtitle">Switch to a plan that better fits your needs</p>';
+      html += '<div class="cb-modal-lg">';
+      // Header bar matching ConsiderOtherPlansModal
+      html += '<div class="cb-header-bar">';
+      html += '<div class="cb-header-bar-left">' + ICONS.rotateCcw + '<span class="cb-header-bar-title">Consider Other Plans</span></div>';
+      html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
+      html += '<div class="cb-content">';
+      html += '<h2>How about 80% off of one of our other plans? These aren\\'t public.</h2>';
+      html += '<p class="cb-subtitle">You\\'d keep all your history and settings and enjoy much of the same functionality at a lower rate.</p>';
       html += '<div class="cb-plans-grid">';
 
       plans.forEach(function(plan) {
-        html += '<div class="cb-plan" onclick="ChurnBuddy.selectPlan(\\'' + plan.id + '\\')">';
+        html += '<div class="cb-plan">';
         html += '<div class="cb-plan-name">' + plan.name + '</div>';
         html += '<div class="cb-plan-price">';
         html += '<span class="cb-plan-price-old">$' + plan.originalPrice + '</span>';
@@ -554,34 +625,45 @@ export async function GET(request: NextRequest) {
         html += '<span class="cb-plan-period">' + plan.period + '</span>';
         html += '</div>';
         html += '<div class="cb-plan-features">';
+        html += '<div class="cb-plan-features-label">Highlights</div>';
         (plan.highlights || []).forEach(function(h) {
-          html += '<div class="cb-plan-feature">' + ICONS.check + '<span>' + h + '</span></div>';
+          html += '<div class="cb-plan-feature">' + h + '</div>';
         });
         html += '</div>';
+        html += '<button class="cb-btn-plan" onclick="ChurnBuddy.selectPlan(\\'' + plan.id + '\\')">Switch Plan</button>';
         html += '</div>';
       });
 
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-secondary" onclick="ChurnBuddy.goBack()">Back</button>';
-      html += '<button class="cb-btn cb-btn-slate" onclick="ChurnBuddy.nextStep()">No Thanks</button>';
+      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">Back</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()">Decline Offer</button>';
+      html += '</div>';
+      html += '</div>';
       html += '</div>';
       html += '</div>';
 
     } else if (state.step === 'offer' && cfg.showOffer !== false) {
+      var discountPct = cfg.discountPercent || 50;
+      var discountDur = cfg.discountDuration || 3;
       html += '<div class="cb-offer">';
-      html += '<div class="cb-header">';
-      html += '<div class="cb-icon">' + ICONS.tag + '</div>';
-      html += '<h2>' + (cfg.offerTitle || 'Special Offer Just For You') + '</h2>';
+      // Header bar matching SpecialOfferModal
+      html += '<div class="cb-header-bar">';
+      html += '<div class="cb-header-bar-left">' + ICONS.tag + '<span class="cb-header-bar-title">Special Offer</span></div>';
+      html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
+      html += '<div class="cb-content">';
+      html += '<h2>Stay to get ' + discountPct + '% off for ' + discountDur + ' months. We\\'d hate to lose you.</h2>';
+      html += '<p class="cb-subtitle">You\\'re eligible for our special discount.</p>';
       html += '<div class="cb-offer-card">';
-      html += '<span class="cb-offer-badge">Limited Time Offer</span>';
-      html += '<div class="cb-offer-discount">' + (cfg.discountPercent || 20) + '% OFF</div>';
-      html += '<div class="cb-offer-duration">for ' + (cfg.discountDuration || 3) + ' months</div>';
+      html += '<div class="cb-offer-badge">' + ICONS.clock + '<span class="cb-offer-badge-text">Time-Limited Deal</span></div>';
+      html += '<div class="cb-offer-discount">' + discountPct + '% off for ' + discountDur + ' months</div>';
+      html += '<button class="cb-btn-offer" onclick="ChurnBuddy.acceptOffer()">Accept This Offer</button>';
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-danger" onclick="ChurnBuddy.confirmCancel()">Cancel Anyway</button>';
-      html += '<button class="cb-btn cb-btn-success" onclick="ChurnBuddy.acceptOffer()">Claim Discount</button>';
+      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">Back</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.confirmCancel()">Decline Offer</button>';
+      html += '</div>';
       html += '</div>';
       html += '</div>';
     } else {
