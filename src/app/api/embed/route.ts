@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const apiKey = searchParams.get('key') || '';
+  const flowId = searchParams.get('flow') || '';
 
   // Determine base URL - use env var, or detect from headers (Vercel/production), or fallback to request origin
   let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
   // Configuration
   var CONFIG = {
     apiKey: '${apiKey}',
+    flowId: '${flowId}',
     apiEndpoint: '${baseUrl}/api/cancel-flow',
     baseUrl: '${baseUrl}'
   };
@@ -251,6 +253,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         eventType: eventType,
+        flowId: CONFIG.flowId,
         customerId: state.customerId,
         subscriptionId: state.subscriptionId,
         details: details
