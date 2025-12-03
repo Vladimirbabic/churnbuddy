@@ -387,6 +387,7 @@ export async function GET(request: NextRequest) {
     customerId: '',
     subscriptionId: '',
     config: null,
+    error: null,
     onCancel: null,
     onSaved: null,
     onPlanSwitch: null
@@ -428,23 +429,43 @@ export async function GET(request: NextRequest) {
     state.isLoading = true;
     render();
 
+    console.log('ChurnBuddy: Fetching config from', CONFIG.configEndpoint);
     fetch(CONFIG.configEndpoint)
-      .then(function(res) { return res.json(); })
+      .then(function(res) {
+        console.log('ChurnBuddy: Response status:', res.status);
+        if (!res.ok) {
+          throw new Error('Failed to fetch config: ' + res.status);
+        }
+        return res.json();
+      })
       .then(function(config) {
+        console.log('ChurnBuddy: Received config:', config);
+        if (config.error) {
+          console.error('ChurnBuddy: Config error:', config.error);
+          state.error = config.error;
+          state.isLoading = false;
+          render();
+          return;
+        }
         state.config = config;
         state.isLoading = false;
-        // Determine first step based on config
-        if (config.showFeedback) {
+        // Determine first step based on config - default to true if undefined
+        var showFeedback = config.showFeedback !== false;
+        var showPlans = config.showPlans !== false;
+        var showOffer = config.showOffer !== false;
+
+        if (showFeedback) {
           state.step = 'feedback';
-        } else if (config.showPlans) {
+        } else if (showPlans) {
           state.step = 'plans';
-        } else if (config.showOffer) {
+        } else if (showOffer) {
           state.step = 'offer';
         }
         render();
       })
       .catch(function(err) {
         console.error('ChurnBuddy: Failed to load config', err);
+        state.error = 'Failed to load configuration. Check flow ID.';
         state.isLoading = false;
         render();
       });
@@ -453,12 +474,12 @@ export async function GET(request: NextRequest) {
   function getNextStep() {
     var cfg = state.config || {};
     if (state.step === 'feedback') {
-      if (cfg.showPlans) return 'plans';
-      if (cfg.showOffer) return 'offer';
+      if (cfg.showPlans !== false) return 'plans';
+      if (cfg.showOffer !== false) return 'offer';
       return 'done';
     }
     if (state.step === 'plans') {
-      if (cfg.showOffer) return 'offer';
+      if (cfg.showOffer !== false) return 'offer';
       return 'done';
     }
     return 'done';
@@ -484,7 +505,9 @@ export async function GET(request: NextRequest) {
 
     if (state.isLoading) {
       html += '<div class="cb-loading"><div class="cb-spinner"></div>Loading...</div>';
-    } else if (state.step === 'feedback' && cfg.showFeedback) {
+    } else if (state.error) {
+      html += '<div class="cb-loading" style="color: #DC2626;">Error: ' + state.error + '</div>';
+    } else if (state.step === 'feedback' && cfg.showFeedback !== false) {
       var options = cfg.feedbackOptions || [];
       html += '<div class="cb-feedback">';
       html += '<div class="cb-header">';
@@ -510,7 +533,7 @@ export async function GET(request: NextRequest) {
       html += '</div>';
       html += '</div>';
 
-    } else if (state.step === 'plans' && cfg.showPlans) {
+    } else if (state.step === 'plans' && cfg.showPlans !== false) {
       var plans = cfg.alternativePlans || [];
       html += '<div class="cb-plans">';
       html += '<div class="cb-header">';
@@ -543,7 +566,7 @@ export async function GET(request: NextRequest) {
       html += '</div>';
       html += '</div>';
 
-    } else if (state.step === 'offer' && cfg.showOffer) {
+    } else if (state.step === 'offer' && cfg.showOffer !== false) {
       html += '<div class="cb-offer">';
       html += '<div class="cb-header">';
       html += '<div class="cb-icon">' + ICONS.tag + '</div>';
@@ -595,6 +618,8 @@ export async function GET(request: NextRequest) {
       state.isOpen = true;
       state.selectedReason = '';
       state.selectedPlan = null;
+      state.error = null;
+      state.config = null;
       logEvent('cancellation_attempt', {});
       loadConfig();
     },
@@ -622,12 +647,12 @@ export async function GET(request: NextRequest) {
 
     goBack: function() {
       var cfg = state.config || {};
-      if (state.step === 'plans' && cfg.showFeedback) {
+      if (state.step === 'plans' && cfg.showFeedback !== false) {
         state.step = 'feedback';
       } else if (state.step === 'offer') {
-        if (cfg.showPlans) {
+        if (cfg.showPlans !== false) {
           state.step = 'plans';
-        } else if (cfg.showFeedback) {
+        } else if (cfg.showFeedback !== false) {
           state.step = 'feedback';
         }
       }
