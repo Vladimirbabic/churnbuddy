@@ -139,7 +139,11 @@ CREATE TABLE cancel_flows (
     {"id": "temporary", "label": "Just need a break"},
     {"id": "other", "label": "Other"}
   ]'::jsonb,
-  discount_percent INTEGER NOT NULL DEFAULT 20 CHECK (discount_percent >= 5 AND discount_percent <= 50),
+  alternative_plans JSONB NOT NULL DEFAULT '[
+    {"id": "basic", "name": "Basic", "originalPrice": 29, "discountedPrice": 5.80, "period": "/mo", "highlights": ["5 projects", "Basic analytics", "Email support", "1GB storage"]},
+    {"id": "pro", "name": "Pro", "originalPrice": 79, "discountedPrice": 15.80, "period": "/mo", "highlights": ["25 projects", "Advanced analytics", "Priority support", "10GB storage"]}
+  ]'::jsonb,
+  discount_percent INTEGER NOT NULL DEFAULT 20 CHECK (discount_percent >= 5 AND discount_percent <= 90),
   discount_duration INTEGER NOT NULL DEFAULT 3 CHECK (discount_duration >= 1 AND discount_duration <= 12),
   show_offer BOOLEAN NOT NULL DEFAULT TRUE,
   impressions INTEGER NOT NULL DEFAULT 0,

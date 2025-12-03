@@ -126,6 +126,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    console.log('Cancel flow save request:', JSON.stringify(body, null, 2));
+
     if (body.id) {
       // Update existing cancel flow
       // If setting as default, unset other defaults first
@@ -137,27 +139,76 @@ export async function POST(request: NextRequest) {
           .neq('id', body.id);
       }
 
-      const updateData = {
-        name: body.name,
-        description: body.description,
-        is_active: body.is_active ?? body.isActive,
-        is_default: body.is_default ?? body.isDefault,
-        target_type: body.target_type ?? body.targetType,
-        target_product_ids: body.target_product_ids ?? body.targetProductIds,
-        target_plan_ids: body.target_plan_ids ?? body.targetPlanIds,
-        theme: body.theme,
-        header_title: body.header_title ?? body.headerTitle,
-        header_description: body.header_description ?? body.headerDescription,
-        offer_title: body.offer_title ?? body.offerTitle,
-        offer_description: body.offer_description ?? body.offerDescription,
-        // Map feedback_options to reasons (database column name)
-        reasons: body.reasons ?? body.feedback_options ?? body.feedbackOptions,
-        discount_percent: body.discount_percent ?? body.discountPercent,
-        discount_duration: body.discount_duration ?? body.discountDuration,
-        show_offer: body.show_offer ?? body.showOffer,
-      };
+      // Build update data, only including defined values
+      const updateData: Record<string, unknown> = {};
 
-      const { data: flow, error } = await (supabase as any)
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.description !== undefined) updateData.description = body.description;
+      if (body.is_active !== undefined || body.isActive !== undefined) {
+        updateData.is_active = body.is_active ?? body.isActive;
+      }
+      if (body.is_default !== undefined || body.isDefault !== undefined) {
+        updateData.is_default = body.is_default ?? body.isDefault;
+      }
+      if (body.target_type !== undefined || body.targetType !== undefined) {
+        updateData.target_type = body.target_type ?? body.targetType;
+      }
+      if (body.target_product_ids !== undefined || body.targetProductIds !== undefined) {
+        updateData.target_product_ids = body.target_product_ids ?? body.targetProductIds;
+      }
+      if (body.target_plan_ids !== undefined || body.targetPlanIds !== undefined) {
+        updateData.target_plan_ids = body.target_plan_ids ?? body.targetPlanIds;
+      }
+      if (body.theme !== undefined) updateData.theme = body.theme;
+      if (body.header_title !== undefined || body.headerTitle !== undefined) {
+        updateData.header_title = body.header_title ?? body.headerTitle;
+      }
+      if (body.header_description !== undefined || body.headerDescription !== undefined) {
+        updateData.header_description = body.header_description ?? body.headerDescription;
+      }
+      if (body.offer_title !== undefined || body.offerTitle !== undefined) {
+        updateData.offer_title = body.offer_title ?? body.offerTitle;
+      }
+      if (body.offer_description !== undefined || body.offerDescription !== undefined) {
+        updateData.offer_description = body.offer_description ?? body.offerDescription;
+      }
+      // Map feedback_options to reasons (database column name)
+      if (body.reasons !== undefined || body.feedback_options !== undefined || body.feedbackOptions !== undefined) {
+        updateData.reasons = body.reasons ?? body.feedback_options ?? body.feedbackOptions;
+      }
+      // Alternative plans for downgrade options
+      if (body.alternative_plans !== undefined || body.alternativePlans !== undefined) {
+        updateData.alternative_plans = body.alternative_plans ?? body.alternativePlans;
+      }
+      if (body.discount_percent !== undefined || body.discountPercent !== undefined) {
+        // Clamp to valid range (5-90) to avoid constraint violations
+        let discountPercent = body.discount_percent ?? body.discountPercent;
+        discountPercent = Math.max(5, Math.min(90, Number(discountPercent) || 20));
+        updateData.discount_percent = discountPercent;
+      }
+      if (body.discount_duration !== undefined || body.discountDuration !== undefined) {
+        // Clamp to valid range (1-12) to avoid constraint violations
+        let discountDuration = body.discount_duration ?? body.discountDuration;
+        discountDuration = Math.max(1, Math.min(12, Number(discountDuration) || 3));
+        updateData.discount_duration = discountDuration;
+      }
+      if (body.show_feedback !== undefined || body.showFeedback !== undefined) {
+        updateData.show_feedback = body.show_feedback ?? body.showFeedback;
+      }
+      if (body.show_plans !== undefined || body.showPlans !== undefined) {
+        updateData.show_plans = body.show_plans ?? body.showPlans;
+      }
+      if (body.show_offer !== undefined || body.showOffer !== undefined) {
+        updateData.show_offer = body.show_offer ?? body.showOffer;
+      }
+
+      console.log('Update data being sent:', JSON.stringify(updateData, null, 2));
+
+      let flow;
+      let error;
+
+      // Try update with all fields first
+      const result = await (supabase as any)
         .from('cancel_flows')
         .update(updateData)
         .eq('id', body.id)
@@ -165,9 +216,30 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
+      flow = result.data;
+      error = result.error;
+
+      // If alternative_plans column not found in cache, retry without it
+      if (error?.code === 'PGRST204' && error?.message?.includes('alternative_plans')) {
+        console.log('Retrying without alternative_plans (schema cache not updated)');
+        const retryData = { ...updateData };
+        delete retryData.alternative_plans;
+
+        const retryResult = await (supabase as any)
+          .from('cancel_flows')
+          .update(retryData)
+          .eq('id', body.id)
+          .eq('organization_id', orgId)
+          .select()
+          .single();
+
+        flow = retryResult.data;
+        error = retryResult.error;
+      }
+
       if (error) {
         console.error('Supabase update error:', error);
-        return NextResponse.json({ error: 'Failed to update cancel flow' }, { status: 500 });
+        return NextResponse.json({ error: `Failed to update: ${error.message}` }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, flow });
@@ -180,6 +252,13 @@ export async function POST(request: NextRequest) {
           .update({ is_default: false })
           .eq('organization_id', orgId);
       }
+
+      // Clamp discount values to valid ranges
+      let discountPercent = body.discount_percent ?? body.discountPercent ?? 20;
+      discountPercent = Math.max(5, Math.min(90, Number(discountPercent) || 20));
+
+      let discountDuration = body.discount_duration ?? body.discountDuration ?? 3;
+      discountDuration = Math.max(1, Math.min(12, Number(discountDuration) || 3));
 
       const insertData = {
         organization_id: orgId,
@@ -197,20 +276,49 @@ export async function POST(request: NextRequest) {
         offer_description: body.offer_description ?? body.offerDescription ?? "",
         // Map feedback_options to reasons (database column name)
         reasons: body.reasons ?? body.feedback_options ?? body.feedbackOptions ?? DEFAULT_REASONS,
-        discount_percent: body.discount_percent ?? body.discountPercent ?? 20,
-        discount_duration: body.discount_duration ?? body.discountDuration ?? 3,
+        // Alternative plans for downgrade options
+        alternative_plans: body.alternative_plans ?? body.alternativePlans,
+        discount_percent: discountPercent,
+        discount_duration: discountDuration,
+        show_feedback: body.show_feedback ?? body.showFeedback ?? true,
+        show_plans: body.show_plans ?? body.showPlans ?? true,
         show_offer: body.show_offer ?? body.showOffer ?? true,
       };
 
-      const { data: flow, error } = await (supabase as any)
+      console.log('Insert data being sent:', JSON.stringify(insertData, null, 2));
+
+      let flow;
+      let error;
+
+      // Try insert with all fields first
+      const result = await (supabase as any)
         .from('cancel_flows')
         .insert(insertData)
         .select()
         .single();
 
+      flow = result.data;
+      error = result.error;
+
+      // If alternative_plans column not found in cache, retry without it
+      if (error?.code === 'PGRST204' && error?.message?.includes('alternative_plans')) {
+        console.log('Retrying insert without alternative_plans (schema cache not updated)');
+        const retryData = { ...insertData };
+        delete retryData.alternative_plans;
+
+        const retryResult = await (supabase as any)
+          .from('cancel_flows')
+          .insert(retryData)
+          .select()
+          .single();
+
+        flow = retryResult.data;
+        error = retryResult.error;
+      }
+
       if (error) {
         console.error('Supabase insert error:', error);
-        return NextResponse.json({ error: 'Failed to create cancel flow' }, { status: 500 });
+        return NextResponse.json({ error: `Failed to create: ${error.message}` }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, flow });

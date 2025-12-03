@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import {
   CreditCard,
   Mail,
-  Settings,
   Save,
   Loader2,
   AlertCircle,
@@ -19,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { CancelFlowModal } from '@/components/CancelFlowModal';
 import { AppLayout } from '@/components/AppLayout';
 
@@ -39,7 +37,7 @@ export default function SettingsPage() {
       testMode: true,
     },
     email: {
-      provider: 'resend' as 'resend' | 'sendgrid',
+      provider: 'resend' as const,
       apiKey: '',
       fromEmail: '',
       fromName: '',
@@ -212,7 +210,7 @@ export default function SettingsPage() {
         )}
 
         <Tabs defaultValue="stripe" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="stripe" className="gap-2">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Stripe</span>
@@ -220,10 +218,6 @@ export default function SettingsPage() {
             <TabsTrigger value="email" className="gap-2">
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">Email</span>
-            </TabsTrigger>
-            <TabsTrigger value="cancel-flow" className="gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Cancel Flow</span>
             </TabsTrigger>
             <TabsTrigger value="branding" className="gap-2">
               <Palette className="h-4 w-4" />
@@ -339,25 +333,9 @@ export default function SettingsPage() {
                 {/* Provider */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Provider</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => updateSettings('email', 'provider', 'resend')}
-                      className={`p-4 rounded-lg border-2 text-left ${
-                        settings.email.provider === 'resend' ? 'border-primary bg-primary/5' : 'border-border'
-                      }`}
-                    >
-                      <p className="font-medium">Resend</p>
-                      <p className="text-sm text-muted-foreground">Modern email API</p>
-                    </button>
-                    <button
-                      onClick={() => updateSettings('email', 'provider', 'sendgrid')}
-                      className={`p-4 rounded-lg border-2 text-left ${
-                        settings.email.provider === 'sendgrid' ? 'border-primary bg-primary/5' : 'border-border'
-                      }`}
-                    >
-                      <p className="font-medium">SendGrid</p>
-                      <p className="text-sm text-muted-foreground">Enterprise-grade</p>
-                    </button>
+                  <div className="p-4 rounded-lg border-2 border-primary bg-primary/5">
+                    <p className="font-medium">Resend</p>
+                    <p className="text-sm text-muted-foreground">Modern email API</p>
                   </div>
                 </div>
 
@@ -369,7 +347,7 @@ export default function SettingsPage() {
                       type={showSecrets['emailKey'] ? 'text' : 'password'}
                       value={settings.email.apiKey}
                       onChange={(e) => updateSettings('email', 'apiKey', e.target.value)}
-                      placeholder={settings.email.provider === 'resend' ? 're_...' : 'SG...'}
+                      placeholder="re_..."
                       className="w-full px-3 py-2 pr-10 rounded-lg border border-input bg-background"
                     />
                     <button
@@ -401,78 +379,6 @@ export default function SettingsPage() {
                     type="text"
                     value={settings.email.fromName}
                     onChange={(e) => updateSettings('email', 'fromName', e.target.value)}
-                    placeholder="Your Company"
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Cancel Flow Tab */}
-          <TabsContent value="cancel-flow">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cancel Flow Settings</CardTitle>
-                <CardDescription>Configure your cancellation save offers</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable/Disable */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="font-medium">Enable Cancel Flow</p>
-                    <p className="text-sm text-muted-foreground">Show save offers to customers trying to cancel</p>
-                  </div>
-                  <Button
-                    variant={settings.cancelFlow.enabled ? 'default' : 'outline'}
-                    onClick={() => updateSettings('cancelFlow', 'enabled', !settings.cancelFlow.enabled)}
-                  >
-                    {settings.cancelFlow.enabled ? 'Enabled' : 'Disabled'}
-                  </Button>
-                </div>
-
-                <Separator />
-
-                {/* Discount Settings */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Discount Percentage</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="5"
-                        max="50"
-                        value={settings.cancelFlow.discountPercent}
-                        onChange={(e) => updateSettings('cancelFlow', 'discountPercent', parseInt(e.target.value) || 20)}
-                        className="w-20 px-3 py-2 rounded-lg border border-input bg-background"
-                      />
-                      <span className="text-muted-foreground">%</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Duration</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        max="12"
-                        value={settings.cancelFlow.discountDuration}
-                        onChange={(e) => updateSettings('cancelFlow', 'discountDuration', parseInt(e.target.value) || 3)}
-                        className="w-20 px-3 py-2 rounded-lg border border-input bg-background"
-                      />
-                      <span className="text-muted-foreground">months</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Company Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Company Name (for modal)</label>
-                  <input
-                    type="text"
-                    value={settings.cancelFlow.companyName}
-                    onChange={(e) => updateSettings('cancelFlow', 'companyName', e.target.value)}
                     placeholder="Your Company"
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background"
                   />

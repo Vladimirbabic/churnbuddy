@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Check,
   Trash2,
-  Eye,
   Star,
   Pencil,
   BarChart3,
@@ -21,12 +20,6 @@ import {
   CheckCircle2,
   Code,
   Zap,
-  Heart,
-  RotateCcw,
-  Tag,
-  ChevronDown,
-  ChevronUp,
-  GripVertical,
   X,
   Sparkles,
 } from 'lucide-react';
@@ -70,6 +63,10 @@ interface CancelFlow {
   impressions: number;
   cancellations: number;
   saves: number;
+  // Step toggles
+  showFeedback: boolean;
+  showPlans: boolean;
+  showOffer: boolean;
 }
 
 const DEFAULT_FEEDBACK_OPTIONS: FeedbackOption[] = [
@@ -138,44 +135,68 @@ function CodeSnippet({ code }: { code: string }) {
   );
 }
 
-// Collapsible Section Component
-function CollapsibleSection({
+// Step Section Component (always open, with selection highlight)
+function StepSection({
   title,
-  icon: Icon,
   iconColor,
   children,
-  defaultOpen = true,
+  isSelected,
+  onSelect,
   stepNumber,
+  enabled,
+  onEnabledChange,
+  showToggle = true,
 }: {
   title: string;
-  icon: React.ElementType;
   iconColor: string;
   children: React.ReactNode;
-  defaultOpen?: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
   stepNumber: number;
+  enabled?: boolean;
+  onEnabledChange?: (enabled: boolean) => void;
+  showToggle?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-card">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
-      >
-        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white`}
-          style={{ backgroundColor: iconColor }}
-        >
-          {stepNumber}
+    <div
+      className={`rounded-lg overflow-hidden bg-card transition-all cursor-pointer ${
+        enabled === false ? 'opacity-50' : ''
+      } ${
+        isSelected
+          ? 'ring-2 ring-offset-2'
+          : 'border border-border'
+      }`}
+      style={isSelected ? { '--tw-ring-color': iconColor } as React.CSSProperties : {}}
+      onClick={onSelect}
+    >
+      <div className="flex items-center cursor-pointer px-4 py-3">
+        <div className="flex-1 flex items-center gap-3">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0`}
+            style={{ backgroundColor: enabled === false ? '#9CA3AF' : iconColor }}
+          >
+            {stepNumber}
+          </div>
+          <span className="font-medium flex-1 text-left">{title}</span>
         </div>
-        <Icon className="h-4 w-4" style={{ color: iconColor }} />
-        <span className="font-medium flex-1 text-left">{title}</span>
-        {isOpen ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        {showToggle && onEnabledChange && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnabledChange(!enabled);
+            }}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
+              enabled ? 'bg-primary' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                enabled ? 'translate-x-4' : 'translate-x-1'
+              }`}
+            />
+          </button>
         )}
-      </button>
-      {isOpen && (
+      </div>
+      {enabled !== false && (
         <div className="px-4 pb-4 pt-2 border-t border-border">
           {children}
         </div>
@@ -352,6 +373,10 @@ function CancelFlowsPageContent() {
     impressions: (f.impressions || 0) as number,
     cancellations: (f.cancellations || 0) as number,
     saves: (f.saves || 0) as number,
+    // Step toggles
+    showFeedback: (f.show_feedback ?? f.showFeedback ?? true) as boolean,
+    showPlans: (f.show_plans ?? f.showPlans ?? true) as boolean,
+    showOffer: (f.show_offer ?? f.showOffer ?? true) as boolean,
   }), []);
 
   const fetchFlows = useCallback(async () => {
@@ -415,6 +440,9 @@ function CancelFlowsPageContent() {
           impressions: 0,
           cancellations: 0,
           saves: 0,
+          showFeedback: true,
+          showPlans: true,
+          showOffer: true,
         });
       }
     };
@@ -462,6 +490,10 @@ function CancelFlowsPageContent() {
         alternative_plans: editingFlow.alternativePlans,
         discount_percent: editingFlow.discountPercent,
         discount_duration: editingFlow.discountDuration,
+        // Step toggles
+        show_feedback: editingFlow.showFeedback,
+        show_plans: editingFlow.showPlans,
+        show_offer: editingFlow.showOffer,
       };
 
       const response = await fetch('/api/cancel-flows', {
@@ -771,9 +803,9 @@ function CancelFlowsPageContent() {
   // Editor view - Full screen with 40/60 split
   if (isEditing && editingFlow) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Simple Header */}
-        <header className="border-b bg-background shrink-0">
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
+        {/* Fixed Header */}
+        <header className="border-b bg-background shrink-0 sticky top-0 z-10">
           <div className="flex items-center justify-between px-6 h-14">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" onClick={handleBack}>
@@ -807,7 +839,7 @@ function CancelFlowsPageContent() {
 
         {/* Error Message */}
         {error && (
-          <div className="mx-6 mt-4 flex items-center gap-2 p-4 text-sm text-destructive bg-destructive/10 rounded-lg">
+          <div className="mx-6 mt-4 flex items-center gap-2 p-4 text-sm text-destructive bg-destructive/10 rounded-lg shrink-0">
             <AlertCircle className="h-4 w-4" />
             {error}
             <button onClick={() => setError(null)} className="ml-auto">×</button>
@@ -818,47 +850,16 @@ function CancelFlowsPageContent() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Side - Editor (40%) */}
           <div className="w-[40%] border-r overflow-y-auto p-6 space-y-4">
-            {/* Step Selector */}
-            <div className="flex gap-2 p-1 bg-muted rounded-lg">
-              <button
-                onClick={() => setPreviewStep('feedback')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  previewStep === 'feedback'
-                    ? 'bg-background shadow text-[#9333EA]'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                1. Feedback
-              </button>
-              <button
-                onClick={() => setPreviewStep('plans')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  previewStep === 'plans'
-                    ? 'bg-background shadow text-[#606C80]'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                2. Plans
-              </button>
-              <button
-                onClick={() => setPreviewStep('offer')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  previewStep === 'offer'
-                    ? 'bg-background shadow text-[#DC2626]'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                3. Offer
-              </button>
-            </div>
-
             {/* Step 1: Feedback Options */}
-            <CollapsibleSection
+            <StepSection
               title="Feedback Survey"
-              icon={Heart}
               iconColor="#9333EA"
               stepNumber={1}
-              defaultOpen={previewStep === 'feedback'}
+              isSelected={previewStep === 'feedback'}
+              onSelect={() => setPreviewStep('feedback')}
+              enabled={editingFlow.showFeedback}
+              onEnabledChange={(enabled) => updateEditingFlow('showFeedback', enabled)}
+              showToggle={true}
             >
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
@@ -891,15 +892,18 @@ function CancelFlowsPageContent() {
                   Add Option
                 </Button>
               </div>
-            </CollapsibleSection>
+            </StepSection>
 
             {/* Step 2: Alternative Plans */}
-            <CollapsibleSection
+            <StepSection
               title="Alternative Plans"
-              icon={RotateCcw}
               iconColor="#606C80"
               stepNumber={2}
-              defaultOpen={previewStep === 'plans'}
+              isSelected={previewStep === 'plans'}
+              onSelect={() => setPreviewStep('plans')}
+              enabled={editingFlow.showPlans}
+              onEnabledChange={(enabled) => updateEditingFlow('showPlans', enabled)}
+              showToggle={true}
             >
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -993,15 +997,18 @@ function CancelFlowsPageContent() {
                   Add Plan
                 </Button>
               </div>
-            </CollapsibleSection>
+            </StepSection>
 
             {/* Step 3: Special Offer */}
-            <CollapsibleSection
+            <StepSection
               title="Special Offer"
-              icon={Tag}
               iconColor="#DC2626"
               stepNumber={3}
-              defaultOpen={previewStep === 'offer'}
+              isSelected={previewStep === 'offer'}
+              onSelect={() => setPreviewStep('offer')}
+              enabled={editingFlow.showOffer}
+              onEnabledChange={(enabled) => updateEditingFlow('showOffer', enabled)}
+              showToggle={true}
             >
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -1040,81 +1047,90 @@ function CancelFlowsPageContent() {
                   </p>
                 </div>
               </div>
-            </CollapsibleSection>
+            </StepSection>
           </div>
 
-          {/* Right Side - Preview (60%) */}
+          {/* Right Side - Preview (60%) - Full height with centered modal */}
           <div
-            className="w-[60%] overflow-y-auto flex items-center justify-center"
+            className="w-[60%] h-full flex flex-col"
             style={{
               backgroundColor: '#f5f5f5',
               backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
               backgroundSize: '20px 20px',
             }}
           >
-            <div className="relative">
-              {/* Step Navigation */}
-              <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2">
-                <button
-                  onClick={() => setPreviewStep('feedback')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    previewStep === 'feedback'
-                      ? 'bg-[#9333EA] text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Step 1
-                </button>
-                <button
-                  onClick={() => setPreviewStep('plans')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    previewStep === 'plans'
-                      ? 'bg-[#606C80] text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Step 2
-                </button>
-                <button
-                  onClick={() => setPreviewStep('offer')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    previewStep === 'offer'
-                      ? 'bg-[#DC2626] text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Step 3
-                </button>
-              </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="relative">
+                {/* Current Step Indicator */}
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                  {((previewStep === 'feedback' && editingFlow.showFeedback) ||
+                    (previewStep === 'plans' && editingFlow.showPlans) ||
+                    (previewStep === 'offer' && editingFlow.showOffer)) ? (
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-medium text-white ${
+                      previewStep === 'feedback' ? 'bg-[#9333EA]' :
+                      previewStep === 'plans' ? 'bg-[#606C80]' : 'bg-[#DC2626]'
+                    }`}>
+                      {previewStep === 'feedback' ? 'Step 1: Feedback' :
+                       previewStep === 'plans' ? 'Step 2: Alternative Plans' : 'Step 3: Special Offer'}
+                    </span>
+                  ) : (
+                    <span className="px-4 py-1.5 rounded-full text-xs font-medium text-white bg-gray-400">
+                      Step Disabled
+                    </span>
+                  )}
+                </div>
 
-              {/* Modal Previews */}
-              <YourFeedbackModal
-                isOpen={previewStep === 'feedback'}
-                onClose={() => {}}
-                onBack={() => {}}
-                onNext={() => setPreviewStep('plans')}
-                options={editingFlow.feedbackOptions}
-                previewMode
-              />
-              <ConsiderOtherPlansModal
-                isOpen={previewStep === 'plans'}
-                onClose={() => {}}
-                onBack={() => setPreviewStep('feedback')}
-                onDecline={() => setPreviewStep('offer')}
-                onSwitchPlan={() => {}}
-                plans={editingFlow.alternativePlans}
-                previewMode
-              />
-              <SpecialOfferModal
-                isOpen={previewStep === 'offer'}
-                onClose={() => {}}
-                onBack={() => setPreviewStep('plans')}
-                onDecline={() => {}}
-                onAcceptOffer={() => {}}
-                discountPercent={editingFlow.discountPercent}
-                discountDuration={`${editingFlow.discountDuration} months`}
-                previewMode
-              />
+                {/* Modal Previews - Only show if step is enabled */}
+                {editingFlow.showFeedback && (
+                  <YourFeedbackModal
+                    isOpen={previewStep === 'feedback'}
+                    onClose={() => {}}
+                    onBack={() => {}}
+                    onNext={() => setPreviewStep('plans')}
+                    options={editingFlow.feedbackOptions}
+                    previewMode
+                  />
+                )}
+                {editingFlow.showPlans && (
+                  <ConsiderOtherPlansModal
+                    isOpen={previewStep === 'plans'}
+                    onClose={() => {}}
+                    onBack={() => setPreviewStep('feedback')}
+                    onDecline={() => setPreviewStep('offer')}
+                    onSwitchPlan={() => {}}
+                    plans={editingFlow.alternativePlans}
+                    previewMode
+                  />
+                )}
+                {editingFlow.showOffer && (
+                  <SpecialOfferModal
+                    isOpen={previewStep === 'offer'}
+                    onClose={() => {}}
+                    onBack={() => setPreviewStep('plans')}
+                    onDecline={() => {}}
+                    onAcceptOffer={() => {}}
+                    discountPercent={editingFlow.discountPercent}
+                    discountDuration={`${editingFlow.discountDuration} months`}
+                    previewMode
+                  />
+                )}
+
+                {/* Show message when step is disabled */}
+                {((previewStep === 'feedback' && !editingFlow.showFeedback) ||
+                  (previewStep === 'plans' && !editingFlow.showPlans) ||
+                  (previewStep === 'offer' && !editingFlow.showOffer)) && (
+                  <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-sm">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                      <X className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Step Disabled</h3>
+                    <p className="text-sm text-muted-foreground">
+                      This step is currently disabled and won&apos;t be shown in the cancel flow.
+                      Toggle it on to preview and configure.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
