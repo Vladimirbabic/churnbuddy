@@ -10,20 +10,22 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const flowId = searchParams.get('flow') || '';
 
-  // Determine base URL
-  let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) {
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    const host = request.headers.get('host');
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
+  // Determine base URL - prefer auto-detection from request headers for portability
+  let baseUrl: string;
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
 
-    if (forwardedHost) {
-      baseUrl = `${proto}://${forwardedHost}`;
-    } else if (host) {
-      baseUrl = `${proto}://${host}`;
-    } else {
-      baseUrl = request.nextUrl.origin;
-    }
+  if (forwardedHost) {
+    baseUrl = `${proto}://${forwardedHost}`;
+  } else if (host && !host.includes('localhost')) {
+    baseUrl = `${proto}://${host}`;
+  } else if (process.env.NEXT_PUBLIC_APP_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  } else if (host) {
+    baseUrl = `http://${host}`;
+  } else {
+    baseUrl = request.nextUrl.origin;
   }
 
   // The embeddable JavaScript widget
