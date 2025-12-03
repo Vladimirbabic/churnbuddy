@@ -6,8 +6,19 @@
 
 import { Resend } from 'resend';
 
-// Initialize Resend client with API key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend client with API key from environment (lazy initialization)
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not configured');
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 // Email configuration from environment
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@churnbuddy.com';
@@ -143,7 +154,7 @@ ${companyName} Team
   `.trim();
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `Action Required: Payment Failed for ${companyName}`,
@@ -219,7 +230,7 @@ export async function sendFollowUpDunningEmail(params: DunningEmailParams & { at
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `${subjects[urgencyLevel]} - ${companyName}`,
@@ -271,7 +282,7 @@ export async function sendCancellationConfirmEmail(params: CancellationConfirmEm
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `Your ${companyName} Subscription Has Been Cancelled`,
@@ -318,7 +329,7 @@ export async function sendSaveOfferAcceptedEmail(params: SaveOfferEmailParams): 
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `Your ${discountPercent}% Discount is Now Active - ${companyName}`,
