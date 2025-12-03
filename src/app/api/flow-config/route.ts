@@ -71,13 +71,25 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getServerSupabase();
 
+    // Log whether we have admin access
+    const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    console.log('Flow config request:', { flowId, hasServiceKey });
+
     const { data: flow, error } = await (supabase as any)
       .from('cancel_flows')
       .select('*')
       .eq('id', flowId)
       .single();
 
-    if (error || !flow) {
+    if (error) {
+      console.error('Flow config DB error:', error);
+      return NextResponse.json(
+        { error: 'Flow not found', details: error.message, hint: hasServiceKey ? undefined : 'SUPABASE_SERVICE_ROLE_KEY not configured - RLS may be blocking access' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    if (!flow) {
       return NextResponse.json(
         { error: 'Flow not found' },
         { status: 404, headers: corsHeaders }
