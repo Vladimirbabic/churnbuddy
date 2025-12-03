@@ -150,7 +150,8 @@ export async function POST(request: NextRequest) {
         header_description: body.header_description ?? body.headerDescription,
         offer_title: body.offer_title ?? body.offerTitle,
         offer_description: body.offer_description ?? body.offerDescription,
-        reasons: body.reasons,
+        // Map feedback_options to reasons (database column name)
+        reasons: body.reasons ?? body.feedback_options ?? body.feedbackOptions,
         discount_percent: body.discount_percent ?? body.discountPercent,
         discount_duration: body.discount_duration ?? body.discountDuration,
         show_offer: body.show_offer ?? body.showOffer,
@@ -194,7 +195,8 @@ export async function POST(request: NextRequest) {
         header_description: body.header_description ?? body.headerDescription ?? "Before you go, please help us improve by sharing why you're canceling",
         offer_title: body.offer_title ?? body.offerTitle ?? "Wait! We have an offer for you",
         offer_description: body.offer_description ?? body.offerDescription ?? "",
-        reasons: body.reasons || DEFAULT_REASONS,
+        // Map feedback_options to reasons (database column name)
+        reasons: body.reasons ?? body.feedback_options ?? body.feedbackOptions ?? DEFAULT_REASONS,
         discount_percent: body.discount_percent ?? body.discountPercent ?? 20,
         discount_duration: body.discount_duration ?? body.discountDuration ?? 3,
         show_offer: body.show_offer ?? body.showOffer ?? true,

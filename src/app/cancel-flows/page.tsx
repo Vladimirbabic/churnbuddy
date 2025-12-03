@@ -344,7 +344,8 @@ function CancelFlowsPageContent() {
     isDefault: (f.is_default ?? f.isDefault ?? false) as boolean,
     targetType: (f.target_type ?? f.targetType ?? 'all') as CancelFlow['targetType'],
     targetPlanIds: (f.target_plan_ids ?? f.targetPlanIds ?? []) as string[],
-    feedbackOptions: (f.feedback_options ?? f.feedbackOptions ?? DEFAULT_FEEDBACK_OPTIONS) as FeedbackOption[],
+    // Database uses 'reasons' column, map to feedbackOptions
+    feedbackOptions: (f.reasons ?? f.feedback_options ?? f.feedbackOptions ?? DEFAULT_FEEDBACK_OPTIONS) as FeedbackOption[],
     alternativePlans: (f.alternative_plans ?? f.alternativePlans ?? DEFAULT_PLANS) as Plan[],
     discountPercent: (f.discount_percent ?? f.discountPercent ?? 50) as number,
     discountDuration: (f.discount_duration ?? f.discountDuration ?? 3) as number,
@@ -632,18 +633,16 @@ function CancelFlowsPageContent() {
   const getIntegrationCode = (flowId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
     return `<!-- ChurnBuddy Cancel Flow -->
-<script src="${baseUrl}/embed/churnbuddy.js"></script>
-<script>
-  ChurnBuddy.init({
-    flowId: '${flowId}',
-    onCancel: function(data) {
-      console.log('User cancelled:', data);
-    },
-    onSave: function(data) {
-      console.log('User saved:', data);
-    }
-  });
-</script>`;
+<script
+  src="${baseUrl}/api/embed"
+  data-churnbuddy
+  data-customer-id="YOUR_STRIPE_CUSTOMER_ID"
+  data-subscription-id="YOUR_STRIPE_SUBSCRIPTION_ID"
+  data-cancel-selector="[data-cancel-subscription]"
+></script>
+
+<!-- Add this attribute to your cancel button -->
+<button data-cancel-subscription>Cancel Subscription</button>`;
   };
 
   if (isLoading) {
