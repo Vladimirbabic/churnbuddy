@@ -9,7 +9,23 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const apiKey = searchParams.get('key') || '';
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+
+  // Determine base URL - use env var, or detect from headers (Vercel/production), or fallback to request origin
+  let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) {
+    // On Vercel, use x-forwarded-host or host header to get actual domain
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = request.headers.get('host');
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+
+    if (forwardedHost) {
+      baseUrl = `${proto}://${forwardedHost}`;
+    } else if (host) {
+      baseUrl = `${proto}://${host}`;
+    } else {
+      baseUrl = request.nextUrl.origin;
+    }
+  }
 
   // The embeddable JavaScript widget
   const script = `
