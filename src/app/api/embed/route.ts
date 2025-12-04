@@ -849,9 +849,10 @@ export async function GET(request: NextRequest) {
       state.customerId = options.customerId || '';
       state.subscriptionId = options.subscriptionId || '';
       state.customerEmail = options.customerEmail || '';  // Email for auto-lookup
-      state.onCancel = options.onCancel || function() {};
-      state.onSaved = options.onSaved || function() {};
-      state.onPlanSwitch = options.onPlanSwitch || function() {};
+      // Only set callbacks if explicitly provided - no default alerts
+      state.onCancel = options.onCancel || null;
+      state.onSaved = options.onSaved || null;
+      state.onPlanSwitch = options.onPlanSwitch || null;
       // Store discount overrides from data attributes or init options
       state.discountPercentOverride = options.discountPercent || null;
       state.discountDurationOverride = options.discountDuration || null;
@@ -1051,13 +1052,15 @@ export async function GET(request: NextRequest) {
       });
       state.isOpen = false;
       render();
-      // Pass detailed cancellation data to callback
-      if (state.onCancel) state.onCancel({
-        reason: state.selectedReason,
-        offersDeclined: true,
-        subscriptionId: state.subscriptionId,
-        customerId: state.customerId
-      });
+      // Only call onCancel if explicitly provided by the developer
+      if (state.onCancel) {
+        state.onCancel({
+          reason: state.selectedReason,
+          offersDeclined: true,
+          subscriptionId: state.subscriptionId,
+          customerId: state.customerId
+        });
+      }
     }
   };
 
