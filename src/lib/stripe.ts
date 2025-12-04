@@ -35,7 +35,7 @@ export async function getOrganizationStripeKey(flowId: string): Promise<string |
     const supabase = getServerSupabase();
     
     // First, get the organization_id from the cancel_flows table
-    const { data: flow, error: flowError } = await supabase
+    const { data: flow, error: flowError } = await (supabase as any)
       .from('cancel_flows')
       .select('organization_id')
       .eq('id', flowId)
@@ -46,19 +46,21 @@ export async function getOrganizationStripeKey(flowId: string): Promise<string |
       return null;
     }
     
+    const orgId = (flow as { organization_id: string }).organization_id;
+    
     // Then get the Stripe key from settings
-    const { data: settings, error: settingsError } = await supabase
+    const { data: settings, error: settingsError } = await (supabase as any)
       .from('settings')
       .select('stripe_config')
-      .eq('organization_id', flow.organization_id)
+      .eq('organization_id', orgId)
       .single();
     
     if (settingsError || !settings) {
-      console.error('Settings not found for org:', flow.organization_id);
+      console.error('Settings not found for org:', orgId);
       return null;
     }
     
-    const stripeConfig = settings.stripe_config as { secret_key?: string } | null;
+    const stripeConfig = (settings as { stripe_config?: { secret_key?: string } }).stripe_config;
     return stripeConfig?.secret_key || null;
   } catch (error) {
     console.error('Error fetching organization Stripe key:', error);
