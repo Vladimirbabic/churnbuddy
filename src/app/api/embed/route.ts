@@ -343,6 +343,46 @@ export async function GET(request: NextRequest) {
     .cb-btn-plan:hover {
       background: #1D4ED8;
     }
+    .cb-btn-plan:disabled {
+      background: #93C5FD;
+      cursor: not-allowed;
+    }
+    .cb-plan-discount-info {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 12px;
+    }
+
+    /* Success Screen */
+    .cb-success-content {
+      text-align: center;
+      padding: 32px 24px !important;
+    }
+    .cb-success-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      background: #DCFCE7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cb-success-icon svg {
+      width: 32px;
+      height: 32px;
+      color: #16A34A;
+    }
+    .cb-discount-note {
+      font-size: 14px;
+      color: #16A34A;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .cb-btn-full {
+      width: 100%;
+      margin-top: 24px;
+    }
 
     /* Offer Step - Red Theme */
     .cb-offer .cb-header-bar {
@@ -519,6 +559,7 @@ export async function GET(request: NextRequest) {
     isOpen: false,
     isLoading: true,
     isProcessing: false,
+    processingMessage: '',
     step: 'feedback',
     selectedReason: '',
     selectedPlan: null,
@@ -531,6 +572,9 @@ export async function GET(request: NextRequest) {
     onCancel: null,
     onSaved: null,
     onPlanSwitch: null,
+    // Plan switch success state
+    planSwitchSuccess: false,
+    switchedPlan: null,
     // Discount overrides from data attributes
     discountPercentOverride: null,
     discountDurationOverride: null,
@@ -757,44 +801,75 @@ export async function GET(request: NextRequest) {
     } else if (state.step === 'plans' && cfg.showPlans !== false) {
       var plans = cfg.alternativePlans || [];
       var copy = cfg.copy || {};
-      html += '<div class="cb-plans">';
-      html += '<div class="cb-modal-lg">';
-      // Header bar matching ConsiderOtherPlansModal
-      html += '<div class="cb-header-bar">';
-      html += '<div class="cb-header-bar-left">' + ICONS.rotateCcw + '<span class="cb-header-bar-title">Consider Other Plans</span></div>';
-      html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
-      html += '</div>';
-      html += '<div class="cb-content">';
-      html += '<h2>' + (copy.plansTitle || 'How about 80% off of one of our other plans? These aren\\'t public.') + '</h2>';
-      html += '<p class="cb-subtitle">' + (copy.plansSubtitle || 'You\\'d keep all your history and settings and enjoy much of the same functionality at a lower rate.') + '</p>';
-      html += '<div class="cb-plans-grid">';
 
-      plans.forEach(function(plan) {
-        html += '<div class="cb-plan">';
-        html += '<div class="cb-plan-name">' + plan.name + '</div>';
-        html += '<div class="cb-plan-price">';
-        html += '<span class="cb-plan-price-old">$' + plan.originalPrice + '</span>';
-        html += '<span class="cb-plan-price-new">$' + plan.discountedPrice.toFixed(2) + '</span>';
-        html += '<span class="cb-plan-period">' + plan.period + '</span>';
+      // Helper to calculate discounted price
+      function getDiscountedPrice(originalPrice, discountPercent) {
+        return (originalPrice * (1 - discountPercent / 100)).toFixed(2);
+      }
+
+      // Show success screen if plan was switched
+      if (state.planSwitchSuccess && state.switchedPlan) {
+        html += '<div class="cb-plans">';
+        html += '<div class="cb-modal-lg">';
+        html += '<div class="cb-header-bar">';
+        html += '<div class="cb-header-bar-left">' + ICONS.check + '<span class="cb-header-bar-title">Plan Switched</span></div>';
+        html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
         html += '</div>';
-        html += '<div class="cb-plan-features">';
-        html += '<div class="cb-plan-features-label">Highlights</div>';
-        (plan.highlights || []).forEach(function(h) {
-          html += '<div class="cb-plan-feature">' + h + '</div>';
+        html += '<div class="cb-content cb-success-content">';
+        html += '<div class="cb-success-icon">' + ICONS.check + '</div>';
+        html += '<h2>You\\'ve been switched to ' + state.switchedPlan.name + '!</h2>';
+        html += '<p class="cb-subtitle">Your new plan is now active. You\\'ll see the prorated changes on your next invoice.</p>';
+        if (state.switchedPlan.discountPercent) {
+          html += '<p class="cb-discount-note">' + state.switchedPlan.discountPercent + '% discount applied for ' + (state.switchedPlan.discountDurationMonths || 3) + ' months.</p>';
+        }
+        html += '<button class="cb-btn cb-btn-primary-black cb-btn-full" onclick="ChurnBuddy.close()">Done</button>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      } else {
+        html += '<div class="cb-plans">';
+        html += '<div class="cb-modal-lg">';
+        // Header bar matching ConsiderOtherPlansModal
+        html += '<div class="cb-header-bar">';
+        html += '<div class="cb-header-bar-left">' + ICONS.rotateCcw + '<span class="cb-header-bar-title">Consider Other Plans</span></div>';
+        html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
+        html += '</div>';
+        html += '<div class="cb-content">';
+        html += '<h2>' + (copy.plansTitle || 'How about 80% off of one of our other plans? These aren\\'t public.') + '</h2>';
+        html += '<p class="cb-subtitle">' + (copy.plansSubtitle || 'You\\'d keep all your history and settings and enjoy much of the same functionality at a lower rate.') + '</p>';
+        html += '<div class="cb-plans-grid">';
+
+        plans.forEach(function(plan) {
+          var discountedPrice = plan.discountPercent ? getDiscountedPrice(plan.originalPrice, plan.discountPercent) : (plan.discountedPrice || plan.originalPrice).toFixed(2);
+          html += '<div class="cb-plan">';
+          html += '<div class="cb-plan-name">' + plan.name + '</div>';
+          html += '<div class="cb-plan-price">';
+          html += '<span class="cb-plan-price-old">$' + plan.originalPrice + '</span>';
+          html += '<span class="cb-plan-price-new">$' + discountedPrice + '</span>';
+          html += '<span class="cb-plan-period">' + plan.period + '</span>';
+          html += '</div>';
+          if (plan.discountPercent) {
+            html += '<p class="cb-plan-discount-info">' + plan.discountPercent + '% off for ' + (plan.discountDurationMonths || 3) + ' months</p>';
+          }
+          html += '<div class="cb-plan-features">';
+          html += '<div class="cb-plan-features-label">Highlights</div>';
+          (plan.highlights || []).forEach(function(h) {
+            html += '<div class="cb-plan-feature">' + h + '</div>';
+          });
+          html += '</div>';
+          html += '<button class="cb-btn-plan" onclick="ChurnBuddy.selectPlan(\\'' + plan.id + '\\')"' + (state.isProcessing ? ' disabled' : '') + '>' + (state.isProcessing ? 'Switching...' : 'Switch Plan') + '</button>';
+          html += '</div>';
         });
-        html += '</div>';
-        html += '<button class="cb-btn-plan" onclick="ChurnBuddy.selectPlan(\\'' + plan.id + '\\')">Switch Plan</button>';
-        html += '</div>';
-      });
 
-      html += '</div>';
-      html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">' + (copy.plansBackButton || 'Back') + '</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()">' + (copy.plansDeclineButton || 'Decline Offer') + '</button>';
-      html += '</div>';
-      html += '</div>';
-      html += '</div>';
-      html += '</div>';
+        html += '</div>';
+        html += '<div class="cb-footer">';
+        html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()"' + (state.isProcessing ? ' disabled' : '') + '>' + (copy.plansBackButton || 'Back') + '</button>';
+        html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.isProcessing ? ' disabled' : '') + '>' + (copy.plansDeclineButton || 'Decline Offer') + '</button>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      }
 
     } else if (state.step === 'offer' && cfg.showOffer !== false) {
       var discountPct = cfg.discountPercent || 50;
@@ -894,12 +969,17 @@ export async function GET(request: NextRequest) {
       state.selectedPlan = null;
       state.error = null;
       state.config = null;
+      state.planSwitchSuccess = false;
+      state.switchedPlan = null;
+      state.isProcessing = false;
       logEvent('cancellation_attempt', {});
       loadConfig();
     },
 
     close: function() {
       state.isOpen = false;
+      state.planSwitchSuccess = false;
+      state.switchedPlan = null;
       stopCountdown();
       state.countdownSeconds = 581; // Reset timer
       render();
@@ -913,7 +993,51 @@ export async function GET(request: NextRequest) {
     selectPlan: function(planId) {
       var cfg = state.config || {};
       var plan = (cfg.alternativePlans || []).find(function(p) { return p.id === planId; });
-      if (plan) {
+      if (!plan) return;
+
+      // If plan has a Stripe price ID, call the switch-plan API
+      if (plan.stripePriceId && state.subscriptionId) {
+        state.isProcessing = true;
+        state.processingMessage = 'Switching your plan...';
+        render();
+
+        fetch('${baseUrl}/api/cancel-flow/switch-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            flowId: CONFIG.flowId,
+            subscriptionId: state.subscriptionId,
+            newPriceId: plan.stripePriceId,
+            customerId: state.customerId,
+            customerEmail: state.customerEmail,
+            planName: plan.name,
+            discountPercent: plan.discountPercent,
+            discountDurationMonths: plan.discountDurationMonths || 3
+          })
+        })
+        .then(function(response) {
+          return response.json().then(function(data) {
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to switch plan');
+            }
+            return data;
+          });
+        })
+        .then(function(data) {
+          state.isProcessing = false;
+          state.planSwitchSuccess = true;
+          state.switchedPlan = plan;
+          render();
+          logEvent('plan_switched', { planId: planId, planName: plan.name, stripePriceId: plan.stripePriceId });
+          if (state.onPlanSwitch) state.onPlanSwitch(plan);
+        })
+        .catch(function(err) {
+          state.isProcessing = false;
+          state.error = { title: 'Switch Failed', message: err.message || 'Could not switch your plan. Please try again.' };
+          render();
+        });
+      } else {
+        // No Stripe price ID - just log event and close (manual plan handling)
         logEvent('plan_switched', { planId: planId, planName: plan.name });
         state.isOpen = false;
         render();

@@ -284,6 +284,33 @@ export async function POST(request: NextRequest) {
       if (body.allow_other_option !== undefined || body.allowOtherOption !== undefined) {
         updateData.allow_other_option = body.allow_other_option ?? body.allowOtherOption;
       }
+      // Copy settings (JSONB)
+      if (body.feedback_copy !== undefined || body.feedbackCopy !== undefined) {
+        updateData.feedback_copy = body.feedback_copy ?? body.feedbackCopy;
+      }
+      if (body.plans_copy !== undefined || body.plansCopy !== undefined) {
+        updateData.plans_copy = body.plans_copy ?? body.plansCopy;
+      }
+      if (body.offer_copy !== undefined || body.offerCopy !== undefined) {
+        updateData.offer_copy = body.offer_copy ?? body.offerCopy;
+      }
+      // Color settings (JSONB)
+      if (body.feedback_colors !== undefined || body.feedbackColors !== undefined) {
+        updateData.feedback_colors = body.feedback_colors ?? body.feedbackColors;
+      }
+      if (body.plans_colors !== undefined || body.plansColors !== undefined) {
+        updateData.plans_colors = body.plans_colors ?? body.plansColors;
+      }
+      if (body.offer_colors !== undefined || body.offerColors !== undefined) {
+        updateData.offer_colors = body.offer_colors ?? body.offerColors;
+      }
+      // Countdown settings
+      if (body.show_countdown !== undefined || body.showCountdown !== undefined) {
+        updateData.show_countdown = body.show_countdown ?? body.showCountdown;
+      }
+      if (body.countdown_minutes !== undefined || body.countdownMinutes !== undefined) {
+        updateData.countdown_minutes = body.countdown_minutes ?? body.countdownMinutes;
+      }
 
       console.log('Update data being sent:', JSON.stringify(updateData, null, 2));
 
@@ -367,6 +394,17 @@ export async function POST(request: NextRequest) {
         show_plans: body.show_plans ?? body.showPlans ?? true,
         show_offer: body.show_offer ?? body.showOffer ?? true,
         allow_other_option: body.allow_other_option ?? body.allowOtherOption ?? true,
+        // Copy settings (JSONB)
+        feedback_copy: body.feedback_copy ?? body.feedbackCopy ?? { title: 'Sorry to see you go.', subtitle: "Please be honest about why you're leaving. It's the only way we can improve." },
+        plans_copy: body.plans_copy ?? body.plansCopy ?? { title: "How about 80% off of one of our other plans? These aren't public.", subtitle: "You'd keep all your history and settings and enjoy much of the same functionality at a lower rate." },
+        offer_copy: body.offer_copy ?? body.offerCopy ?? { title: "Stay to get {discount}% off for {duration}. We'd hate to lose you.", subtitle: "You're eligible for our special discount." },
+        // Color settings (JSONB)
+        feedback_colors: body.feedback_colors ?? body.feedbackColors ?? { primary: '#9333EA', background: '#F5F3FF', text: '#1F2937' },
+        plans_colors: body.plans_colors ?? body.plansColors ?? { primary: '#2563EB', background: '#F0F4FF', text: '#1F2937' },
+        offer_colors: body.offer_colors ?? body.offerColors ?? { primary: '#DC2626', background: '#FEF2F2', text: '#1F2937' },
+        // Countdown settings
+        show_countdown: body.show_countdown ?? body.showCountdown ?? true,
+        countdown_minutes: body.countdown_minutes ?? body.countdownMinutes ?? 10,
       };
 
       console.log('Insert data being sent:', JSON.stringify(insertData, null, 2));

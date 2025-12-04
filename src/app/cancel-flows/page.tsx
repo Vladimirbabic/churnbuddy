@@ -25,6 +25,8 @@ import {
   Palette,
   Type,
   Timer,
+  Download,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,8 +47,11 @@ interface FeedbackOption {
 interface Plan {
   id: string;
   name: string;
+  stripePriceId?: string;       // Stripe price ID for auto-switching
+  stripeProductId?: string;     // Stripe product ID
   originalPrice: number;
-  discountedPrice: number;
+  discountPercent: number;      // Discount % to apply when switching
+  discountDurationMonths: number; // How long the discount lasts
   period: string;
   highlights: string[];
 }
@@ -110,7 +115,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'basic',
     name: 'Basic',
     originalPrice: 29,
-    discountedPrice: 5.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: ['5 projects', 'Basic analytics', 'Email support', '1GB storage'],
   },
@@ -118,7 +124,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     originalPrice: 79,
-    discountedPrice: 15.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: ['25 projects', 'Advanced analytics', 'Priority support', '10GB storage'],
   },
@@ -583,6 +590,22 @@ function CancelFlowsPageContent() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
 
+  // Stripe picker state
+  const [showStripePicker, setShowStripePicker] = useState(false);
+  const [stripeProducts, setStripeProducts] = useState<Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    prices: Array<{
+      id: string;
+      unitAmount: number;
+      currency: string;
+      interval: string | null;
+    }>;
+  }>>([]);
+  const [loadingStripeProducts, setLoadingStripeProducts] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+
   // Get edit mode from URL
   const editId = searchParams.get('edit');
   const isNew = searchParams.get('new') === 'true';
@@ -919,7 +942,8 @@ function CancelFlowsPageContent() {
       id: `plan_${Date.now()}`,
       name: 'New Plan',
       originalPrice: 49,
-      discountedPrice: 9.80,
+      discountPercent: 80,
+      discountDurationMonths: 3,
       period: '/mo',
       highlights: ['Feature 1', 'Feature 2'],
     };
@@ -931,6 +955,68 @@ function CancelFlowsPageContent() {
     const newPlans = editingFlow.alternativePlans.filter((_, i) => i !== index);
     setEditingFlow({ ...editingFlow, alternativePlans: newPlans });
   };
+
+  // Fetch Stripe products for the picker
+  const fetchStripeProducts = async () => {
+    setLoadingStripeProducts(true);
+    setStripeError(null);
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('sb-access-token='))
+        ?.split('=')[1];
+
+      // Get the session token from supabase
+      const response = await fetch('/api/stripe/prices', {
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.error || 'Failed to fetch products');
+      }
+
+      const data = await response.json();
+      setStripeProducts(data.products || []);
+    } catch (error) {
+      console.error('Error fetching Stripe products:', error);
+      setStripeError(error instanceof Error ? error.message : 'Failed to fetch products');
+    } finally {
+      setLoadingStripeProducts(false);
+    }
+  };
+
+  // Add a plan from Stripe
+  const addPlanFromStripe = (product: typeof stripeProducts[0], price: typeof stripeProducts[0]['prices'][0]) => {
+    if (!editingFlow) return;
+
+    const interval = price.interval === 'year' ? '/yr' : '/mo';
+    const priceInDollars = price.unitAmount / 100;
+
+    const newPlan: Plan = {
+      id: `stripe_${price.id}`,
+      name: product.name,
+      stripePriceId: price.id,
+      stripeProductId: product.id,
+      originalPrice: priceInDollars,
+      discountPercent: 80,
+      discountDurationMonths: 3,
+      period: interval,
+      highlights: product.description ? [product.description] : ['Feature 1', 'Feature 2'],
+    };
+
+    setEditingFlow({ ...editingFlow, alternativePlans: [...editingFlow.alternativePlans, newPlan] });
+    setShowStripePicker(false);
+  };
+
+  // Load Stripe products when picker is opened
+  useEffect(() => {
+    if (showStripePicker && stripeProducts.length === 0) {
+      fetchStripeProducts();
+    }
+  }, [showStripePicker]);
 
   // Generate integration code
   const getIntegrationCode = (flowId: string) => {
@@ -1235,9 +1321,20 @@ function CancelFlowsPageContent() {
 
                 {/* Alternative Plans */}
                 <div className="space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Plans
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Plans
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowStripePicker(true)}
+                      className="h-7 text-xs"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Import from Stripe
+                    </Button>
+                  </div>
                 {editingFlow.alternativePlans.map((plan, planIndex) => (
                   <div key={plan.id} className="p-4 border rounded-lg space-y-3 bg-muted/30">
                     <div className="flex items-center justify-between">
@@ -1258,6 +1355,14 @@ function CancelFlowsPageContent() {
                       </Button>
                     </div>
 
+                    {/* Stripe Price ID (if linked) */}
+                    {plan.stripePriceId && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background px-2 py-1 rounded">
+                        <Link2 className="h-3 w-3" />
+                        <span className="truncate">{plan.stripePriceId}</span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs text-muted-foreground">Original Price</label>
@@ -1272,16 +1377,40 @@ function CancelFlowsPageContent() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground">Discounted Price</label>
+                        <label className="text-xs text-muted-foreground">Discount %</label>
                         <div className="flex items-center gap-1">
-                          <span className="text-sm text-muted-foreground">$</span>
                           <input
                             type="number"
-                            step="0.01"
-                            value={plan.discountedPrice}
-                            onChange={(e) => updatePlan(planIndex, 'discountedPrice', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            max="100"
+                            value={plan.discountPercent}
+                            onChange={(e) => updatePlan(planIndex, 'discountPercent', parseInt(e.target.value) || 0)}
                             className="w-full px-2 py-1 rounded border border-input bg-background text-sm"
                           />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">Discount Duration</label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="12"
+                            value={plan.discountDurationMonths}
+                            onChange={(e) => updatePlan(planIndex, 'discountDurationMonths', parseInt(e.target.value) || 3)}
+                            className="w-full px-2 py-1 rounded border border-input bg-background text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">months</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Final Price</label>
+                        <div className="flex items-center gap-1 text-sm font-medium text-green-600">
+                          ${(plan.originalPrice * (1 - plan.discountPercent / 100)).toFixed(2)}/mo
                         </div>
                       </div>
                     </div>
@@ -1323,7 +1452,7 @@ function CancelFlowsPageContent() {
                 ))}
                 <Button variant="outline" size="sm" onClick={addPlan} className="w-full">
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Plan
+                  Add Plan Manually
                 </Button>
                 </div>
               </div>
@@ -1541,6 +1670,86 @@ function CancelFlowsPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Stripe Product Picker Modal */}
+        {showStripePicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowStripePicker(false)}
+            />
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h3 className="text-lg font-semibold">Import from Stripe</h3>
+                <p className="text-sm text-muted-foreground">Select a product and price to add as an alternative plan</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowStripePicker(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingStripeProducts ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Loading products from Stripe...</p>
+                </div>
+              ) : stripeError ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <AlertCircle className="h-8 w-8 text-destructive mb-4" />
+                  <p className="text-destructive font-medium mb-2">Failed to load products</p>
+                  <p className="text-sm text-muted-foreground mb-4">{stripeError}</p>
+                  <Button variant="outline" onClick={fetchStripeProducts}>
+                    Try Again
+                  </Button>
+                </div>
+              ) : stripeProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground mb-2">No products found</p>
+                  <p className="text-sm text-muted-foreground">Make sure you have active products with prices in Stripe.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {stripeProducts.map((product) => (
+                    <div key={product.id} className="border rounded-lg p-4">
+                      <h4 className="font-medium mb-1">{product.name}</h4>
+                      {product.description && (
+                        <p className="text-sm text-muted-foreground mb-3">{product.description}</p>
+                      )}
+                      <div className="grid gap-2">
+                        {product.prices.map((price) => (
+                          <button
+                            key={price.id}
+                            onClick={() => addPlanFromStripe(product, price)}
+                            className="flex items-center justify-between p-3 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                          >
+                            <div>
+                              <span className="font-medium">
+                                ${(price.unitAmount / 100).toFixed(2)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {price.interval === 'year' ? '/year' : price.interval === 'month' ? '/month' : ''}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {price.id}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

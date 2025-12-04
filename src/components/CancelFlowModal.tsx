@@ -8,8 +8,11 @@ import { SpecialOfferModal } from './modals/SpecialOfferModal';
 interface Plan {
   id: string;
   name: string;
+  stripePriceId?: string;
+  stripeProductId?: string;
   originalPrice: number;
-  discountedPrice: number;
+  discountPercent: number;
+  discountDurationMonths: number;
   period: string;
   highlights: string[];
 }
@@ -59,7 +62,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'basic',
     name: 'Basic',
     originalPrice: 29,
-    discountedPrice: 5.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: [
       '5 projects',
@@ -72,7 +76,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     originalPrice: 79,
-    discountedPrice: 15.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: [
       '25 projects',

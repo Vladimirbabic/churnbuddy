@@ -235,3 +235,185 @@ export function getDeclineReason(declineCode?: string | null): string {
 
   return reasons[declineCode || ''] || 'Your payment could not be processed. Please update your payment method.';
 }
+
+// =============================================================================
+// Products & Prices Functions
+// =============================================================================
+
+export interface StripePrice {
+  id: string;
+  productId: string;
+  productName: string;
+  unitAmount: number; // in cents
+  currency: string;
+  interval: 'month' | 'year' | 'week' | 'day' | null;
+  intervalCount: number;
+  active: boolean;
+}
+
+export interface StripeProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  prices: StripePrice[];
+}
+
+/**
+ * Get all active products and their prices from Stripe
+ * Used for the alternative plans picker in cancel flow editor
+ */
+export async function getProductsAndPrices(stripeClient: Stripe): Promise<StripeProduct[]> {
+  try {
+    // Fetch all active products
+    const products = await stripeClient.products.list({
+      active: true,
+      limit: 100,
+    });
+
+    // Fetch all active prices
+    const prices = await stripeClient.prices.list({
+      active: true,
+      limit: 100,
+      expand: ['data.product'],
+    });
+
+    // Group prices by product
+    const productMap = new Map<string, StripeProduct>();
+
+    for (const product of products.data) {
+      productMap.set(product.id, {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        active: product.active,
+        prices: [],
+      });
+    }
+
+    // Add prices to their products
+    for (const price of prices.data) {
+      const productId = typeof price.product === 'string' ? price.product : price.product.id;
+      const product = productMap.get(productId);
+
+      if (product && price.unit_amount !== null) {
+        product.prices.push({
+          id: price.id,
+          productId: productId,
+          productName: product.name,
+          unitAmount: price.unit_amount,
+          currency: price.currency,
+          interval: price.recurring?.interval || null,
+          intervalCount: price.recurring?.interval_count || 1,
+          active: price.active,
+        });
+      }
+    }
+
+    // Return products that have prices, sorted by name
+    return Array.from(productMap.values())
+      .filter(p => p.prices.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error('Error fetching products and prices:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get or create a coupon for a specific discount percentage and duration
+ * Reuses existing coupons if they match the parameters
+ */
+export async function getOrCreateCoupon(
+  stripeClient: Stripe,
+  percentOff: number,
+  durationInMonths: number
+): Promise<string> {
+  const couponName = `Plan Switch - ${percentOff}% off for ${durationInMonths} months`;
+
+  try {
+    // Try to find existing coupon
+    const coupons = await stripeClient.coupons.list({ limit: 100 });
+    const existingCoupon = coupons.data.find(
+      c => c.percent_off === percentOff &&
+           c.duration === 'repeating' &&
+           c.duration_in_months === durationInMonths &&
+           c.valid
+    );
+
+    if (existingCoupon) {
+      return existingCoupon.id;
+    }
+
+    // Create new coupon
+    const newCoupon = await stripeClient.coupons.create({
+      percent_off: percentOff,
+      duration: 'repeating',
+      duration_in_months: durationInMonths,
+      name: couponName,
+    });
+
+    return newCoupon.id;
+  } catch (error) {
+    console.error('Error getting/creating coupon:', error);
+    throw error;
+  }
+}
+
+/**
+ * Switch a subscription to a new price with an optional discount
+ * This handles the plan change immediately with proration
+ */
+export async function switchSubscriptionPlan(
+  stripeClient: Stripe,
+  subscriptionId: string,
+  newPriceId: string,
+  discountPercent?: number,
+  discountDurationMonths?: number
+): Promise<{ success: boolean; subscription?: Stripe.Subscription; error?: string }> {
+  try {
+    // Get current subscription to find the subscription item
+    const subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
+
+    if (!subscription || subscription.status === 'canceled') {
+      return { success: false, error: 'Subscription not found or already canceled' };
+    }
+
+    // Get the first subscription item (most subscriptions have one item)
+    const subscriptionItem = subscription.items.data[0];
+    if (!subscriptionItem) {
+      return { success: false, error: 'No subscription items found' };
+    }
+
+    // Check if already on this price
+    if (subscriptionItem.price.id === newPriceId) {
+      return { success: false, error: 'Already subscribed to this plan' };
+    }
+
+    // Prepare update params
+    const updateParams: Stripe.SubscriptionUpdateParams = {
+      items: [{
+        id: subscriptionItem.id,
+        price: newPriceId,
+      }],
+      proration_behavior: 'create_prorations',
+      // Remove cancel_at_period_end if it was set
+      cancel_at_period_end: false,
+    };
+
+    // Apply discount if specified
+    if (discountPercent && discountPercent > 0 && discountDurationMonths) {
+      const couponId = await getOrCreateCoupon(stripeClient, discountPercent, discountDurationMonths);
+      updateParams.coupon = couponId;
+    }
+
+    // Update the subscription
+    const updatedSubscription = await stripeClient.subscriptions.update(subscriptionId, updateParams);
+
+    return { success: true, subscription: updatedSubscription };
+  } catch (error) {
+    console.error('Error switching subscription plan:', error);
+    const message = error instanceof Error ? error.message : 'Failed to switch plan';
+    return { success: false, error: message };
+  }
+}

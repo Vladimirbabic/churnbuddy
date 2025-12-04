@@ -6,8 +6,11 @@ import { X, RotateCcw } from 'lucide-react';
 interface Plan {
   id: string;
   name: string;
+  stripePriceId?: string;
+  stripeProductId?: string;
   originalPrice: number;
-  discountedPrice: number;
+  discountPercent: number;
+  discountDurationMonths: number;
   period: string;
   highlights: string[];
 }
@@ -40,7 +43,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'basic',
     name: 'Basic',
     originalPrice: 29,
-    discountedPrice: 5.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: [
       '5 projects',
@@ -53,7 +57,8 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     originalPrice: 79,
-    discountedPrice: 15.80,
+    discountPercent: 80,
+    discountDurationMonths: 3,
     period: '/mo',
     highlights: [
       '25 projects',
@@ -63,6 +68,11 @@ const DEFAULT_PLANS: Plan[] = [
     ],
   },
 ];
+
+// Helper to calculate discounted price
+const getDiscountedPrice = (originalPrice: number, discountPercent: number) => {
+  return (originalPrice * (1 - discountPercent / 100)).toFixed(2);
+};
 
 const DEFAULT_COPY: CopySettings = {
   title: "How about 80% off of one of our other plans? These aren't public.",
@@ -143,15 +153,18 @@ export function ConsiderOtherPlansModal({
                 </h3>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-2 mb-4">
+                <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-gray-400 line-through text-sm">
                     ${plan.originalPrice}
                   </span>
                   <span className="font-bold text-2xl" style={{ color: colors.primary }}>
-                    ${plan.discountedPrice}
+                    ${getDiscountedPrice(plan.originalPrice, plan.discountPercent)}
                   </span>
                   <span className="text-gray-500 text-sm">{plan.period}</span>
                 </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  {plan.discountPercent}% off for {plan.discountDurationMonths} months
+                </p>
 
                 {/* Highlights */}
                 <div className="mb-4">
@@ -262,15 +275,18 @@ export function ConsiderOtherPlansModal({
                 </h3>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-2 mb-4">
+                <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-gray-400 line-through text-sm">
                     ${plan.originalPrice}
                   </span>
                   <span className="text-blue-600 font-bold text-2xl">
-                    ${plan.discountedPrice}
+                    ${getDiscountedPrice(plan.originalPrice, plan.discountPercent)}
                   </span>
                   <span className="text-gray-500 text-sm">{plan.period}</span>
                 </div>
+                <p className="text-xs text-gray-500 mb-4">
+                  {plan.discountPercent}% off for {plan.discountDurationMonths} months
+                </p>
 
                 {/* Highlights */}
                 <div className="mb-4">
