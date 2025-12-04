@@ -495,6 +495,7 @@ export async function GET(request: NextRequest) {
     selectedPlan: null,
     customerId: '',
     subscriptionId: '',
+    customerEmail: '',  // Can use email for auto-lookup
     config: null,
     error: null,
     message: null,  // { type: 'error'|'success'|'info', title, text }
@@ -533,6 +534,7 @@ export async function GET(request: NextRequest) {
         flowId: CONFIG.flowId,
         customerId: state.customerId,
         subscriptionId: state.subscriptionId,
+        customerEmail: state.customerEmail,  // For auto-lookup
         details: details
       })
     }).catch(function(err) {
@@ -752,6 +754,7 @@ export async function GET(request: NextRequest) {
       injectStyles();
       state.customerId = options.customerId || '';
       state.subscriptionId = options.subscriptionId || '';
+      state.customerEmail = options.customerEmail || '';  // Email for auto-lookup
       state.onCancel = options.onCancel || function() {};
       state.onSaved = options.onSaved || function() {};
       state.onPlanSwitch = options.onPlanSwitch || function() {};
@@ -842,6 +845,7 @@ export async function GET(request: NextRequest) {
           flowId: CONFIG.flowId,
           customerId: state.customerId,
           subscriptionId: state.subscriptionId,
+          customerEmail: state.customerEmail,  // For auto-lookup
           details: {
             reason: state.selectedReason,
             discountPercent: cfg.discountPercent,
@@ -913,6 +917,7 @@ export async function GET(request: NextRequest) {
       ChurnBuddy.init({
         customerId: script.getAttribute('data-customer-id') || '',
         subscriptionId: script.getAttribute('data-subscription-id') || '',
+        customerEmail: script.getAttribute('data-customer-email') || '',  // Auto-lookup by email
         cancelButtonSelector: script.getAttribute('data-cancel-selector') || '[data-cancel-subscription]'
       });
     }

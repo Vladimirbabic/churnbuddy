@@ -36,6 +36,56 @@ async function getStripeUtils() {
   }
 }
 
+// Look up Stripe customer by email and get their active subscription
+async function lookupCustomerByEmail(email: string) {
+  const stripeUtils = await getStripeUtils();
+  if (!stripeUtils) {
+    return { customerId: null, subscriptionId: null, error: 'Stripe not configured' };
+  }
+
+  try {
+    // Search for customer by email
+    const customers = await stripeUtils.stripe.customers.list({
+      email: email,
+      limit: 1,
+    });
+
+    if (customers.data.length === 0) {
+      return { customerId: null, subscriptionId: null, error: 'No customer found with this email' };
+    }
+
+    const customer = customers.data[0];
+    
+    // Get the customer's active subscription
+    const subscriptions = await stripeUtils.stripe.subscriptions.list({
+      customer: customer.id,
+      status: 'active',
+      limit: 1,
+    });
+
+    // If no active subscription, check for trialing
+    let subscription = subscriptions.data[0];
+    if (!subscription) {
+      const trialingSubscriptions = await stripeUtils.stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'trialing',
+        limit: 1,
+      });
+      subscription = trialingSubscriptions.data[0];
+    }
+
+    return {
+      customerId: customer.id,
+      subscriptionId: subscription?.id || null,
+      customerEmail: customer.email,
+      error: subscription ? null : 'No active subscription found',
+    };
+  } catch (err) {
+    console.error('Error looking up customer by email:', err);
+    return { customerId: null, subscriptionId: null, error: 'Failed to lookup customer' };
+  }
+}
+
 // Lazy load email utilities only when needed
 async function getEmailUtils() {
   try {
@@ -51,20 +101,36 @@ async function getEmailUtils() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { eventType, customerId, subscriptionId, details } = body;
+    let { eventType, customerId, subscriptionId, details } = body;
+    const { customerEmail: inputEmail } = body;
 
-    if (!eventType || !customerId) {
+    // If email is provided instead of customerId, look up the customer
+    let customerEmail: string | undefined = inputEmail;
+    
+    if (!customerId && inputEmail) {
+      const lookup = await lookupCustomerByEmail(inputEmail);
+      if (lookup.customerId) {
+        customerId = lookup.customerId;
+        subscriptionId = subscriptionId || lookup.subscriptionId;
+        customerEmail = lookup.customerEmail || inputEmail;
+      } else {
+        // Log the event anyway with email as identifier
+        customerId = `email:${inputEmail}`;
+        console.warn('Customer lookup failed:', lookup.error);
+      }
+    }
+
+    if (!eventType || (!customerId && !inputEmail)) {
       return NextResponse.json(
-        { error: 'Missing required fields: eventType, customerId' },
+        { error: 'Missing required fields: eventType and (customerId or customerEmail)' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Get customer email from Stripe if available
-    let customerEmail: string | undefined;
+    // Get customer email from Stripe if not already set
     const stripeUtils = await getStripeUtils();
 
-    if (stripeUtils) {
+    if (!customerEmail && stripeUtils && customerId && !customerId.startsWith('email:')) {
       try {
         const customer = await stripeUtils.stripe.customers.retrieve(customerId);
         if (!customer.deleted) {
