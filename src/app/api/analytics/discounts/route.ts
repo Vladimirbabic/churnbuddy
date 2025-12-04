@@ -5,24 +5,70 @@
 // Returns active discounts, acceptance rates, and savings metrics.
 
 import { NextResponse } from 'next/server';
-import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import Stripe from 'stripe';
 
-const DEFAULT_ORG_ID = 'demo-org-001';
-
-// Lazy load Stripe utilities
-async function getStripeUtils() {
+// Helper to get authenticated supabase client and user's organization ID
+async function getAuthenticatedClient() {
   try {
-    const { stripe } = await import('@/lib/stripe');
-    return { stripe };
-  } catch (error) {
-    console.warn('Stripe not configured:', error);
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    return { supabase, orgId: user?.id || null };
+  } catch {
+    return { supabase: null, orgId: null };
+  }
+}
+
+// Helper to get Stripe client from user's settings
+async function getStripeClient(supabase: ReturnType<typeof createServerClient>, orgId: string): Promise<Stripe | null> {
+  try {
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('stripe_config')
+      .eq('organization_id', orgId)
+      .single();
+
+    const stripeConfig = settings?.stripe_config as Record<string, unknown> | null;
+    const secretKey = stripeConfig?.secret_key as string | null;
+
+    if (!secretKey) {
+      return null;
+    }
+
+    return new Stripe(secretKey, {
+      apiVersion: '2023-10-16',
+    });
+  } catch {
     return null;
   }
 }
 
 export async function GET() {
   try {
-    const stripeUtils = await getStripeUtils();
+    // Require authentication
+    const { supabase, orgId } = await getAuthenticatedClient();
+    if (!orgId || !supabase) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get Stripe client from user's settings
+    const stripe = await getStripeClient(supabase, orgId);
 
     // Get discount stats from churn_events
     let discountStats = {
@@ -39,27 +85,25 @@ export async function GET() {
     };
 
     if (isSupabaseConfigured()) {
-      const supabase = getServerSupabase();
-
       // Get total offer attempts (offer was shown)
-      const { count: totalOffers } = await (supabase as ReturnType<typeof getServerSupabase>)
+      const { count: totalOffers } = await (supabase as ReturnType<typeof createServerClient>)
         .from('churn_events')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', DEFAULT_ORG_ID)
+        .eq('organization_id', orgId)
         .in('event_type', ['offer_accepted', 'subscription_canceled']);
 
       // Get accepted offers
-      const { count: acceptedOffers } = await (supabase as ReturnType<typeof getServerSupabase>)
+      const { count: acceptedOffers } = await (supabase as ReturnType<typeof createServerClient>)
         .from('churn_events')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', DEFAULT_ORG_ID)
+        .eq('organization_id', orgId)
         .eq('event_type', 'offer_accepted');
 
       // Get recent accepted discounts
-      const { data: recentEvents } = await (supabase as ReturnType<typeof getServerSupabase>)
+      const { data: recentEvents } = await (supabase as ReturnType<typeof createServerClient>)
         .from('churn_events')
         .select('customer_id, customer_email, details, timestamp')
-        .eq('organization_id', DEFAULT_ORG_ID)
+        .eq('organization_id', orgId)
         .eq('event_type', 'offer_accepted')
         .order('timestamp', { ascending: false })
         .limit(10);
@@ -96,10 +140,10 @@ export async function GET() {
       endsAt: string | null;
     }> = [];
 
-    if (stripeUtils) {
+    if (stripe) {
       try {
         // List all active subscriptions with discounts
-        const subscriptions = await stripeUtils.stripe.subscriptions.list({
+        const subscriptions = await stripe.subscriptions.list({
           status: 'active',
           limit: 100,
           expand: ['data.customer', 'data.discount.coupon'],
@@ -126,15 +170,6 @@ export async function GET() {
       }
     }
 
-    // Calculate estimated savings (simplified - just counts)
-    const estimatedMonthlySavings = activeDiscounts.reduce((total, d) => {
-      // This is a rough estimate - would need actual subscription amounts for accuracy
-      if (d.discountPercent) {
-        return total + 1; // Count active percentage discounts
-      }
-      return total;
-    }, 0);
-
     return NextResponse.json({
       activeDiscounts: activeDiscounts.length,
       activeDiscountsList: activeDiscounts,
@@ -142,7 +177,6 @@ export async function GET() {
       totalOffersAccepted: discountStats.acceptedOffers,
       acceptanceRate: discountStats.acceptanceRate,
       recentDiscounts: discountStats.recentDiscounts,
-      estimatedMonthlySavings: estimatedMonthlySavings,
     });
   } catch (error) {
     console.error('Discount analytics error:', error);
