@@ -163,10 +163,20 @@ export async function GET(request: NextRequest) {
           totalMrr += subMrr;
 
           // If subscription has a discount, calculate saved MRR
-          // savedMrr = the MRR value of the subscription (what would have been lost)
+          // savedMrr = the discounted amount they're paying (revenue we kept)
           if (sub.discount && sub.discount.coupon) {
-            // This subscription was saved with a discount offer
-            savedMrr += subMrr;
+            const coupon = sub.discount.coupon;
+            let discountedMrr = subMrr;
+
+            if (coupon.percent_off) {
+              // Apply percentage discount: $19 with 50% off = $9.50 saved
+              discountedMrr = subMrr * (1 - coupon.percent_off / 100);
+            } else if (coupon.amount_off) {
+              // Apply fixed amount discount
+              discountedMrr = Math.max(0, subMrr - coupon.amount_off);
+            }
+
+            savedMrr += discountedMrr;
             offerAccepted++;
           }
         });
