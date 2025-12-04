@@ -2,20 +2,20 @@
 // Dashboard Metrics API Route
 // =============================================================================
 // Provides aggregated metrics and event data for the founder dashboard.
-// Calculates failed payments, cancellations, recoveries, and saved MRR.
-// Uses Supabase for data persistence.
+// Fetches real data from Stripe and combines with Supabase event logs.
 // Requires authentication - no demo mode.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import Stripe from 'stripe';
 
-// Helper to get current user's organization ID
-async function getOrganizationId(): Promise<string | null> {
+// Helper to get authenticated supabase client and user's organization ID
+async function getAuthenticatedClient() {
   try {
     const cookieStore = await cookies();
-    const supabaseClient = createServerClient(
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -26,9 +26,35 @@ async function getOrganizationId(): Promise<string | null> {
         },
       }
     );
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    return user?.id || null;
+    const { data: { user } } = await supabase.auth.getUser();
+    return { supabase, orgId: user?.id || null };
   } catch {
+    return { supabase: null, orgId: null };
+  }
+}
+
+// Helper to get Stripe client from user's settings
+async function getStripeClient(supabase: ReturnType<typeof createServerClient>, orgId: string): Promise<Stripe | null> {
+  try {
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('stripe_config')
+      .eq('organization_id', orgId)
+      .single();
+
+    const stripeConfig = settings?.stripe_config as Record<string, unknown> | null;
+    const secretKey = stripeConfig?.secret_key as string | null;
+
+    if (!secretKey) {
+      console.log('No Stripe secret key configured for org:', orgId);
+      return null;
+    }
+
+    return new Stripe(secretKey, {
+      apiVersion: '2023-10-16',
+    });
+  } catch (error) {
+    console.error('Failed to get Stripe client:', error);
     return null;
   }
 }
@@ -36,8 +62,8 @@ async function getOrganizationId(): Promise<string | null> {
 export async function GET(request: NextRequest) {
   try {
     // Require authentication
-    const orgId = await getOrganizationId();
-    if (!orgId) {
+    const { supabase, orgId } = await getAuthenticatedClient();
+    if (!orgId || !supabase) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -50,110 +76,210 @@ export async function GET(request: NextRequest) {
     const days = parseInt(searchParams.get('period') || searchParams.get('days') || '30');
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    const startTimestamp = Math.floor(startDate.getTime() / 1000);
 
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Database not configured' },
-        { status: 500 }
-      );
-    }
+    // Initialize metrics
+    let failedPayments = 0;
+    let cancellations = 0;
+    let recoveries = 0;
+    let offerAccepted = 0;
+    let cancellationAttempts = 0;
+    let lostMrr = 0;
+    let recoveredMrr = 0;
+    let totalMrr = 0;
+    let activeSubscriptions = 0;
+    const formattedEvents: Array<{
+      id: string;
+      type: string;
+      timestamp: string;
+      customerId: string;
+      customerEmail: string;
+      details: {
+        amount: string | null;
+        reason: string | null;
+        mrrImpact: string | null;
+      };
+    }> = [];
 
-    const supabase = getServerSupabase();
+    // Get Stripe client from user's settings
+    const stripe = await getStripeClient(supabase, orgId);
 
-    // Get all events for the period
-    const { data: events, error } = await (supabase as any)
-      .from('churn_events')
-      .select('*')
-      .eq('organization_id', orgId)
-      .gte('timestamp', startDate.toISOString())
-      .order('timestamp', { ascending: false })
-      .limit(100);
+    if (stripe) {
+      try {
+        // Fetch failed invoices (past_due or uncollectible)
+        const failedInvoices = await stripe.invoices.list({
+          status: 'open',
+          created: { gte: startTimestamp },
+          limit: 100,
+          expand: ['data.customer'],
+        });
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({
-        summary: {
-          failedPayments: 0,
-          cancellations: 0,
-          recoveries: 0,
-          saved: 0,
-          cancellationAttempts: 0,
-          lostMrr: 0,
-          recoveredMrr: 0,
-          saveRate: 0,
-          recoveryRate: 0,
-        },
-        events: [],
-        period: {
-          days,
-          startDate: startDate.toISOString(),
-          endDate: new Date().toISOString(),
-        },
-      });
-    }
+        failedPayments = failedInvoices.data.filter(inv =>
+          inv.attempted && !inv.paid
+        ).length;
 
-    // Calculate metrics from events
-    const metricsMap: Record<string, { count: number; mrrImpact: number }> = {};
+        // Add failed payment events
+        failedInvoices.data
+          .filter(inv => inv.attempted && !inv.paid)
+          .slice(0, 10)
+          .forEach(inv => {
+            const customer = inv.customer as Stripe.Customer;
+            formattedEvents.push({
+              id: inv.id,
+              type: 'payment_failed',
+              timestamp: new Date(inv.created * 1000).toISOString(),
+              customerId: typeof inv.customer === 'string' ? inv.customer : inv.customer?.id || 'unknown',
+              customerEmail: customer?.email || 'Unknown',
+              details: {
+                amount: `$${(inv.amount_due / 100).toFixed(2)}`,
+                reason: inv.last_finalization_error?.message || 'Payment failed',
+                mrrImpact: `-$${(inv.amount_due / 100).toFixed(2)}`,
+              },
+            });
+          });
 
-    (events || []).forEach((event: { event_type: string; details: Record<string, unknown> }) => {
-      const eventType = event.event_type;
-      if (!metricsMap[eventType]) {
-        metricsMap[eventType] = { count: 0, mrrImpact: 0 };
+        // Fetch active subscriptions for MRR calculation
+        const subscriptions = await stripe.subscriptions.list({
+          status: 'active',
+          limit: 100,
+          expand: ['data.customer'],
+        });
+
+        activeSubscriptions = subscriptions.data.length;
+        totalMrr = subscriptions.data.reduce((sum, sub) => {
+          const item = sub.items.data[0];
+          if (item?.price?.recurring?.interval === 'month') {
+            return sum + (item.price.unit_amount || 0);
+          } else if (item?.price?.recurring?.interval === 'year') {
+            return sum + ((item.price.unit_amount || 0) / 12);
+          }
+          return sum;
+        }, 0);
+
+        // Fetch canceled subscriptions in period
+        const canceledSubs = await stripe.subscriptions.list({
+          status: 'canceled',
+          created: { gte: startTimestamp },
+          limit: 100,
+          expand: ['data.customer'],
+        });
+
+        cancellations = canceledSubs.data.length;
+        lostMrr = canceledSubs.data.reduce((sum, sub) => {
+          const item = sub.items.data[0];
+          if (item?.price?.recurring?.interval === 'month') {
+            return sum + (item.price.unit_amount || 0);
+          } else if (item?.price?.recurring?.interval === 'year') {
+            return sum + ((item.price.unit_amount || 0) / 12);
+          }
+          return sum;
+        }, 0);
+
+        // Add cancellation events
+        canceledSubs.data.slice(0, 10).forEach(sub => {
+          const customer = sub.customer as Stripe.Customer;
+          const item = sub.items.data[0];
+          const mrr = item?.price?.recurring?.interval === 'month'
+            ? (item.price.unit_amount || 0)
+            : ((item?.price?.unit_amount || 0) / 12);
+
+          formattedEvents.push({
+            id: sub.id,
+            type: 'subscription_canceled',
+            timestamp: new Date((sub.canceled_at || sub.created) * 1000).toISOString(),
+            customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id || 'unknown',
+            customerEmail: customer?.email || 'Unknown',
+            details: {
+              amount: `$${(mrr / 100).toFixed(2)}/mo`,
+              reason: sub.cancellation_details?.reason || 'Canceled',
+              mrrImpact: `-$${(mrr / 100).toFixed(2)}`,
+            },
+          });
+        });
+
+        // Fetch recent successful payments (recovered)
+        const successfulPayments = await stripe.paymentIntents.list({
+          created: { gte: startTimestamp },
+          limit: 100,
+        });
+
+        // Count payments that were retried and succeeded
+        recoveries = successfulPayments.data.filter(pi =>
+          pi.status === 'succeeded' && (pi.metadata?.retry === 'true' || pi.metadata?.recovered === 'true')
+        ).length;
+
+      } catch (stripeError) {
+        console.error('Stripe API error:', stripeError);
+        // Continue with Supabase data only
       }
-      metricsMap[eventType].count++;
-      const details = event.details;
-      metricsMap[eventType].mrrImpact += (details?.mrr_impact as number) || 0;
-    });
+    }
 
-    // Calculate summary statistics
-    const failedPayments = metricsMap['payment_failed']?.count || 0;
-    const cancellations = metricsMap['subscription_canceled']?.count || 0;
-    const recoveries = metricsMap['subscription_recovered']?.count || 0;
-    const offerAccepted = metricsMap['offer_accepted']?.count || 0;
-    const cancellationAttempts = metricsMap['cancellation_attempt']?.count || 0;
+    // Also get events from Supabase (for cancel flow events)
+    if (isSupabaseConfigured()) {
+      const serverSupabase = getServerSupabase();
+      const { data: events } = await (serverSupabase as ReturnType<typeof getServerSupabase>)
+        .from('churn_events')
+        .select('*')
+        .eq('organization_id', orgId)
+        .gte('timestamp', startDate.toISOString())
+        .order('timestamp', { ascending: false })
+        .limit(100);
 
-    // Calculate MRR impact
-    const lostMrr = Math.abs(metricsMap['subscription_canceled']?.mrrImpact || 0);
-    const recoveredMrr = metricsMap['subscription_recovered']?.mrrImpact || 0;
+      if (events) {
+        // Count cancel flow specific events
+        events.forEach((event: { event_type: string; details: Record<string, unknown> }) => {
+          if (event.event_type === 'offer_accepted') {
+            offerAccepted++;
+            const details = event.details;
+            recoveredMrr += (details?.mrr_impact as number) || 0;
+          } else if (event.event_type === 'cancellation_attempt') {
+            cancellationAttempts++;
+          }
+        });
 
-    // Calculate save rate (percentage of cancellation attempts that resulted in saves)
+        // Add Supabase events to the list
+        events.slice(0, 20).forEach((event: {
+          id: string;
+          event_type: string;
+          timestamp: string;
+          customer_id: string;
+          customer_email: string | null;
+          details: Record<string, unknown>;
+        }) => {
+          // Don't duplicate if already added from Stripe
+          if (!formattedEvents.find(e => e.id === event.id)) {
+            formattedEvents.push({
+              id: event.id,
+              type: event.event_type,
+              timestamp: event.timestamp,
+              customerId: event.customer_id,
+              customerEmail: event.customer_email || 'Unknown',
+              details: {
+                amount: event.details?.amount_due
+                  ? `$${((event.details.amount_due as number) / 100).toFixed(2)}`
+                  : null,
+                reason: (event.details?.cancellation_reason as string) || (event.details?.failure_reason as string) || null,
+                mrrImpact: event.details?.mrr_impact
+                  ? `${(event.details.mrr_impact as number) > 0 ? '+' : ''}$${Math.abs((event.details.mrr_impact as number) / 100).toFixed(2)}`
+                  : null,
+              },
+            });
+          }
+        });
+      }
+    }
+
+    // Sort events by timestamp
+    formattedEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Calculate rates
     const saveRate = cancellationAttempts > 0
       ? Math.round((offerAccepted / cancellationAttempts) * 100)
       : 0;
 
-    // Calculate recovery rate (percentage of failed payments that were recovered)
     const recoveryRate = failedPayments > 0
       ? Math.round((recoveries / failedPayments) * 100)
       : 0;
-
-    // Format events for the frontend
-    interface ChurnEvent {
-      id: string;
-      event_type: string;
-      timestamp: string;
-      customer_id: string;
-      customer_email: string | null;
-      details: Record<string, unknown>;
-    }
-    const formattedEvents = (events as ChurnEvent[] || []).slice(0, 50).map((event) => {
-      const details = event.details;
-      return {
-        id: event.id,
-        type: event.event_type,
-        timestamp: event.timestamp,
-        customerId: event.customer_id,
-        customerEmail: event.customer_email || 'Unknown',
-        details: {
-          amount: details?.amount_due
-            ? `${((details.amount_due as number) / 100).toFixed(2)} ${(details?.currency as string)?.toUpperCase() || 'USD'}`
-            : null,
-          reason: (details?.cancellation_reason as string) || (details?.failure_reason as string),
-          mrrImpact: details?.mrr_impact
-            ? `${(details.mrr_impact as number) > 0 ? '+' : ''}${((details.mrr_impact as number) / 100).toFixed(2)}`
-            : null,
-        },
-      };
-    });
 
     return NextResponse.json({
       summary: {
@@ -166,13 +292,16 @@ export async function GET(request: NextRequest) {
         recoveredMrr: recoveredMrr / 100,
         saveRate,
         recoveryRate,
+        totalMrr: totalMrr / 100,
+        activeSubscriptions,
       },
-      events: formattedEvents,
+      events: formattedEvents.slice(0, 50),
       period: {
         days,
         startDate: startDate.toISOString(),
         endDate: new Date().toISOString(),
       },
+      stripeConnected: !!stripe,
     });
   } catch (error) {
     console.error('Dashboard API error:', error);

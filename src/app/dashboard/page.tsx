@@ -41,6 +41,8 @@ interface DashboardSummary {
   recoveredMrr: number;
   saveRate: number;
   recoveryRate: number;
+  totalMrr?: number;
+  activeSubscriptions?: number;
 }
 
 interface DashboardEvent {
@@ -106,7 +108,7 @@ interface DiscountAnalytics {
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<{ summary: DashboardSummary; events: DashboardEvent[] } | null>(null);
+  const [data, setData] = useState<{ summary: DashboardSummary; events: DashboardEvent[]; stripeConnected?: boolean } | null>(null);
   const [discountData, setDiscountData] = useState<DiscountAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30');
@@ -180,8 +182,8 @@ export default function DashboardPage() {
     );
   }
 
-  const { summary, events } = data!;
-  const hasData = events.length > 0 || summary.failedPayments > 0 || summary.cancellationAttempts > 0;
+  const { summary, events, stripeConnected } = data!;
+  const hasData = events.length > 0 || summary.failedPayments > 0 || summary.cancellationAttempts > 0 || (summary.activeSubscriptions && summary.activeSubscriptions > 0);
 
   return (
     <AppLayout
@@ -217,6 +219,61 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
+              {/* Stripe connection banner */}
+              {!stripeConnected && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <CreditCard className="h-5 w-5 text-amber-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Connect Stripe to see real data</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Add your Stripe API keys in Settings to fetch live subscription and payment data.</p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/settings">Connect Stripe</Link>
+                  </Button>
+                </div>
+              )}
+
+              {/* MRR Overview cards - only show when Stripe is connected */}
+              {stripeConnected && summary.totalMrr !== undefined && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Total MRR */}
+                  <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        Monthly Recurring Revenue
+                      </CardTitle>
+                      <div className="h-10 w-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(summary.totalMrr)}</div>
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+                        From {summary.activeSubscriptions} active subscriptions
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Active Subscriptions */}
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        Active Subscriptions
+                      </CardTitle>
+                      <div className="h-10 w-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-blue-700 dark:text-blue-300">{summary.activeSubscriptions}</div>
+                      <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                        Avg {formatCurrency((summary.totalMrr || 0) / (summary.activeSubscriptions || 1))}/customer
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               {/* Stats cards */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {/* Failed Payments */}
@@ -261,7 +318,7 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
 
-                {/* Customers Saved */}
+                {/* Save Rate */}
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -277,23 +334,26 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
 
-                {/* MRR Impact */}
+                {/* MRR Lost */}
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                      MRR Recovered
+                      MRR Impact
                     </CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                      <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(summary.recoveredMrr)}</div>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-xs text-muted-foreground">vs</span>
+                    <div className="text-3xl font-bold text-purple-600">
+                      {summary.recoveredMrr - summary.lostMrr >= 0 ? '+' : ''}{formatCurrency(summary.recoveredMrr - summary.lostMrr)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="success" className="text-xs">
+                        +{formatCurrency(summary.recoveredMrr)}
+                      </Badge>
                       <Badge variant="destructive" className="text-xs">
-                        <ArrowDownRight className="mr-1 h-3 w-3" />
-                        {formatCurrency(summary.lostMrr)} lost
+                        -{formatCurrency(summary.lostMrr)}
                       </Badge>
                     </div>
                   </CardContent>
