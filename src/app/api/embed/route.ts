@@ -772,6 +772,14 @@ export async function GET(request: NextRequest) {
       state.discountPercentOverride = options.discountPercent || null;
       state.discountDurationOverride = options.discountDuration || null;
 
+      // Log initialization for debugging
+      console.log('ChurnBuddy initialized:', {
+        customerId: state.customerId || '(not set)',
+        subscriptionId: state.subscriptionId || '(not set)',
+        customerEmail: state.customerEmail || '(not set)',
+        mode: state.customerId ? 'Direct Stripe ID' : (state.customerEmail ? 'Email Lookup' : 'No customer data')
+      });
+
       if (options.cancelButtonSelector) {
         document.querySelectorAll(options.cancelButtonSelector).forEach(function(btn) {
           btn.addEventListener('click', function(e) {
@@ -786,7 +794,16 @@ export async function GET(request: NextRequest) {
       if (options) {
         state.customerId = options.customerId || state.customerId;
         state.subscriptionId = options.subscriptionId || state.subscriptionId;
+        state.customerEmail = options.customerEmail || state.customerEmail;
       }
+      
+      // Warn developers if no customer data is provided
+      if (!state.customerId && !state.subscriptionId && !state.customerEmail) {
+        console.warn('ChurnBuddy: No customer data provided. Please set data-customer-id, data-subscription-id, or data-customer-email on the script tag, or pass them via ChurnBuddy.init() or ChurnBuddy.open()');
+      } else if (!state.customerId && state.customerEmail) {
+        console.log('ChurnBuddy: Using email for customer lookup:', state.customerEmail);
+      }
+      
       state.isOpen = true;
       state.selectedReason = '';
       state.selectedPlan = null;
@@ -896,13 +913,28 @@ export async function GET(request: NextRequest) {
             customerId: state.customerId
           });
         } else {
-          // Generic error
+          // Error - provide specific feedback
+          var errorTitle = 'Something went wrong';
+          var errorText = data.message || 'Failed to apply discount. Please try again or contact support.';
+          
+          if (data.error === 'customer_not_found') {
+            errorTitle = 'Customer Not Found';
+            errorText = 'We could not find your account in our billing system. Please contact support.';
+          } else if (data.error === 'no_subscription') {
+            errorTitle = 'No Active Subscription';
+            errorText = 'You do not have an active subscription to apply a discount to.';
+          } else if (data.error === 'discount_application_failed') {
+            errorTitle = 'Unable to Apply Discount';
+            errorText = 'There was an issue applying the discount to your subscription. Please contact support.';
+          }
+          
           state.message = {
             type: 'error',
-            title: 'Something went wrong',
-            text: data.message || 'Failed to apply discount. Please try again or contact support.'
+            title: errorTitle,
+            text: errorText
           };
           render();
+          console.error('ChurnBuddy: Discount application failed:', data);
         }
       })
       .catch(function(err) {
@@ -959,7 +991,10 @@ export async function GET(request: NextRequest) {
   return new NextResponse(script, {
     headers: {
       'Content-Type': 'application/javascript',
-      'Cache-Control': 'public, max-age=300',
+      // No caching - changes apply immediately to all embedded sites
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       'Access-Control-Allow-Origin': '*',
     },
   });
