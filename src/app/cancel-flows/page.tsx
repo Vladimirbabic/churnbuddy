@@ -664,48 +664,45 @@ function CancelFlowsPageContent() {
   // Generate integration code
   const getIntegrationCode = (flowId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
-    const flow = editingFlow;
-    const discountPercent = flow?.discountPercent || 20;
-    const discountDuration = flow?.discountDuration || 3;
 
     return `<!-- ChurnBuddy Cancel Flow -->
-<!--
-  IMPORTANT: Replace the placeholder values below with actual
-  Stripe customer/subscription IDs from your backend.
-
-  Example with server-side rendering (Next.js, PHP, Rails, etc.):
-  data-customer-id="<?= $customer->stripe_id ?>"
-  data-subscription-id="<?= $subscription->stripe_id ?>"
+<!-- 
+  Simply pass the logged-in user's email address.
+  ChurnBuddy will automatically find their Stripe customer 
+  and subscription to apply discounts.
 -->
 <script
   src="${baseUrl}/api/embed?flow=${flowId}"
   data-churnbuddy
-  data-customer-id="cus_xxxxxxxxxxxxx"
-  data-subscription-id="sub_xxxxxxxxxxxxx"
-  data-discount-percent="${discountPercent}"
-  data-discount-duration="${discountDuration} months"
+  data-customer-email="{USER_EMAIL}"
   data-cancel-selector="[data-cancel-subscription]"
 ></script>
 
 <!-- Add this attribute to your cancel button -->
 <button data-cancel-subscription>Cancel Subscription</button>
 
-<!-- OR: Initialize via JavaScript for dynamic values -->
+<!-- Example with different frameworks: -->
+
+<!-- React/Next.js -->
+<!-- data-customer-email={currentUser.email} -->
+
+<!-- PHP/Laravel -->
+<!-- data-customer-email="<?= auth()->user()->email ?>" -->
+
+<!-- Ruby on Rails -->
+<!-- data-customer-email="<%= current_user.email %>" -->
+
+<!-- OR: Initialize via JavaScript for SPAs -->
 <script>
-  // After page loads, call ChurnBuddy.init with your customer data
+  // For single-page apps, initialize with the user's email
   ChurnBuddy.init({
-    customerId: 'cus_xxxxxxxxxxxxx',      // From your backend
-    subscriptionId: 'sub_xxxxxxxxxxxxx',  // From your backend
-    discountPercent: ${discountPercent},
-    discountDuration: '${discountDuration} months',
+    customerEmail: getCurrentUserEmail(), // Your function
     cancelButtonSelector: '[data-cancel-subscription]',
     onCancel: function(reason) {
-      // Handle cancellation - redirect or call your API
       console.log('User cancelled with reason:', reason);
     },
     onSaved: function() {
-      // Handle when user accepts the discount offer
-      console.log('User saved! Apply discount via your backend.');
+      console.log('User saved with discount!');
     }
   });
 </script>`;
