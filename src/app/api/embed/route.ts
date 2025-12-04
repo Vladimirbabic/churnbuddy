@@ -501,7 +501,10 @@ export async function GET(request: NextRequest) {
     message: null,  // { type: 'error'|'success'|'info', title, text }
     onCancel: null,
     onSaved: null,
-    onPlanSwitch: null
+    onPlanSwitch: null,
+    // Discount overrides from data attributes
+    discountPercentOverride: null,
+    discountDurationOverride: null
   };
 
   // SVG Icons - matching Lucide icons used in React components
@@ -563,6 +566,13 @@ export async function GET(request: NextRequest) {
           state.isLoading = false;
           render();
           return;
+        }
+        // Apply discount overrides from data attributes if provided
+        if (state.discountPercentOverride) {
+          config.discountPercent = state.discountPercentOverride;
+        }
+        if (state.discountDurationOverride) {
+          config.discountDuration = state.discountDurationOverride;
         }
         state.config = config;
         state.isLoading = false;
@@ -758,6 +768,9 @@ export async function GET(request: NextRequest) {
       state.onCancel = options.onCancel || function() {};
       state.onSaved = options.onSaved || function() {};
       state.onPlanSwitch = options.onPlanSwitch || function() {};
+      // Store discount overrides from data attributes or init options
+      state.discountPercentOverride = options.discountPercent || null;
+      state.discountDurationOverride = options.discountDuration || null;
 
       if (options.cancelButtonSelector) {
         document.querySelectorAll(options.cancelButtonSelector).forEach(function(btn) {
@@ -872,7 +885,16 @@ export async function GET(request: NextRequest) {
             text: 'Your ' + cfg.discountPercent + '% discount has been applied for the next ' + cfg.discountDuration + ' months.'
           };
           render();
-          if (state.onSaved) state.onSaved();
+          // Pass result data to callback
+          if (state.onSaved) state.onSaved({
+            success: true,
+            discountApplied: true,
+            discountPercent: cfg.discountPercent,
+            discountDuration: cfg.discountDuration,
+            couponId: data.discount?.couponId,
+            subscriptionId: state.subscriptionId,
+            customerId: state.customerId
+          });
         } else {
           // Generic error
           state.message = {
@@ -907,7 +929,13 @@ export async function GET(request: NextRequest) {
       });
       state.isOpen = false;
       render();
-      if (state.onCancel) state.onCancel(state.selectedReason);
+      // Pass detailed cancellation data to callback
+      if (state.onCancel) state.onCancel({
+        reason: state.selectedReason,
+        offersDeclined: true,
+        subscriptionId: state.subscriptionId,
+        customerId: state.customerId
+      });
     }
   };
 
@@ -917,8 +945,11 @@ export async function GET(request: NextRequest) {
       ChurnBuddy.init({
         customerId: script.getAttribute('data-customer-id') || '',
         subscriptionId: script.getAttribute('data-subscription-id') || '',
-        customerEmail: script.getAttribute('data-customer-email') || '',  // Auto-lookup by email
-        cancelButtonSelector: script.getAttribute('data-cancel-selector') || '[data-cancel-subscription]'
+        customerEmail: script.getAttribute('data-customer-email') || '',
+        cancelButtonSelector: script.getAttribute('data-cancel-selector') || '[data-cancel-subscription]',
+        // Read discount overrides from data attributes
+        discountPercent: parseInt(script.getAttribute('data-discount-percent')) || null,
+        discountDuration: parseInt(script.getAttribute('data-discount-duration')) || null
       });
     }
   });
