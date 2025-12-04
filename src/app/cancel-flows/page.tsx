@@ -63,6 +63,7 @@ interface CancelFlow {
   impressions: number;
   cancellations: number;
   saves: number;
+  feedbackResults: Record<string, number>;
   // Step toggles
   showFeedback: boolean;
   showPlans: boolean;
@@ -373,6 +374,7 @@ function CancelFlowsPageContent() {
     impressions: (f.impressions || 0) as number,
     cancellations: (f.cancellations || 0) as number,
     saves: (f.saves || 0) as number,
+    feedbackResults: (f.feedbackResults || {}) as Record<string, number>,
     // Step toggles
     showFeedback: (f.show_feedback ?? f.showFeedback ?? true) as boolean,
     showPlans: (f.show_plans ?? f.showPlans ?? true) as boolean,
@@ -440,6 +442,7 @@ function CancelFlowsPageContent() {
           impressions: 0,
           cancellations: 0,
           saves: 0,
+          feedbackResults: {},
           showFeedback: true,
           showPlans: true,
           showOffer: true,
@@ -1180,6 +1183,45 @@ function CancelFlowsPageContent() {
                             {flow.discountPercent}% off for {flow.discountDuration} months
                           </div>
                         </div>
+
+                        {/* Feedback Poll Results */}
+                        {Object.keys(flow.feedbackResults || {}).length > 0 && (
+                          <div className="mt-4 pt-4 border-t">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Cancellation Reasons</p>
+                            <div className="space-y-2">
+                              {(() => {
+                                const results = flow.feedbackResults;
+                                const total = Object.values(results).reduce((a, b) => a + b, 0);
+                                const sortedReasons = Object.entries(results)
+                                  .sort(([, a], [, b]) => b - a)
+                                  .slice(0, 5);
+
+                                return sortedReasons.map(([reason, count]) => {
+                                  const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                                  const option = flow.feedbackOptions.find(o => o.id === reason);
+                                  const label = option?.label || reason.replace(/_/g, ' ');
+
+                                  return (
+                                    <div key={reason} className="flex items-center gap-2">
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between text-xs mb-1">
+                                          <span className="truncate">{label}</span>
+                                          <span className="text-muted-foreground ml-2">{count} ({percent}%)</span>
+                                        </div>
+                                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full bg-primary rounded-full"
+                                            style={{ width: `${percent}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">

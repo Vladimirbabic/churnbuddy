@@ -44,7 +44,7 @@ const DEFAULT_REASONS = [
   { id: 'other', label: 'Other reason' },
 ];
 
-// GET: Retrieve all cancel flows
+// GET: Retrieve all cancel flows with stats from churn_events
 export async function GET(request: NextRequest) {
   try {
     const { supabase, orgId } = await getAuthenticatedClient();
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id');
 
     if (id) {
-      // Get single cancel flow
+      // Get single cancel flow with stats
       const { data: flow, error } = await (supabase as any)
         .from('cancel_flows')
         .select('*')
@@ -79,7 +79,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Cancel flow not found' }, { status: 404 });
       }
 
-      return NextResponse.json({ flow });
+      // Get stats for this flow from churn_events
+      const stats = await getFlowStats(supabase, orgId);
+      const flowStats = stats[flow.id] || { impressions: 0, saves: 0, feedbackResults: {} };
+
+      return NextResponse.json({
+        flow: { ...flow, ...flowStats }
+      });
     }
 
     // Get all cancel flows for organization
@@ -95,7 +101,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ flows: [] });
     }
 
-    return NextResponse.json({ flows: flows || [] });
+    // Get aggregated stats from churn_events
+    const stats = await getFlowStats(supabase, orgId);
+
+    // Merge stats into flows
+    const flowsWithStats = (flows || []).map((flow: Record<string, unknown>) => {
+      const flowStats = stats[flow.id as string] || { impressions: 0, saves: 0, feedbackResults: {} };
+      return { ...flow, ...flowStats };
+    });
+
+    return NextResponse.json({ flows: flowsWithStats });
   } catch (error) {
     console.error('Cancel Flows GET error:', error);
     return NextResponse.json(
@@ -103,6 +118,57 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper to get flow stats from churn_events
+async function getFlowStats(supabase: ReturnType<typeof createServerClient>, orgId: string) {
+  const stats: Record<string, { impressions: number; saves: number; feedbackResults: Record<string, number> }> = {};
+
+  try {
+    // Get all churn events for this organization
+    const { data: events, error } = await (supabase as any)
+      .from('churn_events')
+      .select('event_type, details, flow_id')
+      .eq('organization_id', orgId)
+      .in('event_type', ['cancellation_attempt', 'offer_accepted', 'feedback_submitted', 'subscription_canceled']);
+
+    if (error || !events) {
+      console.error('Error fetching churn events:', error);
+      return stats;
+    }
+
+    // Aggregate stats by flow
+    for (const event of events) {
+      const flowId = event.flow_id || 'default';
+
+      if (!stats[flowId]) {
+        stats[flowId] = { impressions: 0, saves: 0, feedbackResults: {} };
+      }
+
+      if (event.event_type === 'cancellation_attempt') {
+        stats[flowId].impressions++;
+
+        // Track feedback reasons
+        const reason = event.details?.cancellation_reason || event.details?.reason;
+        if (reason) {
+          stats[flowId].feedbackResults[reason] = (stats[flowId].feedbackResults[reason] || 0) + 1;
+        }
+      } else if (event.event_type === 'offer_accepted') {
+        stats[flowId].saves++;
+      }
+    }
+
+    // Also add stats to 'default' key for flows without flow_id tracking
+    // (aggregate all stats if no flow_id is recorded)
+    if (!Object.keys(stats).some(k => k !== 'default')) {
+      // If we only have 'default' stats, apply to all flows
+      return stats;
+    }
+  } catch (err) {
+    console.error('Error aggregating flow stats:', err);
+  }
+
+  return stats;
 }
 
 // POST: Create or update a cancel flow

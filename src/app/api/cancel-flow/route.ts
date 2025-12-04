@@ -194,6 +194,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get organization_id from flowId if available
+    let organizationId = DEFAULT_ORG_ID;
+    if (flowId && isSupabaseConfigured()) {
+      const supabase = getServerSupabase();
+      const { data: flow } = await (supabase as any)
+        .from('cancel_flows')
+        .select('organization_id')
+        .eq('id', flowId)
+        .single();
+      if (flow?.organization_id) {
+        organizationId = flow.organization_id;
+      }
+    }
+
     // Create the event record
     let eventId: string | undefined;
 
@@ -203,7 +217,8 @@ export async function POST(request: NextRequest) {
       const { data: event, error } = await (supabase as any)
         .from('churn_events')
         .insert({
-          organization_id: DEFAULT_ORG_ID,
+          organization_id: organizationId,
+          flow_id: flowId || null,
           event_type: eventType,
           timestamp: new Date().toISOString(),
           customer_id: customerId,
