@@ -97,8 +97,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Map database fields to API response
-    // All copy can be customized by the user in the flow editor
-    const copy = flow.copy || {};
+    // Get copy settings from individual columns (new) or legacy copy column (old)
+    const legacyCopy = flow.copy || {};
+    const feedbackCopy = flow.feedback_copy || {};
+    const plansCopy = flow.plans_copy || {};
+    const offerCopy = flow.offer_copy || {};
+
+    // Get color settings from individual columns
+    const feedbackColors = flow.feedback_colors || { primary: '#9333EA', background: '#F5F3FF', text: '#1F2937' };
+    const plansColors = flow.plans_colors || { primary: '#2563EB', background: '#F0F4FF', text: '#1F2937' };
+    const offerColors = flow.offer_colors || { primary: '#DC2626', background: '#FEF2F2', text: '#1F2937' };
+
     const config = {
       feedbackOptions: flow.reasons || DEFAULT_FEEDBACK_OPTIONS,
       alternativePlans: flow.alternative_plans || DEFAULT_PLANS,
@@ -107,27 +116,36 @@ export async function GET(request: NextRequest) {
       showFeedback: flow.show_feedback ?? true,
       showPlans: flow.show_plans ?? true,
       showOffer: flow.show_offer ?? true,
-      // Customizable copy for each step
+      // Allow "Other" option with text input
+      allowOtherOption: flow.allow_other_option ?? true,
+      // Countdown settings
+      showCountdown: flow.show_countdown ?? true,
+      countdownMinutes: flow.countdown_minutes ?? 10,
+      // Color settings for each step
+      feedbackColors,
+      plansColors,
+      offerColors,
+      // Customizable copy for each step (prefer new columns, fallback to legacy)
       copy: {
         // Feedback step
-        feedbackTitle: copy.feedbackTitle || "Sorry to see you go.",
-        feedbackSubtitle: copy.feedbackSubtitle || "Please be honest about why you're leaving. It's the only way we can improve.",
-        feedbackBackButton: copy.feedbackBackButton || "Back",
-        feedbackNextButton: copy.feedbackNextButton || "Next",
+        feedbackTitle: feedbackCopy.title || legacyCopy.feedbackTitle || "Sorry to see you go.",
+        feedbackSubtitle: feedbackCopy.subtitle || legacyCopy.feedbackSubtitle || "Please be honest about why you're leaving. It's the only way we can improve.",
+        feedbackBackButton: legacyCopy.feedbackBackButton || "Back",
+        feedbackNextButton: legacyCopy.feedbackNextButton || "Next",
         // Plans step
-        plansTitle: copy.plansTitle || "How about 80% off of one of our other plans? These aren't public.",
-        plansSubtitle: copy.plansSubtitle || "You'd keep all your history and settings and enjoy much of the same functionality at a lower rate.",
-        plansBackButton: copy.plansBackButton || "Back",
-        plansDeclineButton: copy.plansDeclineButton || "Decline Offer",
+        plansTitle: plansCopy.title || legacyCopy.plansTitle || "How about 80% off of one of our other plans? These aren't public.",
+        plansSubtitle: plansCopy.subtitle || legacyCopy.plansSubtitle || "You'd keep all your history and settings and enjoy much of the same functionality at a lower rate.",
+        plansBackButton: legacyCopy.plansBackButton || "Back",
+        plansDeclineButton: legacyCopy.plansDeclineButton || "Decline Offer",
         // Offer step
-        offerTitle: copy.offerTitle || "Stay to get {discount}% off for {duration} months. We'd hate to lose you.",
-        offerSubtitle: copy.offerSubtitle || "You're eligible for our special discount.",
-        offerTimerLabel: copy.offerTimerLabel || "Offer expires in",
-        offerBadgeText: copy.offerBadgeText || "Time-Limited Deal",
-        offerDiscountText: copy.offerDiscountText || "{discount}% off for {duration} months",
-        offerAcceptButton: copy.offerAcceptButton || "Accept This Offer",
-        offerBackButton: copy.offerBackButton || "Back",
-        offerDeclineButton: copy.offerDeclineButton || "Decline Offer",
+        offerTitle: offerCopy.title || legacyCopy.offerTitle || "Stay to get {discount}% off for {duration} months. We'd hate to lose you.",
+        offerSubtitle: offerCopy.subtitle || legacyCopy.offerSubtitle || "You're eligible for our special discount.",
+        offerTimerLabel: legacyCopy.offerTimerLabel || "Offer expires in",
+        offerBadgeText: legacyCopy.offerBadgeText || "Time-Limited Deal",
+        offerDiscountText: legacyCopy.offerDiscountText || "{discount}% off for {duration} months",
+        offerAcceptButton: legacyCopy.offerAcceptButton || "Accept This Offer",
+        offerBackButton: legacyCopy.offerBackButton || "Back",
+        offerDeclineButton: legacyCopy.offerDeclineButton || "Decline Offer",
       },
       // Deprecated fields (kept for backwards compatibility)
       headerTitle: flow.header_title || "We're sorry to see you go",

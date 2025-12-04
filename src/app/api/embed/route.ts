@@ -198,6 +198,27 @@ export async function GET(request: NextRequest) {
     .cb-option.selected .cb-option-check {
       display: block;
     }
+    .cb-other-input {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px 16px;
+      border: 1px solid #E9D5FF;
+      border-radius: 8px;
+      background: white;
+      color: #1F2937;
+      font-size: 14px;
+      resize: none;
+      min-height: 80px;
+      font-family: inherit;
+    }
+    .cb-other-input:focus {
+      outline: none;
+      border-color: #9333EA;
+      box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.2);
+    }
+    .cb-other-input::placeholder {
+      color: #9CA3AF;
+    }
     .cb-footer {
       display: flex;
       justify-content: space-between;
@@ -562,6 +583,7 @@ export async function GET(request: NextRequest) {
     processingMessage: '',
     step: 'feedback',
     selectedReason: '',
+    otherText: '',  // Text for "Other" feedback option
     selectedPlan: null,
     customerId: '',
     subscriptionId: '',
@@ -778,7 +800,10 @@ export async function GET(request: NextRequest) {
       html += '<p class="cb-subtitle">' + (copy.feedbackSubtitle || 'Please be honest about why you\\'re leaving. It\\'s the only way we can improve.') + '</p>';
       html += '<div class="cb-options">';
 
-      options.forEach(function(opt, idx) {
+      // Filter out any existing "other" option from the list
+      var regularOptions = options.filter(function(opt) { return opt.id !== 'other'; });
+      
+      regularOptions.forEach(function(opt, idx) {
         var letter = opt.letter || String.fromCharCode(65 + idx);
         var selected = state.selectedReason === opt.id ? ' selected' : '';
         html += '<div class="cb-option' + selected + '" onclick="ChurnBuddy.selectReason(\\'' + opt.id + '\\')">';
@@ -790,10 +815,31 @@ export async function GET(request: NextRequest) {
         html += '</div>';
       });
 
+      // Add "Other" option at the end if allowed
+      var allowOther = cfg.allowOtherOption !== false;
+      if (allowOther) {
+        var otherLetter = String.fromCharCode(65 + regularOptions.length);
+        var otherSelected = state.selectedReason === 'other' ? ' selected' : '';
+        html += '<div class="cb-option' + otherSelected + '" onclick="ChurnBuddy.selectReason(\\'other\\')">';
+        html += '<div class="cb-option-letter">' + otherLetter + '</div>';
+        html += '<div class="cb-option-text">Other reason</div>';
+        if (state.selectedReason === 'other') {
+          html += '<div class="cb-option-check">' + ICONS.check + '</div>';
+        }
+        html += '</div>';
+        
+        // Show text input if "other" is selected
+        if (state.selectedReason === 'other') {
+          html += '<textarea class="cb-other-input" id="cb-other-text" placeholder="Please tell us more..." oninput="ChurnBuddy.setOtherText(this.value)">' + (state.otherText || '') + '</textarea>';
+        }
+      }
+
       html += '</div>';
       html += '<div class="cb-footer">';
       html += '<button class="cb-btn cb-btn-back-purple" onclick="ChurnBuddy.close()">' + (copy.feedbackBackButton || 'Back') + '</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.selectedReason ? '' : ' disabled') + '>' + (copy.feedbackNextButton || 'Next') + '</button>';
+      // Disable Next if no reason selected, or if "other" selected but no text
+      var isNextDisabled = !state.selectedReason || (state.selectedReason === 'other' && !state.otherText.trim());
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (isNextDisabled ? ' disabled' : '') + '>' + (copy.feedbackNextButton || 'Next') + '</button>';
       html += '</div>';
       html += '</div>';
       html += '</div>';
@@ -966,6 +1012,7 @@ export async function GET(request: NextRequest) {
       
       state.isOpen = true;
       state.selectedReason = '';
+      state.otherText = '';
       state.selectedPlan = null;
       state.error = null;
       state.config = null;
@@ -987,7 +1034,16 @@ export async function GET(request: NextRequest) {
 
     selectReason: function(reasonId) {
       state.selectedReason = reasonId;
+      // Clear other text when selecting a different reason
+      if (reasonId !== 'other') {
+        state.otherText = '';
+      }
       render();
+    },
+
+    setOtherText: function(text) {
+      state.otherText = text;
+      // Don't re-render to avoid losing cursor position
     },
 
     selectPlan: function(planId) {
@@ -1063,12 +1119,22 @@ export async function GET(request: NextRequest) {
     },
 
     nextStep: function() {
+      // Validate "other" option requires text
+      if (state.step === 'feedback' && state.selectedReason === 'other' && !state.otherText.trim()) {
+        // Don't proceed without other text
+        return;
+      }
+      
       var next = getNextStep();
       if (next === 'done') {
         ChurnBuddy.confirmCancel();
       } else {
         if (state.step === 'feedback' && state.selectedReason) {
-          logEvent('feedback_submitted', { reason: state.selectedReason });
+          var details = { reason: state.selectedReason };
+          if (state.selectedReason === 'other' && state.otherText) {
+            details.otherText = state.otherText;
+          }
+          logEvent('feedback_submitted', details);
         }
         state.step = next;
         render();
@@ -1170,20 +1236,28 @@ export async function GET(request: NextRequest) {
 
     confirmCancel: function() {
       stopCountdown();
-      logEvent('subscription_canceled', {
+      var details = {
         reason: state.selectedReason,
         offersDeclined: true
-      });
+      };
+      if (state.selectedReason === 'other' && state.otherText) {
+        details.otherText = state.otherText;
+      }
+      logEvent('subscription_canceled', details);
       state.isOpen = false;
       render();
       // Only call onCancel if explicitly provided by the developer
       if (state.onCancel) {
-        state.onCancel({
+        var cancelData = {
           reason: state.selectedReason,
           offersDeclined: true,
           subscriptionId: state.subscriptionId,
           customerId: state.customerId
-        });
+        };
+        if (state.selectedReason === 'other' && state.otherText) {
+          cancelData.otherText = state.otherText;
+        }
+        state.onCancel(cancelData);
       }
     }
   };
