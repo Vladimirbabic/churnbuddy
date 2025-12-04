@@ -140,23 +140,36 @@ export async function GET(request: NextRequest) {
             });
           });
 
-        // Fetch active subscriptions for MRR calculation
+        // Fetch active subscriptions for MRR calculation (with discount info)
         const subscriptions = await stripe.subscriptions.list({
           status: 'active',
           limit: 100,
-          expand: ['data.customer'],
+          expand: ['data.customer', 'data.discount.coupon'],
         });
 
         activeSubscriptions = subscriptions.data.length;
-        totalMrr = subscriptions.data.reduce((sum, sub) => {
+
+        // Calculate total MRR and saved MRR from discounted subscriptions
+        subscriptions.data.forEach(sub => {
           const item = sub.items.data[0];
+          let subMrr = 0;
+
           if (item?.price?.recurring?.interval === 'month') {
-            return sum + (item.price.unit_amount || 0);
+            subMrr = item.price.unit_amount || 0;
           } else if (item?.price?.recurring?.interval === 'year') {
-            return sum + ((item.price.unit_amount || 0) / 12);
+            subMrr = (item.price.unit_amount || 0) / 12;
           }
-          return sum;
-        }, 0);
+
+          totalMrr += subMrr;
+
+          // If subscription has a discount, calculate saved MRR
+          // savedMrr = the MRR value of the subscription (what would have been lost)
+          if (sub.discount && sub.discount.coupon) {
+            // This subscription was saved with a discount offer
+            savedMrr += subMrr;
+            offerAccepted++;
+          }
+        });
 
         // Fetch canceled subscriptions in period
         const canceledSubs = await stripe.subscriptions.list({
@@ -228,45 +241,13 @@ export async function GET(request: NextRequest) {
         .limit(100);
 
       if (events) {
-        // Collect subscription IDs from offer_accepted events to calculate saved MRR
-        const savedSubscriptionIds: string[] = [];
-
-        // Count cancel flow specific events
+        // Count cancel flow specific events from Supabase
         events.forEach((event: { event_type: string; subscription_id?: string; details: Record<string, unknown> }) => {
-          if (event.event_type === 'offer_accepted') {
-            offerAccepted++;
-            if (event.subscription_id) {
-              savedSubscriptionIds.push(event.subscription_id);
-            }
-            // Use stored mrr_impact if available
-            const details = event.details;
-            if (details?.mrr_impact) {
-              savedMrr += (details.mrr_impact as number);
-            }
-          } else if (event.event_type === 'cancellation_attempt') {
+          if (event.event_type === 'cancellation_attempt') {
             cancellationAttempts++;
             customersAtRisk++;
           }
         });
-
-        // If we have Stripe and saved subscriptions, calculate actual saved MRR
-        if (stripe && savedSubscriptionIds.length > 0 && savedMrr === 0) {
-          try {
-            for (const subId of savedSubscriptionIds.slice(0, 20)) {
-              const sub = await stripe.subscriptions.retrieve(subId);
-              if (sub && sub.status === 'active') {
-                const item = sub.items.data[0];
-                if (item?.price?.recurring?.interval === 'month') {
-                  savedMrr += (item.price.unit_amount || 0);
-                } else if (item?.price?.recurring?.interval === 'year') {
-                  savedMrr += ((item.price.unit_amount || 0) / 12);
-                }
-              }
-            }
-          } catch (err) {
-            console.error('Error fetching saved subscriptions:', err);
-          }
-        }
 
         // Add Supabase events to the list
         events.slice(0, 20).forEach((event: {
