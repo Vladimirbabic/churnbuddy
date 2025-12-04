@@ -65,6 +65,7 @@ interface CustomerData {
   subscriptionStatus: 'active' | 'canceled' | 'past_due' | 'trialing' | 'none';
   subscriptionId: string | null;
   mrr: number;
+  hasDiscount: boolean;
   cancelAttempts: number;
   createdAt: string;
   currentPlan: string | null;
@@ -127,10 +128,11 @@ export async function GET(request: NextRequest) {
       const activeSubscription = subscriptions.find(s => s.status === 'active' || s.status === 'trialing');
       const subscription = activeSubscription || subscriptions[0];
 
-      // Calculate MRR from subscription
+      // Calculate MRR from subscription (adjusted for discounts)
       let mrr = 0;
       let currentPlan: string | null = null;
-      
+      let hasDiscount = false;
+
       if (subscription && (subscription.status === 'active' || subscription.status === 'trialing')) {
         const item = subscription.items.data[0];
         if (item?.price) {
@@ -139,6 +141,17 @@ export async function GET(request: NextRequest) {
             mrr = (item.price.unit_amount || 0) / 100;
           } else if (item.price.recurring?.interval === 'year') {
             mrr = ((item.price.unit_amount || 0) / 100) / 12;
+          }
+
+          // Apply discount if exists
+          if (subscription.discount?.coupon) {
+            hasDiscount = true;
+            const coupon = subscription.discount.coupon;
+            if (coupon.percent_off) {
+              mrr = mrr * (1 - coupon.percent_off / 100);
+            } else if (coupon.amount_off) {
+              mrr = Math.max(0, mrr - coupon.amount_off / 100);
+            }
           }
         }
       }
@@ -164,6 +177,7 @@ export async function GET(request: NextRequest) {
         subscriptionStatus,
         subscriptionId: subscription?.id || null,
         mrr,
+        hasDiscount,
         cancelAttempts: cancelAttemptCounts[customer.id] || 0,
         createdAt: new Date(customer.created * 1000).toISOString(),
         currentPlan,

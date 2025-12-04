@@ -21,8 +21,9 @@ interface Customer {
   name: string;
   subscriptionStatus: 'active' | 'canceled' | 'past_due' | 'trialing';
   mrr: number;
-  cancelAttempts: number;
+  hasDiscount?: boolean;
   createdAt: string;
+  currentPlan?: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' }> = {
@@ -144,8 +145,8 @@ export default function CustomersPage() {
                   <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
                     <div>Customer</div>
                     <div>Status</div>
+                    <div>Plan</div>
                     <div>MRR</div>
-                    <div>Cancel Attempts</div>
                     <div></div>
                   </div>
                   <div className="divide-y">
@@ -171,14 +172,13 @@ export default function CustomersPage() {
                           <div>
                             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
                           </div>
-                          <div className="text-sm font-medium">
-                            {formatCurrency(customer.mrr)}
+                          <div className="text-sm text-muted-foreground">
+                            {customer.currentPlan || '-'}
                           </div>
                           <div className="text-sm">
-                            {customer.cancelAttempts > 0 ? (
-                              <Badge variant="warning">{customer.cancelAttempts}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">0</span>
+                            <span className="font-medium">{formatCurrency(customer.mrr)}</span>
+                            {customer.hasDiscount && (
+                              <span className="ml-1 text-xs text-purple-600">discounted</span>
                             )}
                           </div>
                           <div>
