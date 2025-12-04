@@ -664,51 +664,12 @@ function CancelFlowsPageContent() {
   // Generate integration code
   const getIntegrationCode = (flowId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
-    const flow = editingFlow;
-    const discountPercent = flow?.discountPercent || 20;
-    const discountDuration = flow?.discountDuration || 3;
 
-    return `<!-- ChurnBuddy Cancel Flow -->
-<!--
-  IMPORTANT: Replace the placeholder values below with actual
-  Stripe customer/subscription IDs from your backend.
-
-  Example with server-side rendering (Next.js, PHP, Rails, etc.):
-  data-customer-id="<?= $customer->stripe_id ?>"
-  data-subscription-id="<?= $subscription->stripe_id ?>"
--->
-<script
-  src="${baseUrl}/api/embed?flow=${flowId}"
-  data-churnbuddy
-  data-customer-id="cus_xxxxxxxxxxxxx"
-  data-subscription-id="sub_xxxxxxxxxxxxx"
-  data-discount-percent="${discountPercent}"
-  data-discount-duration="${discountDuration} months"
-  data-cancel-selector="[data-cancel-subscription]"
-></script>
-
-<!-- Add this attribute to your cancel button -->
-<button data-cancel-subscription>Cancel Subscription</button>
-
-<!-- OR: Initialize via JavaScript for dynamic values -->
-<script>
-  // After page loads, call ChurnBuddy.init with your customer data
-  ChurnBuddy.init({
-    customerId: 'cus_xxxxxxxxxxxxx',      // From your backend
-    subscriptionId: 'sub_xxxxxxxxxxxxx',  // From your backend
-    discountPercent: ${discountPercent},
-    discountDuration: '${discountDuration} months',
-    cancelButtonSelector: '[data-cancel-subscription]',
-    onCancel: function(reason) {
-      // Handle cancellation - redirect or call your API
-      console.log('User cancelled with reason:', reason);
-    },
-    onSaved: function() {
-      // Handle when user accepts the discount offer
-      console.log('User saved! Apply discount via your backend.');
-    }
-  });
-</script>`;
+    return `<script src="${baseUrl}/api/embed?flow=${flowId}"
+  data-customer-id="CUSTOMER_ID"
+  data-subscription-id="SUBSCRIPTION_ID">
+</script>
+<button data-cancel-subscription>Cancel Subscription</button>`;
   };
 
   if (isLoading) {
@@ -773,12 +734,9 @@ function CancelFlowsPageContent() {
                     <label className="text-sm font-medium">Integration Code</label>
                   </div>
                   <CodeSnippet code={getIntegrationCode(editingFlow.id)} />
-                </div>
-
-                {/* Flow ID */}
-                <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Flow ID</p>
-                  <code className="text-sm font-mono">{editingFlow.id}</code>
+                  <p className="text-xs text-muted-foreground">
+                    Replace <code className="bg-muted px-1 rounded">CUSTOMER_ID</code> and <code className="bg-muted px-1 rounded">SUBSCRIPTION_ID</code> with the Stripe IDs from your backend.
+                  </p>
                 </div>
 
                 {/* Actions */}
