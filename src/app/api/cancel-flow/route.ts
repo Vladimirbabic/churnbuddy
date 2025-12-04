@@ -176,7 +176,26 @@ export async function POST(request: NextRequest) {
     }
 
     // If offer was accepted, apply the discount to the subscription
-    if (eventType === 'offer_accepted' && subscriptionId && stripeUtils) {
+    if (eventType === 'offer_accepted') {
+      // Check if we have required data for discount application
+      if (!subscriptionId) {
+        return NextResponse.json({
+          success: false,
+          error: 'missing_subscription',
+          message: 'No subscription ID provided. Cannot apply discount.',
+          eventId,
+        }, { headers: corsHeaders });
+      }
+
+      if (!stripeUtils) {
+        return NextResponse.json({
+          success: false,
+          error: 'stripe_not_configured',
+          message: 'Stripe is not configured. Please set up your Stripe API keys.',
+          eventId,
+        }, { headers: corsHeaders });
+      }
+
       const discountPercent = details?.discountPercent || 20;
       const durationInMonths = parseInt(details?.discountDuration) || 3;
 
@@ -194,6 +213,7 @@ export async function POST(request: NextRequest) {
               name: existingDiscount.coupon?.name,
               endsAt: existingDiscount.end ? new Date(existingDiscount.end * 1000).toISOString() : null,
             },
+            eventId,
           }, { headers: corsHeaders });
         }
 
@@ -204,39 +224,75 @@ export async function POST(request: NextRequest) {
           `Retention Offer - ${customerId}`
         );
 
-        if (coupon) {
-          // Apply the coupon to the subscription
-          await stripeUtils.applyDiscountToSubscription(subscriptionId, coupon.id);
-
-          // Send confirmation email
-          const emailUtils = await getEmailUtils();
-          if (customerEmail && emailUtils) {
-            await emailUtils.sendSaveOfferAcceptedEmail({
-              customerEmail,
-              discountPercent,
-              discountDuration: `${durationInMonths} months`,
-            });
-          }
-
-          // Update the event with processing details
-          if (eventId && isSupabaseConfigured()) {
-            const supabase = getServerSupabase();
-            await (supabase as any)
-              .from('churn_events')
-              .update({
-                details: {
-                  cancellation_reason: details?.reason,
-                  cancellation_feedback: details?.feedback,
-                  discount_offered: details?.discountPercent,
-                  discount_accepted: true,
-                },
-              })
-              .eq('id', eventId);
-          }
+        if (!coupon) {
+          return NextResponse.json({
+            success: false,
+            error: 'coupon_creation_failed',
+            message: 'Failed to create discount coupon. Please try again.',
+            eventId,
+          }, { headers: corsHeaders });
         }
-      } catch (err) {
+
+        // Apply the coupon to the subscription
+        const updatedSubscription = await stripeUtils.applyDiscountToSubscription(subscriptionId, coupon.id);
+
+        if (!updatedSubscription) {
+          return NextResponse.json({
+            success: false,
+            error: 'discount_application_failed',
+            message: 'Failed to apply discount to subscription. The subscription may not exist or is invalid.',
+            eventId,
+          }, { headers: corsHeaders });
+        }
+
+        // Send confirmation email
+        const emailUtils = await getEmailUtils();
+        if (customerEmail && emailUtils) {
+          await emailUtils.sendSaveOfferAcceptedEmail({
+            customerEmail,
+            discountPercent,
+            discountDuration: `${durationInMonths} months`,
+          });
+        }
+
+        // Update the event with processing details
+        if (eventId && isSupabaseConfigured()) {
+          const supabase = getServerSupabase();
+          await (supabase as any)
+            .from('churn_events')
+            .update({
+              details: {
+                cancellation_reason: details?.reason,
+                cancellation_feedback: details?.feedback,
+                discount_offered: details?.discountPercent,
+                discount_accepted: true,
+                discount_applied: true,
+              },
+            })
+            .eq('id', eventId);
+        }
+
+        // Return success with discount details
+        return NextResponse.json({
+          success: true,
+          discountApplied: true,
+          discount: {
+            percentOff: discountPercent,
+            durationMonths: durationInMonths,
+            couponId: coupon.id,
+          },
+          eventId,
+        }, { headers: corsHeaders });
+
+      } catch (err: unknown) {
         console.error('Failed to apply discount:', err);
-        // Don't fail the request - the event was still logged
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        return NextResponse.json({
+          success: false,
+          error: 'discount_error',
+          message: `Failed to apply discount: ${errorMessage}`,
+          eventId,
+        }, { headers: corsHeaders });
       }
     }
 

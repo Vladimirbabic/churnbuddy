@@ -20,11 +20,19 @@ interface FeedbackOption {
   letter: string;
 }
 
+interface DiscountResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  discountApplied?: boolean;
+}
+
 interface CancelFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCancelConfirmed: (reason: string, feedback?: string) => void | Promise<void>;
   onOfferAccepted: () => void | Promise<void>;
+  onOfferFailed?: (error: string, message: string) => void;
   onPlanSwitched?: (planId: string) => void | Promise<void>;
   customerId: string;
   subscriptionId: string;
@@ -82,6 +90,7 @@ export function CancelFlowModal({
   onClose,
   onCancelConfirmed,
   onOfferAccepted,
+  onOfferFailed,
   onPlanSwitched,
   customerId,
   subscriptionId,
@@ -96,6 +105,7 @@ export function CancelFlowModal({
   const [currentStep, setCurrentStep] = useState<FlowStep>('feedback');
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
   // Reset flow when modal opens
   React.useEffect(() => {
@@ -103,12 +113,13 @@ export function CancelFlowModal({
       setCurrentStep('feedback');
       setSelectedReason('');
       setIsProcessing(false);
+      setError(null);
     }
   }, [isOpen]);
 
-  const logEvent = async (eventType: string, details: Record<string, unknown>) => {
+  const logEvent = async (eventType: string, details: Record<string, unknown>): Promise<DiscountResult | null> => {
     try {
-      await fetch(apiEndpoint, {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -118,8 +129,11 @@ export function CancelFlowModal({
           details,
         }),
       });
+      const data = await response.json();
+      return data as DiscountResult;
     } catch (err) {
       console.error('Failed to log cancel flow event:', err);
+      return null;
     }
   };
 
@@ -163,14 +177,53 @@ export function CancelFlowModal({
   // Step 3: Offer - Accept
   const handleAcceptOffer = async () => {
     setIsProcessing(true);
-    await logEvent('offer_accepted', {
+    setError(null);
+    
+    const result = await logEvent('offer_accepted', {
       reason: selectedReason,
       discountPercent,
       discountDuration
     });
 
-    await onOfferAccepted();
     setIsProcessing(false);
+
+    // Check if discount was successfully applied
+    if (!result) {
+      setError({
+        title: 'Connection Error',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.'
+      });
+      if (onOfferFailed) {
+        onOfferFailed('connection_error', 'Unable to connect to the server');
+      }
+      return;
+    }
+
+    if (!result.success) {
+      // Handle specific error types
+      let errorTitle = 'Unable to Apply Discount';
+      let errorMessage = result.message || 'Something went wrong. Please try again.';
+      
+      if (result.error === 'already_has_discount') {
+        errorTitle = 'Discount Already Active';
+        errorMessage = 'You already have an active discount on your subscription. Enjoy your savings!';
+      } else if (result.error === 'missing_subscription') {
+        errorTitle = 'No Subscription Found';
+        errorMessage = 'We couldn\'t find an active subscription. Please contact support.';
+      } else if (result.error === 'stripe_not_configured') {
+        errorTitle = 'Service Unavailable';
+        errorMessage = 'The payment system is not configured. Please contact support.';
+      }
+      
+      setError({ title: errorTitle, message: errorMessage });
+      if (onOfferFailed) {
+        onOfferFailed(result.error || 'unknown_error', errorMessage);
+      }
+      return;
+    }
+
+    // Success! Discount was applied
+    await onOfferAccepted();
     handleClose();
   };
 
@@ -223,6 +276,9 @@ export function CancelFlowModal({
         onAcceptOffer={handleAcceptOffer}
         discountPercent={discountPercent}
         discountDuration={discountDuration}
+        isProcessing={isProcessing}
+        error={error}
+        onClearError={() => setError(null)}
       />
     </>
   );
