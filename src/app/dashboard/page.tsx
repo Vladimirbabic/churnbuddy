@@ -4,25 +4,27 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   CreditCard,
-  TrendingDown,
   Users,
   DollarSign,
-  ArrowUpRight,
   Activity,
   Shield,
-  RefreshCw,
   Settings,
   Plus,
-  Percent,
-  Tag,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { AppLayout } from '@/components/AppLayout';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 // Types
 interface DashboardSummary {
@@ -90,9 +92,15 @@ interface DiscountAnalytics {
   }>;
 }
 
+interface MrrDataPoint {
+  date: string;
+  mrr: number;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<{ summary: DashboardSummary; events: DashboardEvent[]; stripeConnected?: boolean } | null>(null);
   const [discountData, setDiscountData] = useState<DiscountAnalytics | null>(null);
+  const [mrrHistory, setMrrHistory] = useState<MrrDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30');
 
@@ -100,9 +108,10 @@ export default function DashboardPage() {
     // Fetch real data from API
     const fetchData = async () => {
       try {
-        const [dashboardResponse, discountResponse] = await Promise.all([
+        const [dashboardResponse, discountResponse, mrrHistoryResponse] = await Promise.all([
           fetch(`/api/dashboard?period=${period}`),
           fetch('/api/analytics/discounts'),
+          fetch(`/api/analytics/mrr-history?days=${period}`),
         ]);
 
         if (dashboardResponse.ok) {
@@ -115,6 +124,11 @@ export default function DashboardPage() {
         if (discountResponse.ok) {
           const discountResult = await discountResponse.json();
           setDiscountData(discountResult);
+        }
+
+        if (mrrHistoryResponse.ok) {
+          const mrrResult = await mrrHistoryResponse.json();
+          setMrrHistory(mrrResult.history || []);
         }
       } catch (error) {
         // If API fails, show empty state
@@ -264,6 +278,65 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 </div>
+              )}
+
+              {/* MRR Chart */}
+              {stripeConnected && mrrHistory.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      MRR Trend
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={mrrHistory}>
+                          <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fill: '#888' }}
+                            tickFormatter={(value) => {
+                              const date = new Date(value);
+                              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            }}
+                            interval="preserveStartEnd"
+                            minTickGap={50}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fill: '#888' }}
+                            tickFormatter={(value) => `$${value}`}
+                            width={60}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--background))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                            }}
+                            labelFormatter={(value) => {
+                              const date = new Date(value);
+                              return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            }}
+                            formatter={(value: number) => [`$${value.toFixed(2)}`, 'MRR']}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="mrr"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 4, fill: 'hsl(var(--primary))' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Performance Overview */}
