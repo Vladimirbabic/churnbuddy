@@ -10,6 +10,21 @@ import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const DEFAULT_ORG_ID = 'demo-org-001';
 
+// CORS headers for cross-origin requests from embed script
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 // Lazy load Stripe utilities only when needed
 async function getStripeUtils() {
   try {
@@ -41,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (!eventType || !customerId) {
       return NextResponse.json(
         { error: 'Missing required fields: eventType, customerId' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -113,7 +128,7 @@ export async function POST(request: NextRequest) {
               name: existingDiscount.coupon?.name,
               endsAt: existingDiscount.end ? new Date(existingDiscount.end * 1000).toISOString() : null,
             },
-          });
+          }, { headers: corsHeaders });
         }
 
         // Create a coupon for this offer
@@ -162,12 +177,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       eventId,
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Cancel flow API error:', error);
     return NextResponse.json(
       { error: 'Failed to process cancel flow event' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -181,7 +196,7 @@ export async function GET(request: NextRequest) {
     if (!customerId) {
       return NextResponse.json(
         { error: 'Missing customerId parameter' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -192,7 +207,7 @@ export async function GET(request: NextRequest) {
         totalAttempts: 0,
         savedCount: 0,
         demoMode: true,
-      });
+      }, { headers: corsHeaders });
     }
 
     const supabase = getServerSupabase();
@@ -238,12 +253,12 @@ export async function GET(request: NextRequest) {
       hasActiveDiscount,
       totalAttempts: eventsList.filter((e: { event_type: string }) => e.event_type === 'cancellation_attempt').length,
       savedCount: eventsList.filter((e: { event_type: string }) => e.event_type === 'offer_accepted').length,
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Cancel flow GET error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch cancel flow data' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
