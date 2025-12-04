@@ -57,6 +57,17 @@ export async function GET(request: NextRequest) {
       .eq('organization_id', orgId)
       .single();
 
+    console.log('GET settings for org:', orgId);
+    console.log('Settings found:', !!settings);
+    if (error) {
+      console.log('GET error:', error.message);
+    }
+    if (settings?.stripe_config) {
+      const stripeConfig = settings.stripe_config as Record<string, unknown>;
+      console.log('Has secret_key:', !!stripeConfig.secret_key);
+      console.log('Has webhook_secret:', !!stripeConfig.webhook_secret);
+    }
+
     if (error || !settings) {
       // Return default settings structure for new users
       return NextResponse.json({
@@ -217,6 +228,15 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Log what we're about to save (without sensitive data)
+    console.log('Saving settings for org:', orgId);
+    console.log('Update data keys:', Object.keys(updateData));
+    if (updateData.stripe_config) {
+      const stripeConfig = updateData.stripe_config as Record<string, unknown>;
+      console.log('Stripe config has secret_key:', !!stripeConfig.secret_key);
+      console.log('Stripe config has webhook_secret:', !!stripeConfig.webhook_secret);
+    }
+
     // Upsert settings
     const { data: settings, error } = await (supabase as any)
       .from('settings')
@@ -231,11 +251,14 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Supabase upsert error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return NextResponse.json(
-        { error: 'Failed to save settings' },
+        { error: 'Failed to save settings', details: error.message },
         { status: 500 }
       );
     }
+
+    console.log('Settings saved successfully');
 
     return NextResponse.json({
       success: true,
