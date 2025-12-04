@@ -123,6 +123,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Fetch existing settings to preserve sensitive keys when masked value is sent
+    const { data: existingSettings } = await (supabase as ReturnType<typeof createServerClient>)
+      .from('settings')
+      .select('stripe_config, email_config')
+      .eq('organization_id', orgId)
+      .single();
+
+    const existingStripeConfig = (existingSettings?.stripe_config as Record<string, unknown>) || {};
+    const existingEmailConfig = (existingSettings?.email_config as Record<string, unknown>) || {};
+
     // Build update object from request body
     const updateData: Record<string, unknown> = {};
 
@@ -134,23 +144,32 @@ export async function POST(request: NextRequest) {
       updateData.onboarding_step = body.onboarding_step;
     }
 
-    // Handle Stripe settings
+    // Handle Stripe settings - preserve existing keys if masked value sent
     if (body.stripe) {
       updateData.stripe_config = {
         test_mode: body.stripe.testMode ?? true,
         is_connected: true,
-        secret_key: body.stripe.secretKey !== '••••••••' ? body.stripe.secretKey : undefined,
-        webhook_secret: body.stripe.webhookSecret !== '••••••••' ? body.stripe.webhookSecret : undefined,
-        publishable_key: body.stripe.publishableKey,
+        // Preserve existing secret_key if masked value '••••••••' is sent
+        secret_key: body.stripe.secretKey && body.stripe.secretKey !== '••••••••'
+          ? body.stripe.secretKey
+          : existingStripeConfig.secret_key,
+        // Preserve existing webhook_secret if masked value '••••••••' is sent
+        webhook_secret: body.stripe.webhookSecret && body.stripe.webhookSecret !== '••••••••'
+          ? body.stripe.webhookSecret
+          : existingStripeConfig.webhook_secret,
+        publishable_key: body.stripe.publishableKey || existingStripeConfig.publishable_key,
       };
     }
 
-    // Handle Email settings
+    // Handle Email settings - preserve existing api_key if masked value sent
     if (body.email) {
       updateData.email_config = {
         provider: body.email.provider || 'resend',
         is_connected: true,
-        api_key: body.email.apiKey !== '••••••••' ? body.email.apiKey : undefined,
+        // Preserve existing api_key if masked value '••••••••' is sent
+        api_key: body.email.apiKey && body.email.apiKey !== '••••••••'
+          ? body.email.apiKey
+          : existingEmailConfig.api_key,
         from_email: body.email.fromEmail,
         from_name: body.email.fromName,
         reply_to: body.email.replyTo,
