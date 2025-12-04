@@ -483,6 +483,35 @@ export async function GET(request: NextRequest) {
       gap: 12px;
       justify-content: center;
     }
+
+    /* Countdown Timer */
+    .cb-countdown {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #FEF2F2;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .cb-countdown svg {
+      width: 18px;
+      height: 18px;
+      color: #DC2626;
+    }
+    .cb-countdown-label {
+      font-size: 13px;
+      color: #991B1B;
+      font-weight: 500;
+    }
+    .cb-countdown-time {
+      font-size: 20px;
+      font-weight: 700;
+      color: #DC2626;
+      letter-spacing: 0.05em;
+    }
   \`;
 
   // State
@@ -504,7 +533,10 @@ export async function GET(request: NextRequest) {
     onPlanSwitch: null,
     // Discount overrides from data attributes
     discountPercentOverride: null,
-    discountDurationOverride: null
+    discountDurationOverride: null,
+    // Countdown timer
+    countdownSeconds: 581, // 9 minutes 41 seconds
+    countdownInterval: null
   };
 
   // SVG Icons - matching Lucide icons used in React components
@@ -526,6 +558,41 @@ export async function GET(request: NextRequest) {
     style.id = 'cb-styles';
     style.textContent = STYLES;
     document.head.appendChild(style);
+  }
+
+  function formatCountdown(seconds) {
+    var mins = Math.floor(seconds / 60);
+    var secs = seconds % 60;
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+
+  function startCountdown() {
+    // Clear any existing interval
+    if (state.countdownInterval) {
+      clearInterval(state.countdownInterval);
+    }
+
+    state.countdownInterval = setInterval(function() {
+      state.countdownSeconds--;
+
+      if (state.countdownSeconds <= 0) {
+        // Reset timer when it expires
+        state.countdownSeconds = 581; // 9:41
+      }
+
+      // Update timer display without full re-render
+      var timerEl = document.getElementById('cb-countdown-time');
+      if (timerEl) {
+        timerEl.textContent = formatCountdown(state.countdownSeconds);
+      }
+    }, 1000);
+  }
+
+  function stopCountdown() {
+    if (state.countdownInterval) {
+      clearInterval(state.countdownInterval);
+      state.countdownInterval = null;
+    }
   }
 
   function logEvent(eventType, details) {
@@ -655,6 +722,7 @@ export async function GET(request: NextRequest) {
       html += '<div class="cb-loading" style="color: #DC2626;">Error: ' + state.error + '</div>';
     } else if (state.step === 'feedback' && cfg.showFeedback !== false) {
       var options = cfg.feedbackOptions || [];
+      var copy = cfg.copy || {};
       html += '<div class="cb-feedback">';
       // Header bar matching YourFeedbackModal
       html += '<div class="cb-header-bar">';
@@ -662,8 +730,8 @@ export async function GET(request: NextRequest) {
       html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
       html += '<div class="cb-content">';
-      html += '<h2>Sorry to see you go.</h2>';
-      html += '<p class="cb-subtitle">Please be honest about why you\\'re leaving. It\\'s the only way we can improve.</p>';
+      html += '<h2>' + (copy.feedbackTitle || 'Sorry to see you go.') + '</h2>';
+      html += '<p class="cb-subtitle">' + (copy.feedbackSubtitle || 'Please be honest about why you\\'re leaving. It\\'s the only way we can improve.') + '</p>';
       html += '<div class="cb-options">';
 
       options.forEach(function(opt, idx) {
@@ -680,14 +748,15 @@ export async function GET(request: NextRequest) {
 
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-back-purple" onclick="ChurnBuddy.close()">Back</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.selectedReason ? '' : ' disabled') + '>Next</button>';
+      html += '<button class="cb-btn cb-btn-back-purple" onclick="ChurnBuddy.close()">' + (copy.feedbackBackButton || 'Back') + '</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.selectedReason ? '' : ' disabled') + '>' + (copy.feedbackNextButton || 'Next') + '</button>';
       html += '</div>';
       html += '</div>';
       html += '</div>';
 
     } else if (state.step === 'plans' && cfg.showPlans !== false) {
       var plans = cfg.alternativePlans || [];
+      var copy = cfg.copy || {};
       html += '<div class="cb-plans">';
       html += '<div class="cb-modal-lg">';
       // Header bar matching ConsiderOtherPlansModal
@@ -696,8 +765,8 @@ export async function GET(request: NextRequest) {
       html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
       html += '<div class="cb-content">';
-      html += '<h2>How about 80% off of one of our other plans? These aren\\'t public.</h2>';
-      html += '<p class="cb-subtitle">You\\'d keep all your history and settings and enjoy much of the same functionality at a lower rate.</p>';
+      html += '<h2>' + (copy.plansTitle || 'How about 80% off of one of our other plans? These aren\\'t public.') + '</h2>';
+      html += '<p class="cb-subtitle">' + (copy.plansSubtitle || 'You\\'d keep all your history and settings and enjoy much of the same functionality at a lower rate.') + '</p>';
       html += '<div class="cb-plans-grid">';
 
       plans.forEach(function(plan) {
@@ -720,8 +789,8 @@ export async function GET(request: NextRequest) {
 
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">Back</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()">Decline Offer</button>';
+      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">' + (copy.plansBackButton || 'Back') + '</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()">' + (copy.plansDeclineButton || 'Decline Offer') + '</button>';
       html += '</div>';
       html += '</div>';
       html += '</div>';
@@ -730,6 +799,11 @@ export async function GET(request: NextRequest) {
     } else if (state.step === 'offer' && cfg.showOffer !== false) {
       var discountPct = cfg.discountPercent || 50;
       var discountDur = cfg.discountDuration || 3;
+      var copy = cfg.copy || {};
+      // Helper to replace {discount} and {duration} placeholders
+      function replacePlaceholders(text) {
+        return text.replace(/{discount}/g, discountPct).replace(/{duration}/g, discountDur);
+      }
       html += '<div class="cb-offer">';
       // Header bar matching SpecialOfferModal
       html += '<div class="cb-header-bar">';
@@ -737,19 +811,29 @@ export async function GET(request: NextRequest) {
       html += '<button class="cb-close" onclick="ChurnBuddy.close()">' + ICONS.x + '</button>';
       html += '</div>';
       html += '<div class="cb-content">';
-      html += '<h2>Stay to get ' + discountPct + '% off for ' + discountDur + ' months. We\\'d hate to lose you.</h2>';
-      html += '<p class="cb-subtitle">You\\'re eligible for our special discount.</p>';
+      var offerTitle = copy.offerTitle || 'Stay to get {discount}% off for {duration} months. We\\'d hate to lose you.';
+      html += '<h2>' + replacePlaceholders(offerTitle) + '</h2>';
+      html += '<p class="cb-subtitle">' + (copy.offerSubtitle || 'You\\'re eligible for our special discount.') + '</p>';
+      // Countdown timer
+      html += '<div class="cb-countdown">';
+      html += ICONS.clock;
+      html += '<span class="cb-countdown-label">' + (copy.offerTimerLabel || 'Offer expires in') + '</span>';
+      html += '<span class="cb-countdown-time" id="cb-countdown-time">' + formatCountdown(state.countdownSeconds) + '</span>';
+      html += '</div>';
       html += '<div class="cb-offer-card">';
-      html += '<div class="cb-offer-badge">' + ICONS.clock + '<span class="cb-offer-badge-text">Time-Limited Deal</span></div>';
-      html += '<div class="cb-offer-discount">' + discountPct + '% off for ' + discountDur + ' months</div>';
-      html += '<button class="cb-btn-offer" onclick="ChurnBuddy.acceptOffer()">Accept This Offer</button>';
+      html += '<div class="cb-offer-badge">' + ICONS.tag + '<span class="cb-offer-badge-text">' + (copy.offerBadgeText || 'Time-Limited Deal') + '</span></div>';
+      var discountText = copy.offerDiscountText || '{discount}% off for {duration} months';
+      html += '<div class="cb-offer-discount">' + replacePlaceholders(discountText) + '</div>';
+      html += '<button class="cb-btn-offer" onclick="ChurnBuddy.acceptOffer()">' + (copy.offerAcceptButton || 'Accept This Offer') + '</button>';
       html += '</div>';
       html += '<div class="cb-footer">';
-      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">Back</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.confirmCancel()">Decline Offer</button>';
+      html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">' + (copy.offerBackButton || 'Back') + '</button>';
+      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.confirmCancel()">' + (copy.offerDeclineButton || 'Decline Offer') + '</button>';
       html += '</div>';
       html += '</div>';
       html += '</div>';
+      // Start the countdown timer when on offer step
+      setTimeout(startCountdown, 0);
     } else {
       // No steps enabled or done
       html += '<div class="cb-loading">No cancel flow configured</div>';
@@ -815,6 +899,8 @@ export async function GET(request: NextRequest) {
 
     close: function() {
       state.isOpen = false;
+      stopCountdown();
+      state.countdownSeconds = 581; // Reset timer
       render();
     },
 
@@ -836,6 +922,9 @@ export async function GET(request: NextRequest) {
 
     goBack: function() {
       var cfg = state.config || {};
+      if (state.step === 'offer') {
+        stopCountdown();
+      }
       if (state.step === 'plans' && cfg.showFeedback !== false) {
         state.step = 'feedback';
       } else if (state.step === 'offer') {
@@ -955,6 +1044,7 @@ export async function GET(request: NextRequest) {
     },
 
     confirmCancel: function() {
+      stopCountdown();
       logEvent('subscription_canceled', {
         reason: state.selectedReason,
         offersDeclined: true

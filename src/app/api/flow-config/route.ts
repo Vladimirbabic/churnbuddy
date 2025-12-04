@@ -97,6 +97,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Map database fields to API response
+    // All copy can be customized by the user in the flow editor
+    const copy = flow.copy || {};
     const config = {
       feedbackOptions: flow.reasons || DEFAULT_FEEDBACK_OPTIONS,
       alternativePlans: flow.alternative_plans || DEFAULT_PLANS,
@@ -105,6 +107,29 @@ export async function GET(request: NextRequest) {
       showFeedback: flow.show_feedback ?? true,
       showPlans: flow.show_plans ?? true,
       showOffer: flow.show_offer ?? true,
+      // Customizable copy for each step
+      copy: {
+        // Feedback step
+        feedbackTitle: copy.feedbackTitle || "Sorry to see you go.",
+        feedbackSubtitle: copy.feedbackSubtitle || "Please be honest about why you're leaving. It's the only way we can improve.",
+        feedbackBackButton: copy.feedbackBackButton || "Back",
+        feedbackNextButton: copy.feedbackNextButton || "Next",
+        // Plans step
+        plansTitle: copy.plansTitle || "How about 80% off of one of our other plans? These aren't public.",
+        plansSubtitle: copy.plansSubtitle || "You'd keep all your history and settings and enjoy much of the same functionality at a lower rate.",
+        plansBackButton: copy.plansBackButton || "Back",
+        plansDeclineButton: copy.plansDeclineButton || "Decline Offer",
+        // Offer step
+        offerTitle: copy.offerTitle || "Stay to get {discount}% off for {duration} months. We'd hate to lose you.",
+        offerSubtitle: copy.offerSubtitle || "You're eligible for our special discount.",
+        offerTimerLabel: copy.offerTimerLabel || "Offer expires in",
+        offerBadgeText: copy.offerBadgeText || "Time-Limited Deal",
+        offerDiscountText: copy.offerDiscountText || "{discount}% off for {duration} months",
+        offerAcceptButton: copy.offerAcceptButton || "Accept This Offer",
+        offerBackButton: copy.offerBackButton || "Back",
+        offerDeclineButton: copy.offerDeclineButton || "Decline Offer",
+      },
+      // Deprecated fields (kept for backwards compatibility)
       headerTitle: flow.header_title || "We're sorry to see you go",
       headerDescription: flow.header_description || "Before you go, please help us improve by sharing why you're canceling",
       offerTitle: flow.offer_title || "Wait! We have an offer for you",
