@@ -37,8 +37,10 @@ interface DashboardSummary {
   recoveries: number;
   saved: number;
   cancellationAttempts: number;
+  customersAtRisk?: number;
   lostMrr: number;
   recoveredMrr: number;
+  savedMrr?: number; // MRR saved by ChurnBuddy
   saveRate: number;
   recoveryRate: number;
   totalMrr?: number;
@@ -235,7 +237,7 @@ export default function DashboardPage() {
 
               {/* MRR Overview cards - only show when Stripe is connected */}
               {stripeConnected && summary.totalMrr !== undefined && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   {/* Total MRR */}
                   <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -250,6 +252,24 @@ export default function DashboardPage() {
                       <div className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(summary.totalMrr)}</div>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
                         From {summary.activeSubscriptions} active subscriptions
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Revenue Saved by ChurnBuddy */}
+                  <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-purple-200 dark:border-purple-800">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        Revenue Saved
+                      </CardTitle>
+                      <div className="h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-white" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-purple-700 dark:text-purple-300">{formatCurrency(summary.savedMrr || 0)}</div>
+                      <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+                        {summary.saved > 0 ? `From ${summary.saved} saved customers` : 'MRR protected by ChurnBuddy'}
                       </p>
                     </CardContent>
                   </Card>

@@ -86,8 +86,10 @@ export async function GET(request: NextRequest) {
     let cancellationAttempts = 0;
     let lostMrr = 0;
     let recoveredMrr = 0;
+    let savedMrr = 0; // MRR saved by ChurnBuddy (customers who accepted offers)
     let totalMrr = 0;
     let activeSubscriptions = 0;
+    let customersAtRisk = 0; // Customers who started cancel flow
     const formattedEvents: Array<{
       id: string;
       type: string;
@@ -226,16 +228,45 @@ export async function GET(request: NextRequest) {
         .limit(100);
 
       if (events) {
+        // Collect subscription IDs from offer_accepted events to calculate saved MRR
+        const savedSubscriptionIds: string[] = [];
+
         // Count cancel flow specific events
-        events.forEach((event: { event_type: string; details: Record<string, unknown> }) => {
+        events.forEach((event: { event_type: string; subscription_id?: string; details: Record<string, unknown> }) => {
           if (event.event_type === 'offer_accepted') {
             offerAccepted++;
+            if (event.subscription_id) {
+              savedSubscriptionIds.push(event.subscription_id);
+            }
+            // Use stored mrr_impact if available
             const details = event.details;
-            recoveredMrr += (details?.mrr_impact as number) || 0;
+            if (details?.mrr_impact) {
+              savedMrr += (details.mrr_impact as number);
+            }
           } else if (event.event_type === 'cancellation_attempt') {
             cancellationAttempts++;
+            customersAtRisk++;
           }
         });
+
+        // If we have Stripe and saved subscriptions, calculate actual saved MRR
+        if (stripe && savedSubscriptionIds.length > 0 && savedMrr === 0) {
+          try {
+            for (const subId of savedSubscriptionIds.slice(0, 20)) {
+              const sub = await stripe.subscriptions.retrieve(subId);
+              if (sub && sub.status === 'active') {
+                const item = sub.items.data[0];
+                if (item?.price?.recurring?.interval === 'month') {
+                  savedMrr += (item.price.unit_amount || 0);
+                } else if (item?.price?.recurring?.interval === 'year') {
+                  savedMrr += ((item.price.unit_amount || 0) / 12);
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching saved subscriptions:', err);
+          }
+        }
 
         // Add Supabase events to the list
         events.slice(0, 20).forEach((event: {
@@ -288,8 +319,10 @@ export async function GET(request: NextRequest) {
         recoveries,
         saved: offerAccepted,
         cancellationAttempts,
+        customersAtRisk,
         lostMrr: lostMrr / 100, // Convert to dollars
         recoveredMrr: recoveredMrr / 100,
+        savedMrr: savedMrr / 100, // MRR saved by ChurnBuddy
         saveRate,
         recoveryRate,
         totalMrr: totalMrr / 100,
