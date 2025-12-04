@@ -436,12 +436,60 @@ export async function GET(request: NextRequest) {
     @keyframes cb-spin {
       to { transform: rotate(360deg); }
     }
+
+    /* Error/Message state */
+    .cb-message {
+      padding: 24px;
+      text-align: center;
+    }
+    .cb-message-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .cb-message-icon.error {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+    .cb-message-icon.success {
+      background: #D1FAE5;
+      color: #059669;
+    }
+    .cb-message-icon.info {
+      background: #DBEAFE;
+      color: #2563EB;
+    }
+    .cb-message-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+    .cb-message h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 8px;
+    }
+    .cb-message p {
+      font-size: 14px;
+      color: #6B7280;
+      margin: 0 0 16px;
+    }
+    .cb-message-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
   \`;
 
   // State
   var state = {
     isOpen: false,
     isLoading: true,
+    isProcessing: false,
     step: 'feedback',
     selectedReason: '',
     selectedPlan: null,
@@ -449,6 +497,7 @@ export async function GET(request: NextRequest) {
     subscriptionId: '',
     config: null,
     error: null,
+    message: null,  // { type: 'error'|'success'|'info', title, text }
     onCancel: null,
     onSaved: null,
     onPlanSwitch: null
@@ -461,7 +510,10 @@ export async function GET(request: NextRequest) {
     tag: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>',
     x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
     check: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-    clock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+    clock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    alertCircle: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
+    checkCircle: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+    info: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>'
   };
 
   function injectStyles() {
@@ -567,6 +619,26 @@ export async function GET(request: NextRequest) {
 
     if (state.isLoading) {
       html += '<div class="cb-loading"><div class="cb-spinner"></div>Loading...</div>';
+    } else if (state.isProcessing) {
+      html += '<div class="cb-loading"><div class="cb-spinner"></div>Applying discount...</div>';
+    } else if (state.message) {
+      // Show message (error, success, info)
+      var iconMap = { error: ICONS.alertCircle, success: ICONS.checkCircle, info: ICONS.info };
+      html += '<div class="cb-message">';
+      html += '<div class="cb-message-icon ' + state.message.type + '">' + iconMap[state.message.type] + '</div>';
+      html += '<h3>' + state.message.title + '</h3>';
+      html += '<p>' + state.message.text + '</p>';
+      html += '<div class="cb-message-actions">';
+      if (state.message.type === 'success') {
+        html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.close()">Done</button>';
+      } else if (state.message.type === 'info') {
+        html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.clearMessage()">Keep Subscription</button>';
+      } else {
+        html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.clearMessage()">Try Again</button>';
+        html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.close()">Close</button>';
+      }
+      html += '</div>';
+      html += '</div>';
     } else if (state.error) {
       html += '<div class="cb-loading" style="color: #DC2626;">Error: ' + state.error + '</div>';
     } else if (state.step === 'feedback' && cfg.showFeedback !== false) {
@@ -758,14 +830,70 @@ export async function GET(request: NextRequest) {
 
     acceptOffer: function() {
       var cfg = state.config || {};
-      logEvent('offer_accepted', {
-        reason: state.selectedReason,
-        discountPercent: cfg.discountPercent,
-        discountDuration: cfg.discountDuration
-      });
-      state.isOpen = false;
+      state.isProcessing = true;
       render();
-      if (state.onSaved) state.onSaved();
+
+      // Call API to apply discount
+      fetch(CONFIG.eventEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'offer_accepted',
+          flowId: CONFIG.flowId,
+          customerId: state.customerId,
+          subscriptionId: state.subscriptionId,
+          details: {
+            reason: state.selectedReason,
+            discountPercent: cfg.discountPercent,
+            discountDuration: cfg.discountDuration
+          }
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        state.isProcessing = false;
+        if (data.error === 'already_has_discount') {
+          // Customer already has a discount
+          state.message = {
+            type: 'info',
+            title: 'Discount Already Active',
+            text: 'You already have an active discount on your subscription. Enjoy your savings!'
+          };
+          render();
+        } else if (data.success) {
+          // Success - discount applied
+          state.message = {
+            type: 'success',
+            title: 'Discount Applied!',
+            text: 'Your ' + cfg.discountPercent + '% discount has been applied for the next ' + cfg.discountDuration + ' months.'
+          };
+          render();
+          if (state.onSaved) state.onSaved();
+        } else {
+          // Generic error
+          state.message = {
+            type: 'error',
+            title: 'Something went wrong',
+            text: data.message || 'Failed to apply discount. Please try again or contact support.'
+          };
+          render();
+        }
+      })
+      .catch(function(err) {
+        console.error('ChurnBuddy: Failed to apply offer', err);
+        state.isProcessing = false;
+        state.message = {
+          type: 'error',
+          title: 'Connection Error',
+          text: 'Unable to connect. Please check your internet and try again.'
+        };
+        render();
+      });
+    },
+
+    clearMessage: function() {
+      state.message = null;
+      render();
     },
 
     confirmCancel: function() {

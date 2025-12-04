@@ -19,6 +19,8 @@ import {
   Settings,
   Plus,
   FileText,
+  Percent,
+  Tag,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,8 +82,32 @@ const EMPTY_SUMMARY: DashboardSummary = {
   recoveryRate: 0,
 };
 
+// Discount analytics types
+interface DiscountAnalytics {
+  activeDiscounts: number;
+  activeDiscountsList: Array<{
+    customerId: string;
+    customerEmail: string | null;
+    subscriptionId: string;
+    discountPercent: number | null;
+    couponName: string | null;
+    endsAt: string | null;
+  }>;
+  totalOffersShown: number;
+  totalOffersAccepted: number;
+  acceptanceRate: number;
+  recentDiscounts: Array<{
+    customerId: string;
+    customerEmail: string | null;
+    discountPercent: number;
+    appliedAt: string;
+    reason: string | null;
+  }>;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<{ summary: DashboardSummary; events: DashboardEvent[] } | null>(null);
+  const [discountData, setDiscountData] = useState<DiscountAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30');
 
@@ -89,13 +115,21 @@ export default function DashboardPage() {
     // Fetch real data from API
     const fetchData = async () => {
       try {
-        const response = await fetch(`/api/dashboard?period=${period}`);
-        if (response.ok) {
-          const result = await response.json();
+        const [dashboardResponse, discountResponse] = await Promise.all([
+          fetch(`/api/dashboard?period=${period}`),
+          fetch('/api/analytics/discounts'),
+        ]);
+
+        if (dashboardResponse.ok) {
+          const result = await dashboardResponse.json();
           setData(result);
         } else {
-          // If API fails, show empty state
           setData({ summary: EMPTY_SUMMARY, events: [] });
+        }
+
+        if (discountResponse.ok) {
+          const discountResult = await discountResponse.json();
+          setDiscountData(discountResult);
         }
       } catch (error) {
         // If API fails, show empty state
@@ -328,6 +362,26 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Discount Stats */}
+                    {discountData && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Tag className="h-4 w-4 text-purple-600" />
+                              <span className="text-sm font-medium">Discount Acceptance Rate</span>
+                            </div>
+                            <span className="text-2xl font-bold">{discountData.acceptanceRate}%</span>
+                          </div>
+                          <Progress value={discountData.acceptanceRate} className="h-3" />
+                          <p className="text-xs text-muted-foreground">
+                            {discountData.totalOffersAccepted} of {discountData.totalOffersShown} offers accepted
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -395,6 +449,76 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Active Discounts Card */}
+              {discountData && discountData.activeDiscounts > 0 && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Percent className="h-5 w-5 text-purple-600" />
+                          Active Discounts
+                        </CardTitle>
+                        <CardDescription>
+                          {discountData.activeDiscounts} customers currently have active retention discounts
+                        </CardDescription>
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {discountData.activeDiscounts}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
+                        <div>Customer</div>
+                        <div>Discount</div>
+                        <div>Coupon</div>
+                        <div>Expires</div>
+                      </div>
+                      <div className="divide-y">
+                        {discountData.activeDiscountsList.slice(0, 5).map((discount) => (
+                          <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-xs">
+                                  {discount.customerEmail ? getInitials(discount.customerEmail) : '??'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {discount.customerEmail || 'Unknown'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{discount.customerId}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <Badge variant="success" className="gap-1">
+                                <Percent className="h-3 w-3" />
+                                {discount.discountPercent}% off
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground truncate">
+                              {discount.couponName || 'Retention Offer'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {discount.endsAt
+                                ? new Date(discount.endsAt).toLocaleDateString()
+                                : 'Forever'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {discountData.activeDiscounts > 5 && (
+                      <p className="text-xs text-muted-foreground mt-3 text-center">
+                        And {discountData.activeDiscounts - 5} more active discounts...
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Events Table */}
               <Card>

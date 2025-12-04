@@ -55,6 +55,20 @@ export async function getSubscription(subscriptionId: string): Promise<Stripe.Su
 }
 
 /**
+ * Get the active discount on a subscription (if any)
+ * Used to check if customer already has a discount before applying a new one
+ */
+export async function getSubscriptionDiscount(subscriptionId: string): Promise<Stripe.Discount | null> {
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    return subscription.discount;
+  } catch (error) {
+    console.error('Error fetching subscription discount:', error);
+    return null;
+  }
+}
+
+/**
  * Apply a discount coupon to a subscription
  * Used when a customer accepts a save offer
  */

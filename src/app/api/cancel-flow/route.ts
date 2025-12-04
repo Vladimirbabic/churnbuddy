@@ -13,8 +13,8 @@ const DEFAULT_ORG_ID = 'demo-org-001';
 // Lazy load Stripe utilities only when needed
 async function getStripeUtils() {
   try {
-    const { stripe, applyDiscountToSubscription, createDiscountCoupon } = await import('@/lib/stripe');
-    return { stripe, applyDiscountToSubscription, createDiscountCoupon };
+    const { stripe, applyDiscountToSubscription, createDiscountCoupon, getSubscriptionDiscount } = await import('@/lib/stripe');
+    return { stripe, applyDiscountToSubscription, createDiscountCoupon, getSubscriptionDiscount };
   } catch (error) {
     console.warn('Stripe not configured:', error);
     return null;
@@ -100,6 +100,22 @@ export async function POST(request: NextRequest) {
       const durationInMonths = parseInt(details?.discountDuration) || 3;
 
       try {
+        // Check if subscription already has an active discount
+        const existingDiscount = await stripeUtils.getSubscriptionDiscount(subscriptionId);
+        if (existingDiscount) {
+          return NextResponse.json({
+            success: false,
+            error: 'already_has_discount',
+            message: 'This subscription already has an active discount',
+            existingDiscount: {
+              percentOff: existingDiscount.coupon?.percent_off,
+              amountOff: existingDiscount.coupon?.amount_off,
+              name: existingDiscount.coupon?.name,
+              endsAt: existingDiscount.end ? new Date(existingDiscount.end * 1000).toISOString() : null,
+            },
+          });
+        }
+
         // Create a coupon for this offer
         const coupon = await stripeUtils.createDiscountCoupon(
           discountPercent,
