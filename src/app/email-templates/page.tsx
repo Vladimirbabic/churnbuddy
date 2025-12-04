@@ -176,8 +176,10 @@ export default function EmailTemplatesPage() {
     { name: 'customer_email', description: 'Customer\'s email' },
     { name: 'amount', description: 'Payment amount' },
     { name: 'company_name', description: 'Your company name' },
+    { name: 'plan_name', description: 'Subscription plan name' },
     { name: 'update_payment_link', description: 'Link to update payment' },
     { name: 'days_remaining', description: 'Days until cancellation' },
+    { name: 'cancel_attempts', description: 'Number of cancel attempts' },
     { name: 'discount_percent', description: 'Discount percentage' },
     { name: 'discount_duration', description: 'How long discount lasts' },
     { name: 'end_date', description: 'Subscription end date' },
@@ -268,15 +270,6 @@ export default function EmailTemplatesPage() {
                       <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans line-clamp-3">
                         {template.body}
                       </pre>
-                      {template.variables.length > 0 && (
-                        <div className="flex gap-1 mt-3 flex-wrap">
-                          {template.variables.map((v) => (
-                            <Badge key={v} variant="secondary" className="text-xs">
-                              {`{{${v}}}`}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 ))
@@ -409,45 +402,6 @@ export default function EmailTemplatesPage() {
               </div>
             )}
 
-            {/* Variables reference when not editing */}
-            {!editingTemplate && !isCreating && templates.length > 0 && (
-              <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Available Variables</CardTitle>
-                    <CardDescription>
-                      Use these in your templates
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {AVAILABLE_VARIABLES.map((v) => (
-                        <div
-                          key={v.name}
-                          className="flex items-center justify-between p-2 rounded bg-muted/50"
-                        >
-                          <div>
-                            <code className="text-xs font-mono">{`{{${v.name}}}`}</code>
-                            <p className="text-xs text-muted-foreground">{v.description}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => copyVariable(v.name)}
-                            className="p-1 hover:bg-secondary rounded"
-                          >
-                            {copiedVar === v.name ? (
-                              <Check className="h-4 w-4 text-emerald-600" />
-                            ) : (
-                              <Copy className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
     </AppLayout>
   );
