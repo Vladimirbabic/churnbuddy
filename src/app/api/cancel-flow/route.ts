@@ -26,10 +26,63 @@ export async function OPTIONS() {
 }
 
 // Lazy load Stripe utilities only when needed
-async function getStripeUtils() {
+// If flowId is provided, uses the organization's Stripe key from settings
+async function getStripeUtils(flowId?: string) {
   try {
-    const { stripe, applyDiscountToSubscription, createDiscountCoupon, getSubscriptionDiscount } = await import('@/lib/stripe');
-    return { stripe, applyDiscountToSubscription, createDiscountCoupon, getSubscriptionDiscount };
+    const { stripe, createStripeClient, getOrganizationStripeKey, getSubscriptionDiscount } = await import('@/lib/stripe');
+    
+    // If flowId provided, try to get organization's Stripe key
+    let stripeClient = stripe;
+    if (flowId) {
+      const orgStripeKey = await getOrganizationStripeKey(flowId);
+      if (orgStripeKey) {
+        console.log('Using organization Stripe key for flow:', flowId);
+        stripeClient = createStripeClient(orgStripeKey);
+      } else {
+        console.log('No organization Stripe key found, using default');
+      }
+    }
+    
+    // Create functions that use the correct Stripe client
+    const applyDiscountToSubscription = async (subscriptionId: string, couponId: string) => {
+      try {
+        return await stripeClient.subscriptions.update(subscriptionId, { coupon: couponId });
+      } catch (error) {
+        console.error('Error applying discount:', error);
+        return null;
+      }
+    };
+    
+    const createDiscountCoupon = async (percentOff: number, durationInMonths: number, name?: string) => {
+      try {
+        return await stripeClient.coupons.create({
+          percent_off: percentOff,
+          duration: 'repeating',
+          duration_in_months: durationInMonths,
+          name: name || `Save Offer - ${percentOff}% off for ${durationInMonths} months`,
+        });
+      } catch (error) {
+        console.error('Error creating coupon:', error);
+        return null;
+      }
+    };
+    
+    const getSubscriptionDiscountFn = async (subscriptionId: string) => {
+      try {
+        const subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
+        return subscription.discount;
+      } catch (error) {
+        console.error('Error fetching subscription discount:', error);
+        return null;
+      }
+    };
+    
+    return { 
+      stripe: stripeClient, 
+      applyDiscountToSubscription, 
+      createDiscountCoupon, 
+      getSubscriptionDiscount: getSubscriptionDiscountFn 
+    };
   } catch (error) {
     console.warn('Stripe not configured:', error);
     return null;
@@ -37,8 +90,8 @@ async function getStripeUtils() {
 }
 
 // Look up Stripe customer by email and get their active subscription
-async function lookupCustomerByEmail(email: string) {
-  const stripeUtils = await getStripeUtils();
+async function lookupCustomerByEmail(email: string, flowId?: string) {
+  const stripeUtils = await getStripeUtils(flowId);
   if (!stripeUtils) {
     return { customerId: null, subscriptionId: null, error: 'Stripe not configured' };
   }
@@ -101,14 +154,14 @@ async function getEmailUtils() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    let { eventType, customerId, subscriptionId, details } = body;
+    let { eventType, customerId, subscriptionId, details, flowId } = body;
     const { customerEmail: inputEmail } = body;
 
     // If email is provided instead of customerId, look up the customer
     let customerEmail: string | undefined = inputEmail;
     
     if (!customerId && inputEmail) {
-      const lookup = await lookupCustomerByEmail(inputEmail);
+      const lookup = await lookupCustomerByEmail(inputEmail, flowId);
       if (lookup.customerId) {
         customerId = lookup.customerId;
         subscriptionId = subscriptionId || lookup.subscriptionId;
@@ -127,8 +180,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get customer email from Stripe if not already set
-    const stripeUtils = await getStripeUtils();
+    // Get Stripe utils - uses organization's Stripe key if flowId provided
+    const stripeUtils = await getStripeUtils(flowId);
 
     if (!customerEmail && stripeUtils && customerId && !customerId.startsWith('email:')) {
       try {
@@ -314,6 +367,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
+    const flowId = searchParams.get('flowId') || undefined;
 
     if (!customerId) {
       return NextResponse.json(
@@ -349,7 +403,7 @@ export async function GET(request: NextRequest) {
 
     // Check if customer has an active discount
     let hasActiveDiscount = false;
-    const stripeUtils = await getStripeUtils();
+    const stripeUtils = await getStripeUtils(flowId);
 
     if (stripeUtils) {
       try {

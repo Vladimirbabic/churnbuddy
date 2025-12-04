@@ -6,11 +6,65 @@
 
 import Stripe from 'stripe';
 
-// Initialize Stripe with API key from environment
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-  typescript: true,
-});
+// Default Stripe client using environment variable (for ChurnBuddy's own billing)
+export const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+      typescript: true,
+    })
+  : null as unknown as Stripe;
+
+// Create a Stripe client for a specific organization using their API key
+export function createStripeClient(secretKey: string): Stripe {
+  return new Stripe(secretKey, {
+    apiVersion: '2023-10-16',
+    typescript: true,
+  });
+}
+
+// Get organization's Stripe key from settings
+export async function getOrganizationStripeKey(flowId: string): Promise<string | null> {
+  try {
+    // Import supabase dynamically to avoid circular dependencies
+    const { getServerSupabase, isSupabaseConfigured } = await import('@/lib/supabase');
+    
+    if (!isSupabaseConfigured()) {
+      return null;
+    }
+    
+    const supabase = getServerSupabase();
+    
+    // First, get the organization_id from the cancel_flows table
+    const { data: flow, error: flowError } = await supabase
+      .from('cancel_flows')
+      .select('organization_id')
+      .eq('id', flowId)
+      .single();
+    
+    if (flowError || !flow) {
+      console.error('Flow not found:', flowId);
+      return null;
+    }
+    
+    // Then get the Stripe key from settings
+    const { data: settings, error: settingsError } = await supabase
+      .from('settings')
+      .select('stripe_config')
+      .eq('organization_id', flow.organization_id)
+      .single();
+    
+    if (settingsError || !settings) {
+      console.error('Settings not found for org:', flow.organization_id);
+      return null;
+    }
+    
+    const stripeConfig = settings.stripe_config as { secret_key?: string } | null;
+    return stripeConfig?.secret_key || null;
+  } catch (error) {
+    console.error('Error fetching organization Stripe key:', error);
+    return null;
+  }
+}
 
 /**
  * Create a Stripe Billing Portal session for a customer
