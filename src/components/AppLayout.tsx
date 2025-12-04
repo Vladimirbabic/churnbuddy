@@ -24,34 +24,37 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
     <AuthGuard>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          {/* Header */}
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            {(title || description) && (
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-semibold">{title}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            )}
-            {/* Header actions */}
-            {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
-          </header>
-
-          {/* Page content */}
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-6">
-            <div className="mx-auto w-full max-w-6xl">
-              {description && (
-                <p className="text-sm text-muted-foreground mb-4">{description}</p>
+        {/* Wrapper with 8px padding on top, right, bottom */}
+        <div className="flex-1 p-2 pl-0">
+          <SidebarInset className="bg-white border border-border rounded-xl h-full">
+            {/* Header */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              {(title || description) && (
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="font-semibold">{title}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               )}
-              {children}
+              {/* Header actions */}
+              {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+            </header>
+
+            {/* Page content */}
+            <div className="flex flex-1 flex-col gap-4 px-12 py-6">
+              <div className="w-full">
+                {description && (
+                  <p className="text-sm text-muted-foreground mb-4">{description}</p>
+                )}
+                {children}
+              </div>
             </div>
-          </div>
-        </SidebarInset>
+          </SidebarInset>
+        </div>
       </SidebarProvider>
     </AuthGuard>
   );

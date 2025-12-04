@@ -393,7 +393,7 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Branding</CardTitle>
-                  <CardDescription>Customize how ChurnBuddy appears to your customers</CardDescription>
+                  <CardDescription>Customize how Exit Loop appears to your customers</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Company Name */}

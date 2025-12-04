@@ -21,7 +21,7 @@ function getResendClient(): Resend {
 }
 
 // Email configuration from environment
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@churnbuddy.com';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@exitloop.com';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 // Types for email parameters

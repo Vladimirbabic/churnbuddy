@@ -9,3 +9,4 @@ CREATE POLICY "Public can read active cancel flows"
   ON cancel_flows FOR SELECT
   USING (is_active = true);
 
+

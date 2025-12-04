@@ -36,7 +36,7 @@ interface DashboardSummary {
   customersAtRisk?: number;
   lostMrr: number;
   recoveredMrr: number;
-  savedMrr?: number; // MRR saved by ChurnBuddy
+  savedMrr?: number; // MRR saved by Exit Loop
   saveRate: number;
   recoveryRate: number;
   totalMrr?: number;
@@ -111,7 +111,7 @@ export default function DashboardPage() {
         const [dashboardResponse, discountResponse, mrrHistoryResponse] = await Promise.all([
           fetch(`/api/dashboard?period=${period}`),
           fetch('/api/analytics/discounts'),
-          fetch(`/api/analytics/mrr-history?days=${period}`),
+          fetch('/api/analytics/mrr-history?months=12'),
         ]);
 
         if (dashboardResponse.ok) {
@@ -232,111 +232,103 @@ export default function DashboardPage() {
 
               {/* MRR Overview cards - only show when Stripe is connected */}
               {stripeConnected && summary.totalMrr !== undefined && (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Monthly Recurring Revenue
-                      </CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{formatCurrency(summary.totalMrr)}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {summary.activeSubscriptions} active subscriptions
-                      </p>
-                    </CardContent>
-                  </Card>
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-semibold tracking-tight">Dashboard</h2>
+                  <div className="relative rounded-xl p-6" style={{ backgroundImage: 'url(/img/bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                    <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
+                      {/* MRR Card with embedded chart */}
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
+                            Monthly Recurring Revenue
+                          </CardTitle>
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <div className="text-3xl font-medium">{formatCurrency(summary.totalMrr)}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {summary.activeSubscriptions} active subscriptions
+                            </p>
+                          </div>
+                          {/* MRR Chart embedded in card */}
+                          <div className="h-[137px] w-full">
+                            {mrrHistory.length > 0 && (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={mrrHistory} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                                  <XAxis
+                                    dataKey="date"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fill: '#888' }}
+                                    tickFormatter={(value) => {
+                                      const date = new Date(value + 'T00:00:00');
+                                      return date.toLocaleDateString('en-US', { month: 'short' });
+                                    }}
+                                  />
+                                  <Tooltip
+                                    contentStyle={{
+                                      backgroundColor: 'hsl(var(--background))',
+                                      border: '1px solid hsl(var(--border))',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                    }}
+                                    labelFormatter={(value) => {
+                                      const date = new Date(value + 'T00:00:00');
+                                      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                                    }}
+                                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'MRR']}
+                                  />
+                                  <Line
+                                    type="monotone"
+                                    dataKey="mrr"
+                                    stroke="hsl(var(--primary))"
+                                    strokeWidth={2}
+                                    dot={false}
+                                    activeDot={{ r: 4, fill: 'hsl(var(--primary))' }}
+                                  />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
 
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Revenue Saved
-                      </CardTitle>
-                      <Shield className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{formatCurrency(summary.savedMrr || 0)}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {summary.saved > 0 ? `${summary.saved} saved customers` : 'Protected by ChurnBuddy'}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      {/* Right column - stacked cards */}
+                      <div className="flex flex-col gap-4">
+                        <Card className="bg-green-100 border-border">
+                          <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
+                              Revenue Saved
+                            </CardTitle>
+                            <Shield className="h-4 w-4 text-muted-foreground" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-3xl font-medium text-green-700">{formatCurrency(summary.savedMrr || 0)}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {summary.saved > 0 ? `${summary.saved} saved customers` : 'Protected by Exit Loop'}
+                            </p>
+                          </CardContent>
+                        </Card>
 
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Active Subscriptions
-                      </CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{summary.activeSubscriptions}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Avg {formatCurrency((summary.totalMrr || 0) / (summary.activeSubscriptions || 1))}/customer
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* MRR Chart */}
-              {stripeConnected && mrrHistory.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      MRR Trend
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[200px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={mrrHistory}>
-                          <XAxis
-                            dataKey="date"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#888' }}
-                            tickFormatter={(value) => {
-                              const date = new Date(value);
-                              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                            }}
-                            interval="preserveStartEnd"
-                            minTickGap={50}
-                          />
-                          <YAxis
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#888' }}
-                            tickFormatter={(value) => `$${value}`}
-                            width={60}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: 'hsl(var(--background))',
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                            }}
-                            labelFormatter={(value) => {
-                              const date = new Date(value);
-                              return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                            }}
-                            formatter={(value: number) => [`$${value.toFixed(2)}`, 'MRR']}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="mrr"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={false}
-                            activeDot={{ r: 4, fill: 'hsl(var(--primary))' }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                        <Card>
+                          <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
+                              Active Subscriptions
+                            </CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-3xl font-medium">{summary.activeSubscriptions}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Avg {formatCurrency((summary.totalMrr || 0) / (summary.activeSubscriptions || 1))}/customer
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
 
               {/* Performance Overview */}

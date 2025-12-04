@@ -212,7 +212,7 @@ export default function PricingPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Shield className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold">ChurnBuddy</span>
+            <span className="text-lg font-semibold">Exit Loop</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -456,7 +456,7 @@ export default function PricingPage() {
             Ready to reduce churn?
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join hundreds of SaaS founders who are recovering revenue with ChurnBuddy.
+            Join hundreds of SaaS founders who are recovering revenue with Exit Loop.
           </p>
           <Button size="lg" className="gap-2" onClick={() => handleSelectPlan('growth', 'checkout')}>
             Start Your Free Trial
@@ -472,7 +472,7 @@ export default function PricingPage() {
             <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
               <Shield className="h-3 w-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">ChurnBuddy</span>
+            <span className="text-sm font-medium">Exit Loop</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Built for SaaS founders who care about retention.

@@ -35,7 +35,7 @@ export default function HomePage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Shield className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold">ChurnBuddy</span>
+            <span className="text-lg font-semibold">Exit Loop</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -89,7 +89,7 @@ export default function HomePage() {
           </h1>
 
           <p className="text-xl text-muted-foreground max-w-2xl">
-            ChurnBuddy helps SaaS founders reduce churn with automated dunning emails
+            Exit Loop helps SaaS founders reduce churn with automated dunning emails
             and intelligent cancel-save flows. Recover failed payments and save customers
             before they leave.
           </p>
@@ -267,7 +267,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold">Watch MRR Grow</h3>
               <p className="text-muted-foreground">
-                Monitor your dashboard as ChurnBuddy recovers failed payments and saves customers.
+                Monitor your dashboard as Exit Loop recovers failed payments and saves customers.
               </p>
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function HomePage() {
             Quick Integration
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Add ChurnBuddy to your app with just a few lines of code
+            Add Exit Loop to your app with just a few lines of code
           </p>
         </div>
 
@@ -353,7 +353,7 @@ customer.subscription.updated`}</code>
             Ready to reduce churn?
           </h2>
           <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-            Join hundreds of SaaS founders who are recovering revenue and retaining customers with ChurnBuddy.
+            Join hundreds of SaaS founders who are recovering revenue and retaining customers with Exit Loop.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" className="gap-2" asChild>
@@ -376,7 +376,7 @@ customer.subscription.updated`}</code>
             <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
               <Shield className="h-3 w-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">ChurnBuddy</span>
+            <span className="text-sm font-medium">Exit Loop</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Built for SaaS founders who care about retention.
@@ -390,7 +390,7 @@ customer.subscription.updated`}</code>
         onClose={() => setShowModal(false)}
         customerId="cus_demo123"
         subscriptionId="sub_demo456"
-        companyName="ChurnBuddy"
+        companyName="Exit Loop"
         discountPercent={50}
         discountDuration="3 months"
         onCancelConfirmed={async (reason) => {

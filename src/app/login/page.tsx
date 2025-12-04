@@ -44,7 +44,7 @@ export default function LoginPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold">ChurnBuddy</span>
+          <span className="text-xl font-semibold">Exit Loop</span>
         </Link>
 
         <Card>
@@ -123,7 +123,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                  New to ChurnBuddy?
+                  New to Exit Loop?
                 </span>
               </div>
             </div>

@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get('days') || '30');
+    const months = parseInt(searchParams.get('months') || '12');
 
     const stripe = await getStripeClient(supabase, orgId);
 
@@ -97,24 +97,24 @@ export async function GET(request: NextRequest) {
 
     const allSubscriptions = [...activeSubscriptions.data, ...canceledSubscriptions.data];
 
-    // Generate data points for each day
+    // Generate data points for each month
     const history: MrrDataPoint[] = [];
     const now = new Date();
 
-    for (let i = days; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      const dateTimestamp = Math.floor(date.getTime() / 1000);
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      // Use end of month for calculating active subscriptions
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+      const dateTimestamp = Math.floor(endOfMonth.getTime() / 1000);
 
-      let mrrForDay = 0;
+      let mrrForMonth = 0;
 
-      // Calculate MRR for this date by checking which subscriptions were active
+      // Calculate MRR for this month by checking which subscriptions were active at end of month
       allSubscriptions.forEach(sub => {
         const startedAt = sub.created;
         const canceledAt = sub.canceled_at;
 
-        // Check if subscription was active on this date
+        // Check if subscription was active at end of this month
         const wasActive = startedAt <= dateTimestamp &&
           (!canceledAt || canceledAt > dateTimestamp);
 
@@ -138,13 +138,13 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          mrrForDay += subMrr;
+          mrrForMonth += subMrr;
         }
       });
 
       history.push({
         date: date.toISOString().split('T')[0],
-        mrr: Math.round(mrrForDay * 100) / 100,
+        mrr: Math.round(mrrForMonth * 100) / 100,
       });
     }
 

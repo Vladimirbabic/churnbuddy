@@ -698,7 +698,7 @@ function CancelFlowsPageContent() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                   <Shield className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <span className="font-semibold">ChurnBuddy</span>
+                <span className="font-semibold">Exit Loop</span>
               </Link>
             </div>
           </div>
@@ -1111,7 +1111,7 @@ function CancelFlowsPageContent() {
         </Button>
       }
     >
-      <div className="max-w-5xl">
+      <div className="w-full">
         {/* Messages */}
         {error && (
           <div className="mb-6 flex items-center gap-2 p-4 text-sm text-destructive bg-destructive/10 rounded-lg">

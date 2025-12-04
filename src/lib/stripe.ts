@@ -6,7 +6,7 @@
 
 import Stripe from 'stripe';
 
-// Default Stripe client using environment variable (for ChurnBuddy's own billing)
+// Default Stripe client using environment variable (for Exit Loop's own billing)
 export const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2023-10-16',

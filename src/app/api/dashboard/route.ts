@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     let cancellationAttempts = 0;
     let lostMrr = 0;
     let recoveredMrr = 0;
-    let savedMrr = 0; // MRR saved by ChurnBuddy (customers who accepted offers)
+    let savedMrr = 0; // MRR saved by Exit Loop (customers who accepted offers)
     let totalMrr = 0;
     let activeSubscriptions = 0;
     let customersAtRisk = 0; // Customers who started cancel flow
@@ -313,7 +313,7 @@ export async function GET(request: NextRequest) {
         customersAtRisk,
         lostMrr: lostMrr / 100, // Convert to dollars
         recoveredMrr: recoveredMrr / 100,
-        savedMrr: savedMrr / 100, // MRR saved by ChurnBuddy
+        savedMrr: savedMrr / 100, // MRR saved by Exit Loop
         saveRate,
         recoveryRate,
         totalMrr: totalMrr / 100,

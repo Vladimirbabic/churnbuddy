@@ -197,7 +197,7 @@ export default function OnboardingPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Shield className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold">ChurnBuddy</span>
+            <span className="text-lg font-semibold">Exit Loop</span>
           </div>
           <Badge variant="secondary">Setup Wizard</Badge>
         </div>
@@ -267,7 +267,7 @@ export default function OnboardingPage() {
                 <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">Welcome to ChurnBuddy!</CardTitle>
+                <CardTitle className="text-2xl">Welcome to Exit Loop!</CardTitle>
                 <CardDescription className="text-base">
                   Let's get you set up in just a few minutes
                 </CardDescription>
@@ -681,7 +681,7 @@ export default function OnboardingPage() {
                 </div>
                 <CardTitle className="text-2xl">You're all set!</CardTitle>
                 <CardDescription className="text-base">
-                  ChurnBuddy is now configured and ready to help you reduce churn
+                  Exit Loop is now configured and ready to help you reduce churn
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
