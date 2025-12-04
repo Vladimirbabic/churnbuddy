@@ -20,26 +20,26 @@ export interface SubscriptionData {
   updatedAt: Date;
 }
 
-// Plan configuration - matches Stripe products
+// Plan configuration
 export const PLANS = {
   starter: {
     name: 'Starter',
-    price: 900, // $9 in cents
-    priceId: process.env.STRIPE_PRICE_STARTER || 'price_1SaZfrLXgHZdEVXGEoy3Zuzb',
+    price: 900, // in cents
+    priceId: process.env.STRIPE_PRICE_STARTER || 'price_starter',
     cancelFlowsLimit: 1,
     features: ['1 Cancel Flow', 'Basic analytics', 'Email support'],
   },
   growth: {
     name: 'Growth',
-    price: 1900, // $19 in cents
-    priceId: process.env.STRIPE_PRICE_GROWTH || 'price_1SaZg5LXgHZdEVXGLCk6Um6u',
+    price: 1900,
+    priceId: process.env.STRIPE_PRICE_GROWTH || 'price_growth',
     cancelFlowsLimit: 5,
     features: ['5 Cancel Flows', 'Advanced analytics', 'Priority support', 'Custom branding'],
   },
   scale: {
     name: 'Scale',
-    price: 4900, // $49 in cents (add later if needed)
-    priceId: process.env.STRIPE_PRICE_SCALE || 'price_1SaZg5LXgHZdEVXGLCk6Um6u', // Using growth as fallback for now
+    price: 4900,
+    priceId: process.env.STRIPE_PRICE_SCALE || 'price_scale',
     cancelFlowsLimit: -1, // unlimited
     features: ['Unlimited Cancel Flows', 'Advanced analytics', 'Priority support', 'Custom branding', 'API access'],
   },
