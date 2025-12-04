@@ -3,6 +3,17 @@
 import React from 'react';
 import { X, Tag, Clock } from 'lucide-react';
 
+interface CopySettings {
+  title: string;
+  subtitle: string;
+}
+
+interface ColorSettings {
+  primary: string;
+  background: string;
+  text: string;
+}
+
 interface SpecialOfferModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -15,7 +26,22 @@ interface SpecialOfferModalProps {
   isProcessing?: boolean;
   error?: { title: string; message: string } | null;
   onClearError?: () => void;
+  copy?: CopySettings;
+  colors?: ColorSettings;
+  showCountdown?: boolean;
+  countdownMinutes?: number;
 }
+
+const DEFAULT_COPY: CopySettings = {
+  title: "Stay to get {discount}% off for {duration}. We'd hate to lose you.",
+  subtitle: "You're eligible for our special discount.",
+};
+
+const DEFAULT_COLORS: ColorSettings = {
+  primary: '#DC2626',
+  background: '#FEF2F2',
+  text: '#1F2937',
+};
 
 export function SpecialOfferModal({
   isOpen,
@@ -29,7 +55,16 @@ export function SpecialOfferModal({
   isProcessing = false,
   error = null,
   onClearError,
+  copy = DEFAULT_COPY,
+  colors = DEFAULT_COLORS,
+  showCountdown = true,
+  countdownMinutes = 10,
 }: SpecialOfferModalProps) {
+  // Replace placeholders in title
+  const processedTitle = copy.title
+    .replace('{discount}', String(discountPercent))
+    .replace('{duration}', discountDuration);
+
   if (!isOpen) return null;
 
   // Preview mode - render without backdrop and fixed positioning
@@ -42,19 +77,19 @@ export function SpecialOfferModal({
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#FEF2F2]">
+        <div className="flex items-center justify-between px-4 py-2" style={{ backgroundColor: colors.background }}>
           <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-[#DC2626]" />
-            <span className="font-semibold text-sm text-[#DC2626]">
+            <Tag className="h-4 w-4" style={{ color: colors.primary }} />
+            <span className="font-semibold text-sm" style={{ color: colors.primary }}>
               Special Offer
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-red-100 transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:opacity-80 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
-            <X className="h-4 w-4 text-[#DC2626]" />
+            <X className="h-4 w-4" style={{ color: colors.primary }} />
           </button>
         </div>
 
@@ -63,35 +98,39 @@ export function SpecialOfferModal({
           {/* Main Title */}
           <h2
             id="special-offer-title"
-            className="font-bold text-[22px] text-gray-900 mt-2"
+            className="font-bold text-[22px] mt-2"
+            style={{ color: colors.text }}
           >
-            Stay to get {discountPercent}% off for {discountDuration}. We'd hate to lose you.
+            {processedTitle}
           </h2>
 
           {/* Subtext */}
-          <p className="text-sm text-gray-600 mt-1 mb-6">
-            You're eligible for our special discount.
+          <p className="text-sm mt-1 mb-6" style={{ color: colors.text, opacity: 0.7 }}>
+            {copy.subtitle}
           </p>
 
           {/* Offer Card */}
-          <div className="bg-[#FEF2F2] border border-red-100 rounded-2xl p-6 text-center">
+          <div className="rounded-2xl p-6 text-center" style={{ backgroundColor: colors.background, border: `1px solid ${colors.primary}20` }}>
             {/* Time-Limited Label */}
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-[#B91C1C]" />
-              <span className="text-[10px] font-bold text-[#B91C1C] uppercase tracking-wider">
-                Time-Limited Deal
-              </span>
-            </div>
+            {showCountdown && (
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Clock className="h-4 w-4" style={{ color: colors.primary }} />
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.primary }}>
+                  {countdownMinutes} Minutes Left
+                </span>
+              </div>
+            )}
 
             {/* Main Deal */}
-            <p className="text-2xl font-bold text-gray-900 mb-4">
+            <p className="text-2xl font-bold mb-4" style={{ color: colors.text }}>
               {discountPercent}% off for {discountDuration}
             </p>
 
             {/* CTA Button */}
             <button
               onClick={onAcceptOffer}
-              className="w-full bg-red-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
+              className="w-full text-white font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-colors"
+              style={{ backgroundColor: colors.primary }}
             >
               Accept This Offer
             </button>
@@ -101,7 +140,8 @@ export function SpecialOfferModal({
           <div className="flex justify-between mt-6">
             <button
               onClick={onBack}
-              className="bg-gray-100 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 rounded-lg font-medium transition-colors"
+              style={{ backgroundColor: colors.background, color: colors.text }}
             >
               Back
             </button>

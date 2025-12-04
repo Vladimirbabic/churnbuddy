@@ -9,13 +9,27 @@ interface FeedbackOption {
   letter: string;
 }
 
+interface CopySettings {
+  title: string;
+  subtitle: string;
+}
+
+interface ColorSettings {
+  primary: string;
+  background: string;
+  text: string;
+}
+
 interface YourFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   onBack: () => void;
-  onNext: (selectedOption: string) => void;
+  onNext: (selectedOption: string, otherText?: string) => void;
   options?: FeedbackOption[];
   previewMode?: boolean;
+  copy?: CopySettings;
+  colors?: ColorSettings;
+  allowOtherOption?: boolean;
 }
 
 const DEFAULT_OPTIONS: FeedbackOption[] = [
@@ -23,8 +37,18 @@ const DEFAULT_OPTIONS: FeedbackOption[] = [
   { id: 'not_using', label: "I'm not using it enough", letter: 'B' },
   { id: 'missing_features', label: 'Missing features I need', letter: 'C' },
   { id: 'found_alternative', label: 'Found a better alternative', letter: 'D' },
-  { id: 'other', label: 'Other reason', letter: 'E' },
 ];
+
+const DEFAULT_COPY: CopySettings = {
+  title: 'Sorry to see you go.',
+  subtitle: "Please be honest about why you're leaving. It's the only way we can improve.",
+};
+
+const DEFAULT_COLORS: ColorSettings = {
+  primary: '#9333EA',
+  background: '#F5F3FF',
+  text: '#1F2937',
+};
 
 export function YourFeedbackModal({
   isOpen,
@@ -33,21 +57,39 @@ export function YourFeedbackModal({
   onNext,
   options = DEFAULT_OPTIONS,
   previewMode = false,
+  copy = DEFAULT_COPY,
+  colors = DEFAULT_COLORS,
+  allowOtherOption = true,
 }: YourFeedbackModalProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [otherText, setOtherText] = useState('');
 
   // Reset selection when options change (for preview)
   useEffect(() => {
     setSelectedOption(null);
-  }, [options]);
+    setOtherText('');
+  }, [options, allowOtherOption]);
 
   if (!isOpen) return null;
 
+  // Filter out any existing "other" option from the provided options and add it at the end if allowed
+  const regularOptions = options.filter(opt => opt.id !== 'other');
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const displayOptions = regularOptions.map((opt, idx) => ({
+    ...opt,
+    letter: letters[idx] || 'X',
+  }));
+
+  // Add "Other" option at the end if allowed
+  const otherOptionLetter = letters[displayOptions.length] || 'X';
+
   const handleNext = () => {
     if (selectedOption) {
-      onNext(selectedOption);
+      onNext(selectedOption, selectedOption === 'other' ? otherText : undefined);
     }
   };
+
+  const isNextDisabled = !selectedOption || (selectedOption === 'other' && !otherText.trim());
 
   // Preview mode - render without backdrop and fixed positioning
   if (previewMode) {
@@ -59,19 +101,19 @@ export function YourFeedbackModal({
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#F5F3FF]">
+        <div className="flex items-center justify-between px-4 py-2" style={{ backgroundColor: colors.background }}>
           <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-[#9333EA] fill-[#9333EA]" />
-            <span className="font-semibold text-sm text-[#9333EA]">
+            <Heart className="h-4 w-4" style={{ color: colors.primary, fill: colors.primary }} />
+            <span className="font-semibold text-sm" style={{ color: colors.primary }}>
               Your Feedback
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-purple-100 transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:opacity-80 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
-            <X className="h-4 w-4 text-[#9333EA]" />
+            <X className="h-4 w-4" style={{ color: colors.primary }} />
           </button>
         </div>
 
@@ -80,68 +122,128 @@ export function YourFeedbackModal({
           {/* Main Title */}
           <h2
             id="feedback-title"
-            className="font-bold text-[22px] text-gray-900 mt-2"
+            className="font-bold text-[22px] mt-2"
+            style={{ color: colors.text }}
           >
-            Sorry to see you go.
+            {copy.title}
           </h2>
 
           {/* Subtext */}
-          <p className="text-sm text-gray-600 mt-1 mb-6">
-            Please be honest about why you're leaving. It's the only way we can
-            improve.
+          <p className="text-sm mt-1 mb-6" style={{ color: colors.text, opacity: 0.7 }}>
+            {copy.subtitle}
           </p>
 
           {/* Option List */}
           <div className="space-y-3">
-            {options.map((option) => {
+            {displayOptions.map((option) => {
               const isSelected = selectedOption === option.id;
               return (
                 <button
                   key={option.id}
                   onClick={() => setSelectedOption(option.id)}
                   className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
-                    isSelected
-                      ? 'bg-[#F3E8FF] border-[#9333EA] border-2'
-                      : 'bg-[#F3E8FF] border-[#E9D5FF] hover:border-[#D8B4FE]'
+                    isSelected ? 'border-2' : ''
                   }`}
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: isSelected ? colors.primary : `${colors.primary}40`,
+                  }}
                   aria-pressed={isSelected}
                 >
                   {/* Letter Badge */}
                   <span
-                    className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold ${
-                      isSelected
-                        ? 'bg-[#9333EA] text-white'
-                        : 'bg-white text-gray-600 border border-[#E9D5FF]'
-                    }`}
+                    className="flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold"
+                    style={{
+                      backgroundColor: isSelected ? colors.primary : 'white',
+                      color: isSelected ? 'white' : colors.text,
+                      border: isSelected ? 'none' : `1px solid ${colors.primary}40`,
+                    }}
                   >
                     {option.letter}
                   </span>
 
                   {/* Label */}
-                  <span className="flex-1 font-medium text-gray-800">
+                  <span className="flex-1 font-medium" style={{ color: colors.text }}>
                     {option.label}
                   </span>
 
                   {/* Checkmark for selected */}
                   {isSelected && (
-                    <Check className="h-5 w-5 text-[#9333EA]" />
+                    <Check className="h-5 w-5" style={{ color: colors.primary }} />
                   )}
                 </button>
               );
             })}
+
+            {/* Other Option - always last when enabled */}
+            {allowOtherOption && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => setSelectedOption('other')}
+                  className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
+                    selectedOption === 'other' ? 'border-2' : ''
+                  }`}
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: selectedOption === 'other' ? colors.primary : `${colors.primary}40`,
+                  }}
+                  aria-pressed={selectedOption === 'other'}
+                >
+                  {/* Letter Badge */}
+                  <span
+                    className="flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold"
+                    style={{
+                      backgroundColor: selectedOption === 'other' ? colors.primary : 'white',
+                      color: selectedOption === 'other' ? 'white' : colors.text,
+                      border: selectedOption === 'other' ? 'none' : `1px solid ${colors.primary}40`,
+                    }}
+                  >
+                    {otherOptionLetter}
+                  </span>
+
+                  {/* Label */}
+                  <span className="flex-1 font-medium" style={{ color: colors.text }}>
+                    Other reason
+                  </span>
+
+                  {/* Checkmark for selected */}
+                  {selectedOption === 'other' && (
+                    <Check className="h-5 w-5" style={{ color: colors.primary }} />
+                  )}
+                </button>
+
+                {/* Text input for Other option */}
+                {selectedOption === 'other' && (
+                  <textarea
+                    value={otherText}
+                    onChange={(e) => setOtherText(e.target.value)}
+                    placeholder="Please tell us more..."
+                    className="w-full px-4 py-3 rounded-lg border text-sm resize-none focus:outline-none focus:ring-2"
+                    style={{
+                      borderColor: `${colors.primary}40`,
+                      backgroundColor: 'white',
+                      color: colors.text,
+                    }}
+                    rows={3}
+                    autoFocus
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}
           <div className="flex justify-between mt-6">
             <button
               onClick={onBack}
-              className="bg-purple-100 text-purple-900 px-4 py-2 rounded-lg font-medium hover:bg-purple-200 transition-colors"
+              className="px-4 py-2 rounded-lg font-medium transition-colors"
+              style={{ backgroundColor: colors.background, color: colors.text }}
             >
               Back
             </button>
             <button
               onClick={handleNext}
-              disabled={!selectedOption}
+              disabled={isNextDisabled}
               className="bg-black text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
@@ -203,7 +305,7 @@ export function YourFeedbackModal({
 
           {/* Option List */}
           <div className="space-y-3">
-            {options.map((option) => {
+            {displayOptions.map((option) => {
               const isSelected = selectedOption === option.id;
               return (
                 <button
@@ -239,6 +341,54 @@ export function YourFeedbackModal({
                 </button>
               );
             })}
+
+            {/* Other Option - always last when enabled */}
+            {allowOtherOption && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => setSelectedOption('other')}
+                  className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
+                    selectedOption === 'other'
+                      ? 'bg-[#F3E8FF] border-[#9333EA] border-2'
+                      : 'bg-[#F3E8FF] border-[#E9D5FF] hover:border-[#D8B4FE]'
+                  }`}
+                  aria-pressed={selectedOption === 'other'}
+                >
+                  {/* Letter Badge */}
+                  <span
+                    className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold ${
+                      selectedOption === 'other'
+                        ? 'bg-[#9333EA] text-white'
+                        : 'bg-white text-gray-600 border border-[#E9D5FF]'
+                    }`}
+                  >
+                    {otherOptionLetter}
+                  </span>
+
+                  {/* Label */}
+                  <span className="flex-1 font-medium text-gray-800">
+                    Other reason
+                  </span>
+
+                  {/* Checkmark for selected */}
+                  {selectedOption === 'other' && (
+                    <Check className="h-5 w-5 text-[#9333EA]" />
+                  )}
+                </button>
+
+                {/* Text input for Other option */}
+                {selectedOption === 'other' && (
+                  <textarea
+                    value={otherText}
+                    onChange={(e) => setOtherText(e.target.value)}
+                    placeholder="Please tell us more..."
+                    className="w-full px-4 py-3 rounded-lg border border-[#E9D5FF] bg-white text-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#9333EA]"
+                    rows={3}
+                    autoFocus
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -251,7 +401,7 @@ export function YourFeedbackModal({
             </button>
             <button
               onClick={handleNext}
-              disabled={!selectedOption}
+              disabled={isNextDisabled}
               className="bg-black text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next

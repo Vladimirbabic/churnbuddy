@@ -33,6 +33,36 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   trialing: { label: 'Trial', variant: 'secondary' },
 };
 
+// Color palette for avatars based on email hash
+const AVATAR_COLORS = [
+  { bg: 'bg-red-100', text: 'text-red-700' },
+  { bg: 'bg-orange-100', text: 'text-orange-700' },
+  { bg: 'bg-amber-100', text: 'text-amber-700' },
+  { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  { bg: 'bg-lime-100', text: 'text-lime-700' },
+  { bg: 'bg-green-100', text: 'text-green-700' },
+  { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  { bg: 'bg-teal-100', text: 'text-teal-700' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-700' },
+  { bg: 'bg-sky-100', text: 'text-sky-700' },
+  { bg: 'bg-blue-100', text: 'text-blue-700' },
+  { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  { bg: 'bg-violet-100', text: 'text-violet-700' },
+  { bg: 'bg-purple-100', text: 'text-purple-700' },
+  { bg: 'bg-fuchsia-100', text: 'text-fuchsia-700' },
+  { bg: 'bg-pink-100', text: 'text-pink-700' },
+];
+
+// Get consistent color for an email
+const getAvatarColor = (email: string) => {
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[index];
+};
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,18 +185,19 @@ export default function CustomersPage() {
                         label: customer.subscriptionStatus,
                         variant: 'secondary' as const,
                       };
+                      const avatarColor = getAvatarColor(customer.email);
 
                       return (
                         <div key={customer.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9">
-                              <AvatarFallback className="text-xs bg-secondary">
+                              <AvatarFallback className={`text-xs ${avatarColor.bg} ${avatarColor.text}`}>
                                 {getInitials(customer.name, customer.email)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-medium">{customer.name || customer.email.split('@')[0]}</p>
-                              <p className="text-xs text-muted-foreground">{customer.email}</p>
+                              <p className="text-sm font-medium">{customer.email}</p>
+                              <p className="text-xs text-muted-foreground">{customer.id}</p>
                             </div>
                           </div>
                           <div>

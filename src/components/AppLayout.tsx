@@ -46,7 +46,7 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
 
             {/* Page content */}
             <div className="flex flex-1 flex-col gap-4 px-12 py-6">
-              <div className="w-full">
+              <div className="w-full max-w-[1280px] mx-auto">
                 {description && (
                   <p className="text-sm text-muted-foreground mb-4">{description}</p>
                 )}

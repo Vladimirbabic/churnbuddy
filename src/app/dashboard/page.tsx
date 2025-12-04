@@ -252,7 +252,7 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           {/* MRR Chart embedded in card */}
-                          <div className="h-[137px] w-full">
+                          <div className="h-[137px] w-full [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
                             {mrrHistory.length > 0 && (
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={mrrHistory} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>

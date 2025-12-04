@@ -122,7 +122,13 @@ export async function GET(request: NextRequest) {
 
 // Helper to get flow stats from churn_events
 async function getFlowStats(supabase: ReturnType<typeof createServerClient>, orgId: string) {
-  const stats: Record<string, { impressions: number; saves: number; feedbackResults: Record<string, number> }> = {};
+  const stats: Record<string, {
+    impressions: number;
+    saves: number;
+    cancellations: number;
+    feedbackResults: Record<string, number>;
+    otherFeedback: string[];
+  }> = {};
 
   try {
     // Get all churn events for this organization
@@ -142,7 +148,7 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
       const flowId = event.flow_id || 'default';
 
       if (!stats[flowId]) {
-        stats[flowId] = { impressions: 0, saves: 0, feedbackResults: {} };
+        stats[flowId] = { impressions: 0, saves: 0, cancellations: 0, feedbackResults: {}, otherFeedback: [] };
       }
 
       if (event.event_type === 'cancellation_attempt') {
@@ -153,8 +159,16 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
         if (reason) {
           stats[flowId].feedbackResults[reason] = (stats[flowId].feedbackResults[reason] || 0) + 1;
         }
+
+        // Capture "other" feedback text
+        const otherText = event.details?.other_feedback || event.details?.cancellation_feedback;
+        if (otherText && typeof otherText === 'string' && otherText.trim()) {
+          stats[flowId].otherFeedback.push(otherText.trim());
+        }
       } else if (event.event_type === 'offer_accepted') {
         stats[flowId].saves++;
+      } else if (event.event_type === 'subscription_canceled') {
+        stats[flowId].cancellations++;
       }
     }
 
@@ -267,6 +281,9 @@ export async function POST(request: NextRequest) {
       if (body.show_offer !== undefined || body.showOffer !== undefined) {
         updateData.show_offer = body.show_offer ?? body.showOffer;
       }
+      if (body.allow_other_option !== undefined || body.allowOtherOption !== undefined) {
+        updateData.allow_other_option = body.allow_other_option ?? body.allowOtherOption;
+      }
 
       console.log('Update data being sent:', JSON.stringify(updateData, null, 2));
 
@@ -349,6 +366,7 @@ export async function POST(request: NextRequest) {
         show_feedback: body.show_feedback ?? body.showFeedback ?? true,
         show_plans: body.show_plans ?? body.showPlans ?? true,
         show_offer: body.show_offer ?? body.showOffer ?? true,
+        allow_other_option: body.allow_other_option ?? body.allowOtherOption ?? true,
       };
 
       console.log('Insert data being sent:', JSON.stringify(insertData, null, 2));

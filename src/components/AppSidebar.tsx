@@ -56,9 +56,9 @@ export function AppSidebar() {
           <Image
             src="/img/logo.svg"
             alt="Exit Loop"
-            width={120}
-            height={32}
-            className="h-8 w-auto"
+            width={90}
+            height={24}
+            className="h-6 w-auto"
           />
         </Link>
       </SidebarHeader>

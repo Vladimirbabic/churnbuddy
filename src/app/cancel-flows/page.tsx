@@ -22,6 +22,9 @@ import {
   Zap,
   X,
   Sparkles,
+  Palette,
+  Type,
+  Timer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +51,17 @@ interface Plan {
   highlights: string[];
 }
 
+interface StepCopy {
+  title: string;
+  subtitle: string;
+}
+
+interface ColorSettings {
+  primary: string;
+  background: string;
+  text: string;
+}
+
 interface CancelFlow {
   id: string;
   name: string;
@@ -64,10 +78,24 @@ interface CancelFlow {
   cancellations: number;
   saves: number;
   feedbackResults: Record<string, number>;
+  otherFeedback: string[]; // Array of "other" text responses
   // Step toggles
   showFeedback: boolean;
   showPlans: boolean;
   showOffer: boolean;
+  // Allow "Other" option with text input
+  allowOtherOption: boolean;
+  // Customizable copy for each step
+  feedbackCopy: StepCopy;
+  plansCopy: StepCopy;
+  offerCopy: StepCopy;
+  // Color settings for each step
+  feedbackColors: ColorSettings;
+  plansColors: ColorSettings;
+  offerColors: ColorSettings;
+  // Countdown settings
+  showCountdown: boolean;
+  countdownMinutes: number;
 }
 
 const DEFAULT_FEEDBACK_OPTIONS: FeedbackOption[] = [
@@ -75,7 +103,6 @@ const DEFAULT_FEEDBACK_OPTIONS: FeedbackOption[] = [
   { id: 'not_using', label: "I'm not using it enough", letter: 'B' },
   { id: 'missing_features', label: 'Missing features I need', letter: 'C' },
   { id: 'found_alternative', label: 'Found a better alternative', letter: 'D' },
-  { id: 'other', label: 'Other reason', letter: 'E' },
 ];
 
 const DEFAULT_PLANS: Plan[] = [
@@ -96,6 +123,210 @@ const DEFAULT_PLANS: Plan[] = [
     highlights: ['25 projects', 'Advanced analytics', 'Priority support', '10GB storage'],
   },
 ];
+
+const DEFAULT_FEEDBACK_COPY: StepCopy = {
+  title: 'Sorry to see you go.',
+  subtitle: "Please be honest about why you're leaving. It's the only way we can improve.",
+};
+
+const DEFAULT_PLANS_COPY: StepCopy = {
+  title: "How about 80% off of one of our other plans? These aren't public.",
+  subtitle: "You'd keep all your history and settings and enjoy much of the same functionality at a lower rate.",
+};
+
+const DEFAULT_OFFER_COPY: StepCopy = {
+  title: "Stay to get {discount}% off for {duration}. We'd hate to lose you.",
+  subtitle: "You're eligible for our special discount.",
+};
+
+const DEFAULT_FEEDBACK_COLORS: ColorSettings = {
+  primary: '#9333EA',
+  background: '#F5F3FF',
+  text: '#1F2937',
+};
+
+const DEFAULT_PLANS_COLORS: ColorSettings = {
+  primary: '#2563EB',
+  background: '#F0F4FF',
+  text: '#1F2937',
+};
+
+const DEFAULT_OFFER_COLORS: ColorSettings = {
+  primary: '#DC2626',
+  background: '#FEF2F2',
+  text: '#1F2937',
+};
+
+// Color palette presets
+interface ColorPreset {
+  id: string;
+  name: string;
+  colors: ColorSettings;
+}
+
+const COLOR_PRESETS: ColorPreset[] = [
+  {
+    id: 'purple',
+    name: 'Purple',
+    colors: { primary: '#9333EA', background: '#F5F3FF', text: '#1F2937' },
+  },
+  {
+    id: 'blue',
+    name: 'Blue',
+    colors: { primary: '#2563EB', background: '#EFF6FF', text: '#1F2937' },
+  },
+  {
+    id: 'red',
+    name: 'Red',
+    colors: { primary: '#DC2626', background: '#FEF2F2', text: '#1F2937' },
+  },
+  {
+    id: 'green',
+    name: 'Green',
+    colors: { primary: '#16A34A', background: '#F0FDF4', text: '#1F2937' },
+  },
+  {
+    id: 'orange',
+    name: 'Orange',
+    colors: { primary: '#EA580C', background: '#FFF7ED', text: '#1F2937' },
+  },
+  {
+    id: 'teal',
+    name: 'Teal',
+    colors: { primary: '#0D9488', background: '#F0FDFA', text: '#1F2937' },
+  },
+];
+
+// Helper to find matching preset or return 'custom'
+function findColorPreset(colors: ColorSettings): string {
+  const preset = COLOR_PRESETS.find(
+    p => p.colors.primary === colors.primary &&
+         p.colors.background === colors.background &&
+         p.colors.text === colors.text
+  );
+  return preset?.id || 'custom';
+}
+
+// Color Palette Picker Component
+function ColorPalettePicker({
+  colors,
+  onChange,
+}: {
+  colors: ColorSettings;
+  onChange: (colors: ColorSettings) => void;
+}) {
+  const [selectedPreset, setSelectedPreset] = useState(() => findColorPreset(colors));
+
+  // Update selected preset when colors change externally
+  useEffect(() => {
+    setSelectedPreset(findColorPreset(colors));
+  }, [colors]);
+
+  const handlePresetChange = (presetId: string) => {
+    setSelectedPreset(presetId);
+    if (presetId !== 'custom') {
+      const preset = COLOR_PRESETS.find(p => p.id === presetId);
+      if (preset) {
+        onChange(preset.colors);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Preset Selector */}
+      <div className="flex flex-wrap gap-2">
+        {COLOR_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            onClick={() => handlePresetChange(preset.id)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+              selectedPreset === preset.id
+                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div
+              className="w-4 h-4 rounded-full border border-white shadow-sm"
+              style={{ backgroundColor: preset.colors.primary }}
+            />
+            <span className="text-xs font-medium">{preset.name}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => handlePresetChange('custom')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+            selectedPreset === 'custom'
+              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+              : 'border-border hover:border-primary/50'
+          }`}
+        >
+          <div className="w-4 h-4 rounded-full border border-dashed border-gray-400 flex items-center justify-center">
+            <Palette className="w-2.5 h-2.5 text-gray-400" />
+          </div>
+          <span className="text-xs font-medium">Custom</span>
+        </button>
+      </div>
+
+      {/* Custom Color Pickers - only show when custom is selected */}
+      {selectedPreset === 'custom' && (
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Primary</label>
+            <div className="relative">
+              <input
+                type="color"
+                value={colors.primary}
+                onChange={(e) => onChange({ ...colors, primary: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <div
+                className="w-full h-8 rounded-lg border border-input flex items-center justify-center gap-2 cursor-pointer"
+                style={{ backgroundColor: colors.primary }}
+              >
+                <span className="text-xs font-mono text-white drop-shadow-sm">{colors.primary}</span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Background</label>
+            <div className="relative">
+              <input
+                type="color"
+                value={colors.background}
+                onChange={(e) => onChange({ ...colors, background: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <div
+                className="w-full h-8 rounded-lg border border-input flex items-center justify-center gap-2 cursor-pointer"
+                style={{ backgroundColor: colors.background }}
+              >
+                <span className="text-xs font-mono text-gray-600">{colors.background}</span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Text</label>
+            <div className="relative">
+              <input
+                type="color"
+                value={colors.text}
+                onChange={(e) => onChange({ ...colors, text: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <div
+                className="w-full h-8 rounded-lg border border-input flex items-center justify-center gap-2 cursor-pointer"
+                style={{ backgroundColor: colors.text }}
+              >
+                <span className="text-xs font-mono text-white drop-shadow-sm">{colors.text}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type PreviewStep = 'feedback' | 'plans' | 'offer';
 
@@ -375,10 +606,24 @@ function CancelFlowsPageContent() {
     cancellations: (f.cancellations || 0) as number,
     saves: (f.saves || 0) as number,
     feedbackResults: (f.feedbackResults || {}) as Record<string, number>,
+    otherFeedback: (f.otherFeedback || []) as string[],
     // Step toggles
     showFeedback: (f.show_feedback ?? f.showFeedback ?? true) as boolean,
     showPlans: (f.show_plans ?? f.showPlans ?? true) as boolean,
     showOffer: (f.show_offer ?? f.showOffer ?? true) as boolean,
+    // Allow "Other" option
+    allowOtherOption: (f.allow_other_option ?? f.allowOtherOption ?? true) as boolean,
+    // Customizable copy
+    feedbackCopy: (f.feedback_copy ?? f.feedbackCopy ?? DEFAULT_FEEDBACK_COPY) as StepCopy,
+    plansCopy: (f.plans_copy ?? f.plansCopy ?? DEFAULT_PLANS_COPY) as StepCopy,
+    offerCopy: (f.offer_copy ?? f.offerCopy ?? DEFAULT_OFFER_COPY) as StepCopy,
+    // Color settings
+    feedbackColors: (f.feedback_colors ?? f.feedbackColors ?? DEFAULT_FEEDBACK_COLORS) as ColorSettings,
+    plansColors: (f.plans_colors ?? f.plansColors ?? DEFAULT_PLANS_COLORS) as ColorSettings,
+    offerColors: (f.offer_colors ?? f.offerColors ?? DEFAULT_OFFER_COLORS) as ColorSettings,
+    // Countdown settings
+    showCountdown: (f.show_countdown ?? f.showCountdown ?? true) as boolean,
+    countdownMinutes: (f.countdown_minutes ?? f.countdownMinutes ?? 10) as number,
   }), []);
 
   const fetchFlows = useCallback(async () => {
@@ -443,9 +688,19 @@ function CancelFlowsPageContent() {
           cancellations: 0,
           saves: 0,
           feedbackResults: {},
+          otherFeedback: [],
           showFeedback: true,
           showPlans: true,
           showOffer: true,
+          allowOtherOption: true,
+          feedbackCopy: { ...DEFAULT_FEEDBACK_COPY },
+          plansCopy: { ...DEFAULT_PLANS_COPY },
+          offerCopy: { ...DEFAULT_OFFER_COPY },
+          feedbackColors: { ...DEFAULT_FEEDBACK_COLORS },
+          plansColors: { ...DEFAULT_PLANS_COLORS },
+          offerColors: { ...DEFAULT_OFFER_COLORS },
+          showCountdown: true,
+          countdownMinutes: 10,
         });
       }
     };
@@ -497,6 +752,19 @@ function CancelFlowsPageContent() {
         show_feedback: editingFlow.showFeedback,
         show_plans: editingFlow.showPlans,
         show_offer: editingFlow.showOffer,
+        // Allow "Other" option
+        allow_other_option: editingFlow.allowOtherOption,
+        // Customizable copy
+        feedback_copy: editingFlow.feedbackCopy,
+        plans_copy: editingFlow.plansCopy,
+        offer_copy: editingFlow.offerCopy,
+        // Color settings
+        feedback_colors: editingFlow.feedbackColors,
+        plans_colors: editingFlow.plansColors,
+        offer_colors: editingFlow.offerColors,
+        // Countdown settings
+        show_countdown: editingFlow.showCountdown,
+        countdown_minutes: editingFlow.countdownMinutes,
       };
 
       const response = await fetch('/api/cancel-flows', {
@@ -814,7 +1082,7 @@ function CancelFlowsPageContent() {
             {/* Step 1: Feedback Options */}
             <StepSection
               title="Feedback Survey"
-              iconColor="#9333EA"
+              iconColor={editingFlow.feedbackColors.primary}
               stepNumber={1}
               isSelected={previewStep === 'feedback'}
               onSelect={() => setPreviewStep('feedback')}
@@ -822,43 +1090,105 @@ function CancelFlowsPageContent() {
               onEnabledChange={(enabled) => updateEditingFlow('showFeedback', enabled)}
               showToggle={true}
             >
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Configure the exit survey options shown to users
-                </p>
-                {editingFlow.feedbackOptions.map((option, index) => (
-                  <div key={option.id} className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[#F5F3FF] text-[#9333EA] flex items-center justify-center text-xs font-medium shrink-0">
-                      {option.letter}
-                    </div>
+              <div className="space-y-4">
+                {/* Copy Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Type className="h-3 w-3" />
+                    Copy
+                  </div>
+                  <div className="space-y-2">
                     <input
                       type="text"
-                      value={option.label}
-                      onChange={(e) => updateFeedbackOption(index, 'label', e.target.value)}
-                      className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm"
-                      placeholder="Feedback option..."
+                      value={editingFlow.feedbackCopy.title}
+                      onChange={(e) => updateEditingFlow('feedbackCopy', { ...editingFlow.feedbackCopy, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-medium"
+                      placeholder="Title..."
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFeedbackOption(index)}
-                      className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <textarea
+                      value={editingFlow.feedbackCopy.subtitle}
+                      onChange={(e) => updateEditingFlow('feedbackCopy', { ...editingFlow.feedbackCopy, subtitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none"
+                      placeholder="Subtitle..."
+                      rows={2}
+                    />
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addFeedbackOption} className="w-full">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Option
-                </Button>
+                </div>
+
+                {/* Color Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Palette className="h-3 w-3" />
+                    Colors
+                  </div>
+                  <ColorPalettePicker
+                    colors={editingFlow.feedbackColors}
+                    onChange={(colors) => updateEditingFlow('feedbackColors', colors)}
+                  />
+                </div>
+
+                {/* Feedback Options */}
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Survey Options
+                  </p>
+                  {editingFlow.feedbackOptions.map((option, index) => (
+                    <div key={option.id} className="flex items-center gap-2">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+                        style={{ backgroundColor: editingFlow.feedbackColors.background, color: editingFlow.feedbackColors.primary }}
+                      >
+                        {option.letter}
+                      </div>
+                      <input
+                        type="text"
+                        value={option.label}
+                        onChange={(e) => updateFeedbackOption(index, 'label', e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm"
+                        placeholder="Feedback option..."
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFeedbackOption(index)}
+                        className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addFeedbackOption} className="w-full">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Option
+                  </Button>
+                </div>
+
+                {/* Allow Other Option Toggle */}
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Allow &quot;Other&quot; option</p>
+                    <p className="text-xs text-muted-foreground">Let users write custom feedback</p>
+                  </div>
+                  <button
+                    onClick={() => updateEditingFlow('allowOtherOption', !editingFlow.allowOtherOption)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
+                      editingFlow.allowOtherOption ? 'bg-primary' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        editingFlow.allowOtherOption ? 'translate-x-4' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             </StepSection>
 
             {/* Step 2: Alternative Plans */}
             <StepSection
               title="Alternative Plans"
-              iconColor="#606C80"
+              iconColor={editingFlow.plansColors.primary}
               stepNumber={2}
               isSelected={previewStep === 'plans'}
               onSelect={() => setPreviewStep('plans')}
@@ -867,9 +1197,47 @@ function CancelFlowsPageContent() {
               showToggle={true}
             >
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Configure the alternative plans to offer
-                </p>
+                {/* Copy Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Type className="h-3 w-3" />
+                    Copy
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editingFlow.plansCopy.title}
+                      onChange={(e) => updateEditingFlow('plansCopy', { ...editingFlow.plansCopy, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-medium"
+                      placeholder="Title..."
+                    />
+                    <textarea
+                      value={editingFlow.plansCopy.subtitle}
+                      onChange={(e) => updateEditingFlow('plansCopy', { ...editingFlow.plansCopy, subtitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none"
+                      placeholder="Subtitle..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                {/* Color Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Palette className="h-3 w-3" />
+                    Colors
+                  </div>
+                  <ColorPalettePicker
+                    colors={editingFlow.plansColors}
+                    onChange={(colors) => updateEditingFlow('plansColors', colors)}
+                  />
+                </div>
+
+                {/* Alternative Plans */}
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Plans
+                  </p>
                 {editingFlow.alternativePlans.map((plan, planIndex) => (
                   <div key={plan.id} className="p-4 border rounded-lg space-y-3 bg-muted/30">
                     <div className="flex items-center justify-between">
@@ -957,13 +1325,14 @@ function CancelFlowsPageContent() {
                   <Plus className="h-4 w-4 mr-1" />
                   Add Plan
                 </Button>
+                </div>
               </div>
             </StepSection>
 
             {/* Step 3: Special Offer */}
             <StepSection
               title="Special Offer"
-              iconColor="#DC2626"
+              iconColor={editingFlow.offerColors.primary}
               stepNumber={3}
               isSelected={previewStep === 'offer'}
               onSelect={() => setPreviewStep('offer')}
@@ -972,40 +1341,104 @@ function CancelFlowsPageContent() {
               showToggle={true}
             >
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Configure the final discount offer
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Discount %</label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="90"
-                      value={editingFlow.discountPercent}
-                      onChange={(e) => updateEditingFlow('discountPercent', parseInt(e.target.value) || 50)}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background"
-                    />
+                {/* Copy Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Type className="h-3 w-3" />
+                    Copy
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Duration (months)</label>
                     <input
-                      type="number"
-                      min="1"
-                      max="12"
-                      value={editingFlow.discountDuration}
-                      onChange={(e) => updateEditingFlow('discountDuration', parseInt(e.target.value) || 3)}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background"
+                      type="text"
+                      value={editingFlow.offerCopy.title}
+                      onChange={(e) => updateEditingFlow('offerCopy', { ...editingFlow.offerCopy, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-medium"
+                      placeholder="Title (use {discount} and {duration} for dynamic values)..."
+                    />
+                    <textarea
+                      value={editingFlow.offerCopy.subtitle}
+                      onChange={(e) => updateEditingFlow('offerCopy', { ...editingFlow.offerCopy, subtitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none"
+                      placeholder="Subtitle..."
+                      rows={2}
                     />
                   </div>
                 </div>
-                <div className="p-4 bg-[#FEF2F2] rounded-lg border border-red-200">
-                  <p className="text-sm text-[#DC2626] font-medium">
-                    Preview: {editingFlow.discountPercent}% off for {editingFlow.discountDuration} months
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    This offer will be shown as the last step before cancellation
-                  </p>
+
+                {/* Color Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Palette className="h-3 w-3" />
+                    Colors
+                  </div>
+                  <ColorPalettePicker
+                    colors={editingFlow.offerColors}
+                    onChange={(colors) => updateEditingFlow('offerColors', colors)}
+                  />
+                </div>
+
+                {/* Countdown Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      <Timer className="h-3 w-3" />
+                      Countdown Timer
+                    </div>
+                    <button
+                      onClick={() => updateEditingFlow('showCountdown', !editingFlow.showCountdown)}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
+                        editingFlow.showCountdown ? 'bg-primary' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          editingFlow.showCountdown ? 'translate-x-4' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {editingFlow.showCountdown && (
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">Duration (minutes)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={editingFlow.countdownMinutes}
+                        onChange={(e) => updateEditingFlow('countdownMinutes', parseInt(e.target.value) || 10)}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Discount Settings */}
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">Discount</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">Discount %</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="90"
+                        value={editingFlow.discountPercent}
+                        onChange={(e) => updateEditingFlow('discountPercent', parseInt(e.target.value) || 50)}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">Duration (months)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={editingFlow.discountDuration}
+                        onChange={(e) => updateEditingFlow('discountDuration', parseInt(e.target.value) || 3)}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </StepSection>
@@ -1027,10 +1460,14 @@ function CancelFlowsPageContent() {
                   {((previewStep === 'feedback' && editingFlow.showFeedback) ||
                     (previewStep === 'plans' && editingFlow.showPlans) ||
                     (previewStep === 'offer' && editingFlow.showOffer)) ? (
-                    <span className={`px-4 py-1.5 rounded-full text-xs font-medium text-white ${
-                      previewStep === 'feedback' ? 'bg-[#9333EA]' :
-                      previewStep === 'plans' ? 'bg-[#606C80]' : 'bg-[#DC2626]'
-                    }`}>
+                    <span
+                      className="px-4 py-1.5 rounded-full text-xs font-medium text-white"
+                      style={{
+                        backgroundColor:
+                          previewStep === 'feedback' ? editingFlow.feedbackColors.primary :
+                          previewStep === 'plans' ? editingFlow.plansColors.primary : editingFlow.offerColors.primary
+                      }}
+                    >
                       {previewStep === 'feedback' ? 'Step 1: Feedback' :
                        previewStep === 'plans' ? 'Step 2: Alternative Plans' : 'Step 3: Special Offer'}
                     </span>
@@ -1050,6 +1487,9 @@ function CancelFlowsPageContent() {
                     onNext={() => setPreviewStep('plans')}
                     options={editingFlow.feedbackOptions}
                     previewMode
+                    copy={editingFlow.feedbackCopy}
+                    colors={editingFlow.feedbackColors}
+                    allowOtherOption={editingFlow.allowOtherOption}
                   />
                 )}
                 {editingFlow.showPlans && (
@@ -1061,6 +1501,8 @@ function CancelFlowsPageContent() {
                     onSwitchPlan={() => {}}
                     plans={editingFlow.alternativePlans}
                     previewMode
+                    copy={editingFlow.plansCopy}
+                    colors={editingFlow.plansColors}
                   />
                 )}
                 {editingFlow.showOffer && (
@@ -1073,6 +1515,10 @@ function CancelFlowsPageContent() {
                     discountPercent={editingFlow.discountPercent}
                     discountDuration={`${editingFlow.discountDuration} months`}
                     previewMode
+                    copy={editingFlow.offerCopy}
+                    colors={editingFlow.offerColors}
+                    showCountdown={editingFlow.showCountdown}
+                    countdownMinutes={editingFlow.countdownMinutes}
                   />
                 )}
 
@@ -1184,42 +1630,89 @@ function CancelFlowsPageContent() {
                           </div>
                         </div>
 
-                        {/* Feedback Poll Results */}
-                        {Object.keys(flow.feedbackResults || {}).length > 0 && (
-                          <div className="mt-4 pt-4 border-t">
-                            <p className="text-xs font-medium text-muted-foreground mb-2">Cancellation Reasons</p>
-                            <div className="space-y-2">
-                              {(() => {
-                                const results = flow.feedbackResults;
-                                const total = Object.values(results).reduce((a, b) => a + b, 0);
-                                const sortedReasons = Object.entries(results)
-                                  .sort(([, a], [, b]) => b - a)
-                                  .slice(0, 5);
-
-                                return sortedReasons.map(([reason, count]) => {
-                                  const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                                  const option = flow.feedbackOptions.find(o => o.id === reason);
-                                  const label = option?.label || reason.replace(/_/g, ' ');
-
-                                  return (
-                                    <div key={reason} className="flex items-center gap-2">
-                                      <div className="flex-1">
-                                        <div className="flex items-center justify-between text-xs mb-1">
-                                          <span className="truncate">{label}</span>
-                                          <span className="text-muted-foreground ml-2">{count} ({percent}%)</span>
-                                        </div>
-                                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                          <div
-                                            className="h-full bg-primary rounded-full"
-                                            style={{ width: `${percent}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                });
-                              })()}
+                        {/* Results Section */}
+                        {flow.impressions > 0 && (
+                          <div className="mt-4 pt-4 border-t space-y-4">
+                            {/* Outcomes */}
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-2">Outcomes</p>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
+                                  <p className="text-lg font-bold text-emerald-600">{flow.saves}</p>
+                                  <p className="text-xs text-emerald-600/80">Saved</p>
+                                </div>
+                                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
+                                  <p className="text-lg font-bold text-red-600">{flow.cancellations}</p>
+                                  <p className="text-xs text-red-600/80">Cancelled</p>
+                                </div>
+                                <div className="p-3 bg-muted rounded-lg text-center">
+                                  <p className="text-lg font-bold text-muted-foreground">
+                                    {flow.impressions - flow.saves - flow.cancellations}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">Abandoned</p>
+                                </div>
+                              </div>
                             </div>
+
+                            {/* Feedback Reasons */}
+                            {Object.keys(flow.feedbackResults || {}).length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-2">Feedback Reasons</p>
+                                <div className="space-y-2">
+                                  {(() => {
+                                    const results = flow.feedbackResults;
+                                    const total = Object.values(results).reduce((a, b) => a + b, 0);
+                                    const sortedReasons = Object.entries(results)
+                                      .sort(([, a], [, b]) => b - a)
+                                      .slice(0, 5);
+
+                                    return sortedReasons.map(([reason, count]) => {
+                                      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                                      const option = flow.feedbackOptions.find(o => o.id === reason);
+                                      const label = option?.label || reason.replace(/_/g, ' ');
+
+                                      return (
+                                        <div key={reason} className="flex items-center gap-2">
+                                          <div className="flex-1">
+                                            <div className="flex items-center justify-between text-xs mb-1">
+                                              <span className="truncate">{label}</span>
+                                              <span className="text-muted-foreground ml-2">{count} ({percent}%)</span>
+                                            </div>
+                                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                              <div
+                                                className="h-full bg-primary rounded-full"
+                                                style={{ width: `${percent}%` }}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Other Feedback */}
+                            {flow.otherFeedback && flow.otherFeedback.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-2">
+                                  &quot;Other&quot; Responses ({flow.otherFeedback.length})
+                                </p>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                  {flow.otherFeedback.slice(0, 5).map((feedback, idx) => (
+                                    <div key={idx} className="text-xs p-2 bg-muted/50 rounded-lg text-muted-foreground italic">
+                                      &quot;{feedback}&quot;
+                                    </div>
+                                  ))}
+                                  {flow.otherFeedback.length > 5 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      +{flow.otherFeedback.length - 5} more responses
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
