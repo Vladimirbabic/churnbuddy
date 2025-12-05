@@ -60,7 +60,8 @@ export async function GET() {
     }
 
     const supabase = getServerSupabase();
-    const { data: settings, error } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: settings, error } = await (supabase as any)
       .from('email_sequences')
       .select('*')
       .eq('organization_id', orgId)
@@ -72,7 +73,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      settings: settings ? { ...DEFAULT_SETTINGS, ...settings } : DEFAULT_SETTINGS,
+      settings: settings ? { ...DEFAULT_SETTINGS, ...(settings as Record<string, unknown>) } : DEFAULT_SETTINGS,
     });
   } catch (error) {
     console.error('Email Sequences GET error:', error);
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
     const supabase = getServerSupabase();
 
     // Check if settings exist
-    const { data: existing } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
       .from('email_sequences')
       .select('id')
       .eq('organization_id', orgId)
@@ -121,7 +123,8 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing settings
-      const { data, error } = await (supabase as ReturnType<typeof getServerSupabase>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('email_sequences')
         .update(settingsData)
         .eq('organization_id', orgId)
@@ -136,7 +139,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, settings: data });
     } else {
       // Insert new settings
-      const { data, error } = await (supabase as ReturnType<typeof getServerSupabase>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('email_sequences')
         .insert({
           organization_id: orgId,
