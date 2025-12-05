@@ -2,15 +2,20 @@
 // Stripe Webhook Handler (Next.js API Route)
 // =============================================================================
 // Receives and processes Stripe webhook events for churn management:
-// - invoice.payment_failed: Triggers dunning emails to customers
-// - customer.subscription.deleted: Logs cancellation events
+// - invoice.payment_failed: Triggers dunning email sequence
+// - customer.subscription.deleted: Logs cancellation and sends goodbye + win-back emails
 // - customer.subscription.updated: Tracks subscription changes and recoveries
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe, getDeclineReason, createBillingPortalSession } from '@/lib/stripe';
-import { sendDunningEmail } from '@/lib/email';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  scheduleDunningSequence,
+  scheduleWinbackSequence,
+  cancelPendingEmails,
+  type EmailContext,
+} from '@/lib/emailService';
 
 // Stripe webhook secret for signature verification
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -20,6 +25,62 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
  * Disable body parsing - Stripe webhooks require raw body for signature verification
  */
 export const runtime = 'nodejs';
+
+/**
+ * Get organization ID from Stripe customer ID
+ * Looks up the cancel_flows table to find which org owns this customer
+ */
+async function getOrganizationFromCustomer(customerId: string): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const supabase = getServerSupabase();
+
+    // Look for any churn event with this customer to find the org
+    const { data: event } = await (supabase as ReturnType<typeof getServerSupabase>)
+      .from('churn_events')
+      .select('organization_id')
+      .eq('customer_id', customerId)
+      .limit(1)
+      .single();
+
+    if (event?.organization_id) {
+      return event.organization_id;
+    }
+
+    // Fallback: check settings table for orgs with matching Stripe config
+    // This assumes there's only one organization (single-tenant mode)
+    const { data: settings } = await (supabase as ReturnType<typeof getServerSupabase>)
+      .from('settings')
+      .select('organization_id')
+      .limit(1)
+      .single();
+
+    return settings?.organization_id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get company name from organization settings
+ */
+async function getCompanyName(organizationId: string): Promise<string> {
+  if (!isSupabaseConfigured()) return 'Our Team';
+
+  try {
+    const supabase = getServerSupabase();
+    const { data: settings } = await (supabase as ReturnType<typeof getServerSupabase>)
+      .from('settings')
+      .select('company_name')
+      .eq('organization_id', organizationId)
+      .single();
+
+    return settings?.company_name || 'Our Team';
+  } catch {
+    return 'Our Team';
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +143,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * Handle invoice.payment_failed event
- * Sends dunning email to customer and logs the event
+ * Schedules dunning email sequence and logs the event
  */
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   console.log('Processing payment failed event:', invoice.id);
@@ -111,6 +172,16 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     return;
   }
 
+  // Get organization ID
+  const organizationId = await getOrganizationFromCustomer(customerId);
+  if (!organizationId) {
+    console.error('Could not determine organization for customer:', customerId);
+    return;
+  }
+
+  // Get company name
+  const companyName = await getCompanyName(organizationId);
+
   // Extract failure details from the invoice
   const failureCode = invoice.last_finalization_error?.code ||
                       (invoice as any).payment_intent?.last_payment_error?.decline_code;
@@ -127,18 +198,27 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     console.error('Failed to create billing portal session:', err);
   }
 
+  const subscriptionId = typeof invoice.subscription === 'string'
+    ? invoice.subscription
+    : invoice.subscription?.id;
+
+  // Format amount for display
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: invoice.currency.toUpperCase(),
+  }).format(invoice.amount_due / 100);
+
   // Log the payment failed event to database
   const supabase = getServerSupabase();
-  await (supabase as any)
+  await (supabase as ReturnType<typeof getServerSupabase>)
     .from('churn_events')
     .insert({
+      organization_id: organizationId,
       event_type: 'payment_failed',
       timestamp: new Date().toISOString(),
       customer_id: customerId,
       customer_email: customerEmail,
-      subscription_id: typeof invoice.subscription === 'string'
-        ? invoice.subscription
-        : invoice.subscription?.id,
+      subscription_id: subscriptionId,
       invoice_id: invoice.id,
       details: {
         failure_reason: failureReason,
@@ -150,46 +230,53 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       processed: false,
     });
 
-  // Send dunning email to customer
-  const emailResult = await sendDunningEmail({
-    customerEmail,
-    customerName,
+  // Build email context
+  const emailContext: EmailContext = {
+    name: customerName,
+    email: customerEmail,
+    customer_id: customerId,
+    subscription_id: subscriptionId,
+    amount: formattedAmount,
+    update_link: billingPortalUrl || hostedInvoiceUrl,
+    company_name: companyName,
+    team_name: companyName,
+  };
+
+  // Schedule dunning email sequence
+  const result = await scheduleDunningSequence({
+    organizationId,
+    context: emailContext,
     invoiceId: invoice.id,
-    amountDue: invoice.amount_due,
-    currency: invoice.currency,
-    hostedInvoiceUrl,
-    billingPortalUrl,
-    failureReason,
   });
 
-  // Log that the dunning email was sent
-  if (emailResult.success) {
-    await (supabase as any)
+  // Log that dunning sequence was scheduled
+  if (result.success) {
+    await (supabase as ReturnType<typeof getServerSupabase>)
       .from('churn_events')
       .insert({
+        organization_id: organizationId,
         event_type: 'payment_retry_sent',
         timestamp: new Date().toISOString(),
         customer_id: customerId,
         customer_email: customerEmail,
-        subscription_id: typeof invoice.subscription === 'string'
-          ? invoice.subscription
-          : invoice.subscription?.id,
+        subscription_id: subscriptionId,
         invoice_id: invoice.id,
         details: {
           amount_due: invoice.amount_due,
           currency: invoice.currency,
+          emails_scheduled: result.scheduledCount,
         },
         source: 'webhook',
         processed: true,
       });
   }
 
-  console.log(`Dunning email ${emailResult.success ? 'sent' : 'failed'} for invoice ${invoice.id}`);
+  console.log(`Dunning sequence ${result.success ? 'scheduled' : 'failed'} for invoice ${invoice.id} (${result.scheduledCount} emails)`);
 }
 
 /**
  * Handle customer.subscription.deleted event
- * Logs the cancellation and can trigger follow-up actions
+ * Logs the cancellation and schedules goodbye + win-back emails
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('Processing subscription deleted event:', subscription.id);
@@ -203,16 +290,28 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return;
   }
 
-  // Get customer email for logging
+  // Get customer details
   let customerEmail: string | undefined;
+  let customerName: string | undefined;
   try {
     const customer = await stripe.customers.retrieve(customerId);
     if (!customer.deleted) {
       customerEmail = customer.email || undefined;
+      customerName = customer.name || undefined;
     }
   } catch (err) {
     console.error('Failed to fetch customer:', err);
   }
+
+  // Get organization ID
+  const organizationId = await getOrganizationFromCustomer(customerId);
+  if (!organizationId) {
+    console.error('Could not determine organization for customer:', customerId);
+    // Still log the event without sending emails
+  }
+
+  // Get company name
+  const companyName = organizationId ? await getCompanyName(organizationId) : 'Our Team';
 
   // Calculate MRR impact (for metrics)
   const monthlyAmount = subscription.items.data.reduce((total, item) => {
@@ -228,23 +327,53 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   // Log the cancellation event
   const supabase = getServerSupabase();
-  await (supabase as any)
-    .from('churn_events')
-    .insert({
-      event_type: 'subscription_canceled',
-      timestamp: new Date().toISOString(),
-      customer_id: customerId,
-      customer_email: customerEmail,
-      subscription_id: subscription.id,
-      details: {
-        previous_status: subscription.status,
-        mrr_impact: -monthlyAmount, // Negative because it's lost MRR
-        plan_id: subscription.items.data[0]?.price.id,
-        currency: subscription.currency,
-      },
-      source: 'webhook',
-      processed: true,
+
+  if (organizationId) {
+    await (supabase as ReturnType<typeof getServerSupabase>)
+      .from('churn_events')
+      .insert({
+        organization_id: organizationId,
+        event_type: 'subscription_canceled',
+        timestamp: new Date().toISOString(),
+        customer_id: customerId,
+        customer_email: customerEmail,
+        subscription_id: subscription.id,
+        details: {
+          previous_status: subscription.status,
+          mrr_impact: -monthlyAmount, // Negative because it's lost MRR
+          plan_id: subscription.items.data[0]?.price.id,
+          currency: subscription.currency,
+        },
+        source: 'webhook',
+        processed: true,
+      });
+
+    // Cancel any pending dunning emails for this customer
+    await cancelPendingEmails({
+      organizationId,
+      customerId,
+      templateTypes: ['dunning_1', 'dunning_2', 'dunning_3', 'dunning_4'],
     });
+
+    // Schedule goodbye and win-back emails
+    if (customerEmail) {
+      const emailContext: EmailContext = {
+        name: customerName,
+        email: customerEmail,
+        customer_id: customerId,
+        subscription_id: subscription.id,
+        company_name: companyName,
+        team_name: companyName,
+        reactivate_link: `${APP_URL}/reactivate?customer=${customerId}`,
+        return_link: `${APP_URL}/pricing`,
+      };
+
+      await scheduleWinbackSequence({
+        organizationId,
+        context: emailContext,
+      });
+    }
+  }
 
   console.log(`Subscription ${subscription.id} cancelled. MRR impact: -${monthlyAmount / 100} ${subscription.currency}`);
 }
@@ -279,6 +408,9 @@ async function handleSubscriptionUpdated(
     console.error('Failed to fetch customer:', err);
   }
 
+  // Get organization ID
+  const organizationId = await getOrganizationFromCustomer(customerId);
+
   // Check if this is a recovery (status changed from past_due/unpaid to active)
   const previousStatus = previousAttributes?.status;
   const isRecovery =
@@ -300,31 +432,42 @@ async function handleSubscriptionUpdated(
     }, 0);
 
     // Log the recovery event
-    await (supabase as any)
-      .from('churn_events')
-      .insert({
-        event_type: 'subscription_recovered',
-        timestamp: new Date().toISOString(),
-        customer_id: customerId,
-        customer_email: customerEmail,
-        subscription_id: subscription.id,
-        details: {
-          previous_status: previousStatus,
-          new_status: subscription.status,
-          mrr_impact: monthlyAmount, // Positive because it's recovered MRR
-          plan_id: subscription.items.data[0]?.price.id,
-          currency: subscription.currency,
-        },
-        source: 'webhook',
-        processed: true,
+    if (organizationId) {
+      await (supabase as ReturnType<typeof getServerSupabase>)
+        .from('churn_events')
+        .insert({
+          organization_id: organizationId,
+          event_type: 'subscription_recovered',
+          timestamp: new Date().toISOString(),
+          customer_id: customerId,
+          customer_email: customerEmail,
+          subscription_id: subscription.id,
+          details: {
+            previous_status: previousStatus,
+            new_status: subscription.status,
+            mrr_impact: monthlyAmount, // Positive because it's recovered MRR
+            plan_id: subscription.items.data[0]?.price.id,
+            currency: subscription.currency,
+          },
+          source: 'webhook',
+          processed: true,
+        });
+
+      // Cancel any pending dunning emails since payment succeeded
+      await cancelPendingEmails({
+        organizationId,
+        customerId,
+        templateTypes: ['dunning_1', 'dunning_2', 'dunning_3', 'dunning_4'],
       });
+    }
 
     console.log(`Subscription ${subscription.id} recovered! MRR recovered: ${monthlyAmount / 100} ${subscription.currency}`);
-  } else if (previousStatus && previousStatus !== subscription.status) {
+  } else if (previousStatus && previousStatus !== subscription.status && organizationId) {
     // Log other status changes
-    await (supabase as any)
+    await (supabase as ReturnType<typeof getServerSupabase>)
       .from('churn_events')
       .insert({
+        organization_id: organizationId,
         event_type: 'subscription_updated',
         timestamp: new Date().toISOString(),
         customer_id: customerId,
