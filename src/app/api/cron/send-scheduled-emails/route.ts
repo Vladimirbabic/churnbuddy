@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         const result = await sendTemplateEmail({
           organizationId: email.organization_id,
           templateType: email.template_type as EmailTemplateType,
-          context: email.context as EmailContext,
+          context: email.context as unknown as EmailContext,
           invoiceId: email.invoice_id,
           cancelFlowId: email.cancel_flow_id,
         });
