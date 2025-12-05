@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     const now = new Date().toISOString();
 
     // Fetch pending emails that are due to be sent
-    const { data: pendingEmails, error: fetchError } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: pendingEmails, error: fetchError } = await (supabase as any)
       .from('scheduled_emails')
       .select('*')
       .eq('status', 'pending')
@@ -79,8 +80,9 @@ export async function GET(request: NextRequest) {
         });
 
         // Update the scheduled email record
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (result.success) {
-          await (supabase as ReturnType<typeof getServerSupabase>)
+          await (supabase as any)
             .from('scheduled_emails')
             .update({
               status: 'sent',
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
             .eq('id', email.id);
           processed++;
         } else {
-          await (supabase as ReturnType<typeof getServerSupabase>)
+          await (supabase as any)
             .from('scheduled_emails')
             .update({
               status: 'failed',
@@ -101,7 +103,7 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error(`Failed to process scheduled email ${email.id}:`, err);
-        await (supabase as ReturnType<typeof getServerSupabase>)
+        await (supabase as any)
           .from('scheduled_emails')
           .update({
             status: 'failed',
