@@ -1845,29 +1845,28 @@ function CancelFlowsPageContent() {
                           </div>
                         </div>
 
-                        {/* Results Section */}
-                        {flow.impressions > 0 && (
-                          <div className="mt-4 pt-4 border-t space-y-4">
-                            {/* Outcomes */}
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-2">Outcomes</p>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
-                                  <p className="text-lg font-bold text-emerald-600">{flow.saves}</p>
-                                  <p className="text-xs text-emerald-600/80">Saved</p>
-                                </div>
-                                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
-                                  <p className="text-lg font-bold text-red-600">{flow.cancellations}</p>
-                                  <p className="text-xs text-red-600/80">Cancelled</p>
-                                </div>
-                                <div className="p-3 bg-muted rounded-lg text-center">
-                                  <p className="text-lg font-bold text-muted-foreground">
-                                    {flow.impressions - flow.saves - flow.cancellations}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">Abandoned</p>
-                                </div>
+                        {/* Results Section - Always show */}
+                        <div className="mt-4 pt-4 border-t space-y-4">
+                          {/* Outcomes */}
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Outcomes</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
+                                <p className="text-lg font-bold text-emerald-600">{flow.saves || 0}</p>
+                                <p className="text-xs text-emerald-600/80">Saved</p>
+                              </div>
+                              <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
+                                <p className="text-lg font-bold text-red-600">{flow.cancellations || 0}</p>
+                                <p className="text-xs text-red-600/80">Cancelled</p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-lg text-center">
+                                <p className="text-lg font-bold text-muted-foreground">
+                                  {Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0))}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Abandoned</p>
                               </div>
                             </div>
+                          </div>
 
                             {/* Feedback Reasons */}
                             {Object.keys(flow.feedbackResults || {}).length > 0 && (
@@ -1928,8 +1927,7 @@ function CancelFlowsPageContent() {
                                 </div>
                               </div>
                             )}
-                          </div>
-                        )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">

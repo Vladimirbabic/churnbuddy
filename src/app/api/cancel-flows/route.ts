@@ -105,8 +105,12 @@ export async function GET(request: NextRequest) {
     const stats = await getFlowStats(supabase, orgId);
 
     // Merge stats into flows
+    // If events don't have flow_id, they go to 'default' bucket - apply to all flows
+    const defaultStats = stats['default'] || { impressions: 0, saves: 0, cancellations: 0, feedbackResults: {}, otherFeedback: [] };
+
     const flowsWithStats = (flows || []).map((flow: Record<string, unknown>) => {
-      const flowStats = stats[flow.id as string] || { impressions: 0, saves: 0, feedbackResults: {} };
+      // Try to get stats for this specific flow, fallback to default stats
+      const flowStats = stats[flow.id as string] || defaultStats;
       return { ...flow, ...flowStats };
     });
 
