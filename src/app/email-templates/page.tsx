@@ -840,7 +840,7 @@ export default function EmailTemplatesPage() {
                             type="number"
                             min="0"
                             max="30"
-                            value={(sequenceSettings as Record<string, number>)[field]}
+                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
                             onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
                             className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
                             disabled={savingSettings || !sequenceSettings.dunning_enabled}
@@ -893,7 +893,7 @@ export default function EmailTemplatesPage() {
                             type="number"
                             min="0"
                             max="30"
-                            value={(sequenceSettings as Record<string, number>)[field]}
+                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
                             onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
                             className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
                             disabled={savingSettings || !sequenceSettings.cancel_save_enabled}
@@ -960,7 +960,7 @@ export default function EmailTemplatesPage() {
                             type="number"
                             min="0"
                             max="90"
-                            value={(sequenceSettings as Record<string, number>)[field]}
+                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
                             onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
                             className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
                             disabled={savingSettings || !sequenceSettings.winback_enabled}
