@@ -729,7 +729,7 @@ export default function EmailTemplatesPage() {
                         const existingTemplate = getTemplateForType(templateInfo.type);
                         const isCustomized = !!existingTemplate;
                         const dayValue = templateInfo.dayField && sequenceSettings
-                          ? (sequenceSettings as Record<string, number | boolean>)[templateInfo.dayField]
+                          ? (sequenceSettings as unknown as Record<string, number | boolean>)[templateInfo.dayField]
                           : null;
 
                         return (
