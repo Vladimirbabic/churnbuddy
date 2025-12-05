@@ -117,12 +117,20 @@ export default function HomePage() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-              Log in
-            </Link>
-            <Button asChild>
-              <Link href="/signup">Start free</Link>
-            </Button>
+            {user ? (
+              <Button asChild>
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                  Log in
+                </Link>
+                <Button asChild>
+                  <Link href="/signup">Start free</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -140,10 +148,18 @@ export default function HomePage() {
               <Link href="#pricing" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
               <Link href="#resources" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Resources</Link>
               <div className="pt-4 border-t flex flex-col gap-3">
-                <Link href="/login" className="text-sm font-medium text-center" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-                <Button asChild className="w-full">
-                  <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Start free</Link>
-                </Button>
+                {user ? (
+                  <Button asChild className="w-full">
+                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>Go to Dashboard</Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Link href="/login" className="text-sm font-medium text-center" onClick={() => setIsMenuOpen(false)}>Log in</Link>
+                    <Button asChild className="w-full">
+                      <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Start free</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>

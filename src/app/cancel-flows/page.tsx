@@ -840,7 +840,7 @@ function ResultsModal({
   );
 }
 
-function CancelFlowsPageContent() {
+function CancelFlowsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1311,12 +1311,14 @@ function CancelFlowsPageContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading cancel flows...</p>
+      <AppLayout title="Cancel Flows">
+        <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading cancel flows...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -2034,11 +2036,10 @@ function CancelFlowsPageContent() {
     );
   }
 
-  // List View - with sidebar
+  // List View - with AppLayout sidebar
   return (
     <AppLayout
       title="Cancel Flows"
-      description="Create cancel flows for different products or customer segments to maximize retention."
       actions={
         <Button onClick={handleCreateNew} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -2287,13 +2288,13 @@ function CancelFlowsPageContent() {
   );
 }
 
-// Loading fallback for Suspense - uses AppLayout to prevent sidebar flicker
+// Loading fallback for Suspense
 function CancelFlowsLoading() {
   return (
     <AppLayout title="Cancel Flows">
       <div className="flex items-center justify-center py-16">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-muted-foreground">Loading cancel flows...</p>
         </div>
       </div>
@@ -2305,7 +2306,7 @@ function CancelFlowsLoading() {
 export default function CancelFlowsPage() {
   return (
     <Suspense fallback={<CancelFlowsLoading />}>
-      <CancelFlowsPageContent />
+      <CancelFlowsInner />
     </Suspense>
   );
 }
