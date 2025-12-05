@@ -6,6 +6,18 @@ import { createStripeClient, switchSubscriptionPlan } from '@/lib/stripe';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// CORS headers for cross-origin embed widget requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200, headers: corsHeaders });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -25,7 +37,7 @@ export async function POST(request: Request) {
     if (!flowId || !subscriptionId || !newPriceId) {
       return NextResponse.json(
         { error: 'Missing required fields: flowId, subscriptionId, newPriceId' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -40,7 +52,7 @@ export async function POST(request: Request) {
 
     if (flowError || !flow) {
       console.error('Flow not found:', flowError);
-      return NextResponse.json({ error: 'Flow not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Flow not found' }, { status: 404, headers: corsHeaders });
     }
 
     const organizationId = flow.organization_id;
@@ -56,7 +68,7 @@ export async function POST(request: Request) {
       console.error('Stripe not configured:', settingsError);
       return NextResponse.json(
         { error: 'Stripe not configured for this organization' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -75,7 +87,7 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to switch plan' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -119,12 +131,12 @@ export async function POST(request: Request) {
         status: result.subscription?.status,
         currentPeriodEnd: result.subscription?.current_period_end,
       },
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Error switching plan:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
