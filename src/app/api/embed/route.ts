@@ -720,32 +720,18 @@ export async function GET(request: NextRequest) {
       .cb-plans .cb-close:hover {
         background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1);
       }
-      .cb-plan-card.selected {
-        border-color: \${plansColors.primary};
-        box-shadow: 0 0 0 2px rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.2);
-      }
-      .cb-plan-badge {
-        background: \${plansColors.primary};
-      }
-      .cb-plan-price {
+      .cb-plan-price-new {
         color: \${plansColors.primary};
       }
-      .cb-plan-check {
-        color: \${plansColors.primary};
-      }
-      .cb-plan-btn {
+      .cb-btn-plan {
         background: \${plansColors.primary};
       }
-      .cb-plan-btn:hover {
+      .cb-btn-plan:hover {
         background: \${plansColors.primary};
         opacity: 0.9;
       }
-      .cb-btn-back-blue {
-        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1);
-        color: \${plansColors.primary};
-      }
-      .cb-btn-back-blue:hover {
-        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.2);
+      .cb-btn-plan:disabled {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.5);
       }
 
       /* Offer Step - Dynamic Colors */
@@ -766,22 +752,22 @@ export async function GET(request: NextRequest) {
       .cb-offer .cb-close:hover {
         background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1);
       }
-      .cb-discount {
+      .cb-offer-card {
+        background: \${offerColors.background};
+        border-color: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.3);
+      }
+      .cb-offer-badge svg {
         color: \${offerColors.primary};
       }
-      .cb-btn-primary-red {
+      .cb-offer-badge-text {
+        color: \${offerColors.primary};
+      }
+      .cb-btn-offer {
         background: \${offerColors.primary};
       }
-      .cb-btn-primary-red:hover {
+      .cb-btn-offer:hover {
         background: \${offerColors.primary};
         opacity: 0.9;
-      }
-      .cb-btn-back-red {
-        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1);
-        color: \${offerColors.primary};
-      }
-      .cb-btn-back-red:hover {
-        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.2);
       }
       .cb-countdown svg {
         color: \${offerColors.primary};
@@ -1221,7 +1207,12 @@ export async function GET(request: NextRequest) {
 
     setOtherText: function(text) {
       state.otherText = text;
-      // Don't re-render to avoid losing cursor position
+      // Update button state without full re-render to avoid losing cursor position
+      var nextBtn = document.querySelector('.cb-feedback .cb-btn-primary-black');
+      if (nextBtn) {
+        var isDisabled = !text.trim();
+        nextBtn.disabled = isDisabled;
+      }
     },
 
     selectPlan: function(planId) {

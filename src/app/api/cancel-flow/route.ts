@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
           subscription_id: subscriptionId,
           details: {
             cancellation_reason: details?.reason,
-            cancellation_feedback: details?.feedback,
+            cancellation_feedback: details?.otherText || details?.feedback,
             discount_offered: details?.discountPercent,
             discount_accepted: eventType === 'offer_accepted',
           },
@@ -331,7 +331,7 @@ export async function POST(request: NextRequest) {
             .update({
               details: {
                 cancellation_reason: details?.reason,
-                cancellation_feedback: details?.feedback,
+                cancellation_feedback: details?.otherText || details?.feedback,
                 discount_offered: details?.discountPercent,
                 discount_accepted: true,
                 discount_applied: true,
