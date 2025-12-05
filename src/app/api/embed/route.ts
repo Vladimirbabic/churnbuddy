@@ -1273,7 +1273,8 @@ export async function GET(request: NextRequest) {
         .then(function(response) {
           return response.json().then(function(data) {
             if (!response.ok) {
-              throw new Error(data.error || 'Failed to switch plan');
+              var errorMsg = typeof data.error === 'string' ? data.error : (data.message || 'Failed to switch plan');
+              throw new Error(errorMsg);
             }
             return data;
           });

@@ -413,7 +413,18 @@ export async function switchSubscriptionPlan(
     return { success: true, subscription: updatedSubscription };
   } catch (error) {
     console.error('Error switching subscription plan:', error);
-    const message = error instanceof Error ? error.message : 'Failed to switch plan';
+    // Handle Stripe errors specifically
+    let message = 'Failed to switch plan';
+    if (error && typeof error === 'object') {
+      // Stripe errors have a 'message' property
+      if ('message' in error && typeof (error as { message: unknown }).message === 'string') {
+        message = (error as { message: string }).message;
+      }
+      // Also check for raw property which sometimes contains the actual error
+      if ('raw' in error && typeof error.raw === 'object' && error.raw && 'message' in error.raw) {
+        message = (error.raw as { message: string }).message;
+      }
+    }
     return { success: false, error: message };
   }
 }
