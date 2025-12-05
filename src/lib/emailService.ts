@@ -298,7 +298,8 @@ async function getTemplate(
 
   try {
     const supabase = getServerSupabase();
-    const { data: template } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: template } = await (supabase as any)
       .from('email_templates')
       .select('subject, body, is_active')
       .eq('organization_id', organizationId)
@@ -430,7 +431,7 @@ export async function sendTemplateEmail(params: SendEmailParams): Promise<SendEm
     // Log the send to database
     if (isSupabaseConfigured()) {
       const supabase = getServerSupabase();
-      await (supabase as ReturnType<typeof getServerSupabase>)
+      await (supabase as any)
         .from('email_sends')
         .insert({
           organization_id: organizationId,
@@ -472,7 +473,7 @@ export async function scheduleEmail(params: {
 
   try {
     const supabase = getServerSupabase();
-    const { data, error } = await (supabase as ReturnType<typeof getServerSupabase>)
+    const { data, error } = await (supabase as any)
       .from('scheduled_emails')
       .insert({
         organization_id: params.organizationId,
@@ -515,7 +516,7 @@ export async function cancelPendingEmails(params: {
 
   try {
     const supabase = getServerSupabase();
-    let query = (supabase as ReturnType<typeof getServerSupabase>)
+    let query = (supabase as any)
       .from('scheduled_emails')
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
       .eq('organization_id', params.organizationId)
@@ -584,7 +585,7 @@ export async function getSequenceSettings(organizationId: string): Promise<{
 
   try {
     const supabase = getServerSupabase();
-    const { data } = await (supabase as ReturnType<typeof getServerSupabase>)
+    const { data } = await (supabase as any)
       .from('email_sequences')
       .select('*')
       .eq('organization_id', organizationId)
