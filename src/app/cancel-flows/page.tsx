@@ -68,6 +68,15 @@ interface ColorSettings {
   text: string;
 }
 
+// Per-reason outcome stats
+interface ReasonOutcome {
+  saves: number;
+  cancellations: number;
+  abandoned: number;
+  total: number;
+  otherTexts: string[];
+}
+
 interface CancelFlow {
   id: string;
   name: string;
@@ -85,6 +94,8 @@ interface CancelFlow {
   saves: number;
   feedbackResults: Record<string, number>;
   otherFeedback: string[]; // Array of "other" text responses
+  // Per-reason outcome breakdown
+  reasonOutcomes: Record<string, ReasonOutcome>;
   // Step toggles
   showFeedback: boolean;
   showPlans: boolean;
@@ -569,6 +580,266 @@ function UpgradeModal({
   );
 }
 
+// Results Modal Component - Shows detailed feedback analytics
+function ResultsModal({
+  isOpen,
+  onClose,
+  flow,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  flow: CancelFlow;
+}) {
+  if (!isOpen) return null;
+
+  const reasonOutcomes = flow.reasonOutcomes || {};
+  const feedbackOptions = flow.feedbackOptions || [];
+
+  // Sort reasons by total responses (highest first)
+  const sortedReasons = Object.entries(reasonOutcomes)
+    .sort(([, a], [, b]) => b.total - a.total);
+
+  // Calculate total overall outcomes for comparison
+  const totalResponses = sortedReasons.reduce((acc, [, outcome]) => acc + outcome.total, 0);
+
+  // Find best and worst performing reasons (by save rate)
+  let bestReason: { reason: string; saveRate: number } | null = null;
+  let worstReason: { reason: string; saveRate: number } | null = null;
+
+  for (const [reason, outcome] of sortedReasons) {
+    if (outcome.total >= 1) { // Only consider reasons with at least 1 response
+      const completed = outcome.saves + outcome.cancellations;
+      const saveRate = completed > 0 ? (outcome.saves / completed) * 100 : 0;
+
+      if (!bestReason || saveRate > bestReason.saveRate) {
+        bestReason = { reason, saveRate };
+      }
+      if (!worstReason || saveRate < worstReason.saveRate) {
+        worstReason = { reason, saveRate };
+      }
+    }
+  }
+
+  // Get label for a reason ID
+  const getReasonLabel = (reasonId: string) => {
+    const option = feedbackOptions.find(o => o.id === reasonId);
+    return option?.label || reasonId.replace(/_/g, ' ');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col"
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-xl font-bold">{flow.name} Results</h2>
+            <p className="text-sm text-muted-foreground">
+              Detailed breakdown of feedback responses and outcomes
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-2xl font-bold">{flow.impressions || 0}</p>
+              <p className="text-xs text-muted-foreground">Total Impressions</p>
+            </div>
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
+              <p className="text-2xl font-bold text-emerald-600">{flow.saves || 0}</p>
+              <p className="text-xs text-emerald-600/80">Saved</p>
+            </div>
+            <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
+              <p className="text-2xl font-bold text-red-600">{flow.cancellations || 0}</p>
+              <p className="text-xs text-red-600/80">Cancelled</p>
+            </div>
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-center">
+              <p className="text-2xl font-bold text-amber-600">
+                {Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0))}
+              </p>
+              <p className="text-xs text-amber-600/80">Abandoned</p>
+            </div>
+          </div>
+
+          {/* Insights */}
+          {(bestReason || worstReason) && totalResponses > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {bestReason && bestReason.saveRate > 0 && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Highest Save Rate</span>
+                  </div>
+                  <p className="text-sm font-medium">{getReasonLabel(bestReason.reason)}</p>
+                  <p className="text-xs text-emerald-600">{Math.round(bestReason.saveRate)}% saved</p>
+                </div>
+              )}
+              {worstReason && worstReason.saveRate < 100 && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-red-700 dark:text-red-400">Lowest Save Rate</span>
+                  </div>
+                  <p className="text-sm font-medium">{getReasonLabel(worstReason.reason)}</p>
+                  <p className="text-xs text-red-600">{Math.round(worstReason.saveRate)}% saved</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Per-Reason Breakdown */}
+          <div>
+            <h3 className="font-semibold mb-4">Outcomes by Feedback Reason</h3>
+            {sortedReasons.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No feedback data yet</p>
+                <p className="text-sm">Results will appear here once users start going through your cancel flow</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sortedReasons.map(([reason, outcome]) => {
+                  const label = getReasonLabel(reason);
+                  const completed = outcome.saves + outcome.cancellations;
+                  const saveRate = completed > 0 ? Math.round((outcome.saves / completed) * 100) : 0;
+                  const cancelRate = completed > 0 ? Math.round((outcome.cancellations / completed) * 100) : 0;
+                  const percentOfTotal = totalResponses > 0 ? Math.round((outcome.total / totalResponses) * 100) : 0;
+
+                  return (
+                    <div key={reason} className="p-4 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <span className="font-medium">{label}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            ({outcome.total} responses, {percentOfTotal}% of total)
+                          </span>
+                        </div>
+                        <Badge variant={saveRate >= 50 ? 'default' : 'secondary'} className={saveRate >= 50 ? 'bg-emerald-600' : ''}>
+                          {saveRate}% save rate
+                        </Badge>
+                      </div>
+
+                      {/* Outcome breakdown */}
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+                            <span className="text-sm font-bold text-emerald-600">{outcome.saves}</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-emerald-600">Saved</p>
+                            <p className="text-xs text-emerald-500">{saveRate}%</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <span className="text-sm font-bold text-red-600">{outcome.cancellations}</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-red-600">Cancelled</p>
+                            <p className="text-xs text-red-500">{cancelRate}%</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                            <span className="text-sm font-bold text-muted-foreground">{outcome.abandoned}</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Abandoned</p>
+                            <p className="text-xs text-muted-foreground">
+                              {outcome.total > 0 ? Math.round((outcome.abandoned / outcome.total) * 100) : 0}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visual bar */}
+                      <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                        <div
+                          className="bg-emerald-500 h-full transition-all"
+                          style={{ width: `${outcome.total > 0 ? (outcome.saves / outcome.total) * 100 : 0}%` }}
+                        />
+                        <div
+                          className="bg-red-500 h-full transition-all"
+                          style={{ width: `${outcome.total > 0 ? (outcome.cancellations / outcome.total) * 100 : 0}%` }}
+                        />
+                        <div
+                          className="bg-gray-300 dark:bg-gray-600 h-full transition-all"
+                          style={{ width: `${outcome.total > 0 ? (outcome.abandoned / outcome.total) * 100 : 0}%` }}
+                        />
+                      </div>
+
+                      {/* Other feedback texts for this reason */}
+                      {outcome.otherTexts && outcome.otherTexts.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Custom responses:</p>
+                          <div className="space-y-1 max-h-24 overflow-y-auto">
+                            {outcome.otherTexts.slice(0, 5).map((text, idx) => (
+                              <div key={idx} className="text-xs p-2 bg-background rounded text-muted-foreground italic">
+                                &quot;{text}&quot;
+                              </div>
+                            ))}
+                            {outcome.otherTexts.length > 5 && (
+                              <p className="text-xs text-muted-foreground">
+                                +{outcome.otherTexts.length - 5} more
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Other Feedback Section */}
+          {flow.otherFeedback && flow.otherFeedback.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-4">All &quot;Other&quot; Responses ({flow.otherFeedback.length})</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto p-4 bg-muted/30 rounded-lg">
+                {flow.otherFeedback.map((feedback, idx) => (
+                  <div key={idx} className="text-sm p-3 bg-background rounded-lg">
+                    <span className="text-muted-foreground italic">&quot;{feedback}&quot;</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t shrink-0">
+          <Button onClick={onClose} className="w-full">
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CancelFlowsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -590,6 +861,10 @@ function CancelFlowsPageContent() {
   const [cancelFlowsLimit, setCancelFlowsLimit] = useState<number>(-1); // -1 = unlimited
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  // Results modal state
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [selectedFlowForResults, setSelectedFlowForResults] = useState<CancelFlow | null>(null);
 
   // Stripe picker state
   const [showStripePicker, setShowStripePicker] = useState(false);
@@ -631,6 +906,7 @@ function CancelFlowsPageContent() {
     saves: (f.saves || 0) as number,
     feedbackResults: (f.feedbackResults || {}) as Record<string, number>,
     otherFeedback: (f.otherFeedback || []) as string[],
+    reasonOutcomes: (f.reasonOutcomes || {}) as Record<string, ReasonOutcome>,
     // Step toggles
     showFeedback: (f.show_feedback ?? f.showFeedback ?? true) as boolean,
     showPlans: (f.show_plans ?? f.showPlans ?? true) as boolean,
@@ -713,6 +989,7 @@ function CancelFlowsPageContent() {
           saves: 0,
           feedbackResults: {},
           otherFeedback: [],
+          reasonOutcomes: {},
           showFeedback: true,
           showPlans: true,
           showOffer: true,
@@ -1932,6 +2209,18 @@ function CancelFlowsPageContent() {
 
                       <div className="flex items-center gap-2">
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFlowForResults(flow);
+                            setShowResultsModal(true);
+                          }}
+                          className="gap-2"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          See Results
+                        </Button>
+                        <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(flow)}
@@ -1981,6 +2270,18 @@ function CancelFlowsPageContent() {
           currentFlowsCount={flows.length}
           flowsLimit={cancelFlowsLimit}
         />
+
+        {/* Results Modal */}
+        {selectedFlowForResults && (
+          <ResultsModal
+            isOpen={showResultsModal}
+            onClose={() => {
+              setShowResultsModal(false);
+              setSelectedFlowForResults(null);
+            }}
+            flow={selectedFlowForResults}
+          />
+        )}
       </div>
     </AppLayout>
   );

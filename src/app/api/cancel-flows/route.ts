@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     // Merge stats into flows
     // If events don't have flow_id, they go to 'default' bucket - apply to all flows
-    const defaultStats = stats['default'] || { impressions: 0, saves: 0, cancellations: 0, feedbackResults: {}, otherFeedback: [] };
+    const defaultStats = stats['default'] || { impressions: 0, saves: 0, cancellations: 0, feedbackResults: {}, otherFeedback: [], reasonOutcomes: {} };
 
     const flowsWithStats = (flows || []).map((flow: Record<string, unknown>) => {
       // Try to get stats for this specific flow, fallback to default stats
@@ -124,6 +124,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Per-reason outcome stats
+interface ReasonOutcome {
+  saves: number;
+  cancellations: number;
+  abandoned: number;
+  total: number;
+  otherTexts: string[]; // Text from "other" reason
+}
+
 // Helper to get flow stats from churn_events
 async function getFlowStats(supabase: ReturnType<typeof createServerClient>, orgId: string) {
   const stats: Record<string, {
@@ -132,27 +141,57 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
     cancellations: number;
     feedbackResults: Record<string, number>;
     otherFeedback: string[];
+    // NEW: Per-reason outcome breakdown
+    reasonOutcomes: Record<string, ReasonOutcome>;
   }> = {};
 
   try {
     // Get all churn events for this organization
+    // Note: session_id column may not exist, and plan_switched may not be in the enum
     const { data: events, error } = await (supabase as any)
       .from('churn_events')
-      .select('event_type, details, flow_id')
+      .select('event_type, details, flow_id, customer_id, timestamp')
       .eq('organization_id', orgId)
-      .in('event_type', ['cancellation_attempt', 'offer_accepted', 'feedback_submitted', 'subscription_canceled', 'plan_switched']);
+      .in('event_type', ['cancellation_attempt', 'offer_accepted', 'feedback_submitted', 'subscription_canceled'])
+      .order('timestamp', { ascending: true });
 
     if (error || !events) {
       console.error('Error fetching churn events:', error);
       return stats;
     }
 
-    // Aggregate stats by flow
+    // Track feedback reason per customer to link with outcomes
+    // Key: customer_id (we use the customer to correlate feedback with outcomes)
+    const customerReasons: Record<string, { reason: string; otherText?: string; flowId: string }> = {};
+
+    // First pass: collect all feedback reasons by customer
+    for (const event of events) {
+      if (event.event_type === 'feedback_submitted') {
+        const customerKey = event.customer_id || event.timestamp;
+        const reason = event.details?.cancellation_reason || event.details?.reason;
+        const otherText = event.details?.otherText || event.details?.cancellation_feedback;
+        const flowId = event.flow_id || 'default';
+
+        if (customerKey && reason) {
+          customerReasons[customerKey] = { reason, otherText, flowId };
+        }
+      }
+    }
+
+    // Second pass: aggregate stats by flow
     for (const event of events) {
       const flowId = event.flow_id || 'default';
+      const customerKey = event.customer_id || event.timestamp;
 
       if (!stats[flowId]) {
-        stats[flowId] = { impressions: 0, saves: 0, cancellations: 0, feedbackResults: {}, otherFeedback: [] };
+        stats[flowId] = {
+          impressions: 0,
+          saves: 0,
+          cancellations: 0,
+          feedbackResults: {},
+          otherFeedback: [],
+          reasonOutcomes: {}
+        };
       }
 
       if (event.event_type === 'cancellation_attempt') {
@@ -162,17 +201,56 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
         const reason = event.details?.cancellation_reason || event.details?.reason;
         if (reason) {
           stats[flowId].feedbackResults[reason] = (stats[flowId].feedbackResults[reason] || 0) + 1;
+
+          // Initialize reason outcome tracking
+          if (!stats[flowId].reasonOutcomes[reason]) {
+            stats[flowId].reasonOutcomes[reason] = { saves: 0, cancellations: 0, abandoned: 0, total: 0, otherTexts: [] };
+          }
+          stats[flowId].reasonOutcomes[reason].total++;
         }
 
         // Capture "other" feedback text
         const otherText = event.details?.otherText || event.details?.cancellation_feedback || event.details?.other_feedback;
         if (otherText && typeof otherText === 'string' && otherText.trim()) {
           stats[flowId].otherFeedback.push(otherText.trim());
+
+          // Also add to reason-specific other texts if reason is "other"
+          if (reason === 'other' && stats[flowId].reasonOutcomes[reason]) {
+            stats[flowId].reasonOutcomes[reason].otherTexts.push(otherText.trim());
+          }
         }
-      } else if (event.event_type === 'offer_accepted' || event.event_type === 'plan_switched') {
+      } else if (event.event_type === 'offer_accepted') {
         stats[flowId].saves++;
+
+        // Link to reason if we have customer tracking
+        const customerInfo = customerReasons[customerKey];
+        if (customerInfo && customerInfo.flowId === flowId) {
+          const reason = customerInfo.reason;
+          if (!stats[flowId].reasonOutcomes[reason]) {
+            stats[flowId].reasonOutcomes[reason] = { saves: 0, cancellations: 0, abandoned: 0, total: 0, otherTexts: [] };
+          }
+          stats[flowId].reasonOutcomes[reason].saves++;
+        }
       } else if (event.event_type === 'subscription_canceled') {
         stats[flowId].cancellations++;
+
+        // Link to reason if we have customer tracking
+        const customerInfo = customerReasons[customerKey];
+        if (customerInfo && customerInfo.flowId === flowId) {
+          const reason = customerInfo.reason;
+          if (!stats[flowId].reasonOutcomes[reason]) {
+            stats[flowId].reasonOutcomes[reason] = { saves: 0, cancellations: 0, abandoned: 0, total: 0, otherTexts: [] };
+          }
+          stats[flowId].reasonOutcomes[reason].cancellations++;
+        }
+      }
+    }
+
+    // Calculate abandoned for each reason
+    for (const flowId of Object.keys(stats)) {
+      for (const reason of Object.keys(stats[flowId].reasonOutcomes)) {
+        const ro = stats[flowId].reasonOutcomes[reason];
+        ro.abandoned = Math.max(0, ro.total - ro.saves - ro.cancellations);
       }
     }
 
