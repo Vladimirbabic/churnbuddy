@@ -136,7 +136,7 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
       .from('churn_events')
       .select('event_type, details, flow_id')
       .eq('organization_id', orgId)
-      .in('event_type', ['cancellation_attempt', 'offer_accepted', 'feedback_submitted', 'subscription_canceled']);
+      .in('event_type', ['cancellation_attempt', 'offer_accepted', 'feedback_submitted', 'subscription_canceled', 'plan_switched']);
 
     if (error || !events) {
       console.error('Error fetching churn events:', error);
@@ -153,19 +153,19 @@ async function getFlowStats(supabase: ReturnType<typeof createServerClient>, org
 
       if (event.event_type === 'cancellation_attempt') {
         stats[flowId].impressions++;
-
-        // Track feedback reasons
+      } else if (event.event_type === 'feedback_submitted') {
+        // Track feedback reasons from feedback_submitted events
         const reason = event.details?.cancellation_reason || event.details?.reason;
         if (reason) {
           stats[flowId].feedbackResults[reason] = (stats[flowId].feedbackResults[reason] || 0) + 1;
         }
 
         // Capture "other" feedback text
-        const otherText = event.details?.other_feedback || event.details?.cancellation_feedback;
+        const otherText = event.details?.otherText || event.details?.cancellation_feedback || event.details?.other_feedback;
         if (otherText && typeof otherText === 'string' && otherText.trim()) {
           stats[flowId].otherFeedback.push(otherText.trim());
         }
-      } else if (event.event_type === 'offer_accepted') {
+      } else if (event.event_type === 'offer_accepted' || event.event_type === 'plan_switched') {
         stats[flowId].saves++;
       } else if (event.event_type === 'subscription_canceled') {
         stats[flowId].cancellations++;
