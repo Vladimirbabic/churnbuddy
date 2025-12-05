@@ -295,8 +295,11 @@ export async function GET(request: NextRequest) {
     formattedEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Calculate rates
-    const saveRate = cancellationAttempts > 0
-      ? Math.round((offerAccepted / cancellationAttempts) * 100)
+    // Save rate = saves / (saves + cancellations)
+    // Abandoned users (closed modal) stayed subscribed, so exclude them from calculation
+    const completedFlows = offerAccepted + cancellations;
+    const saveRate = completedFlows > 0
+      ? Math.round((offerAccepted / completedFlows) * 100)
       : 0;
 
     const recoveryRate = failedPayments > 0

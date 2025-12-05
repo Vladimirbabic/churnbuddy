@@ -332,52 +332,52 @@ export default function DashboardPage() {
               )}
 
               {/* Performance Overview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Overview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Performance Overview</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Payment Recovery Rate */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Payment Recovery Rate</span>
-                      <span className="text-2xl font-bold">{summary.recoveryRate}%</span>
-                    </div>
-                    <Progress value={summary.recoveryRate} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {summary.recoveries} of {summary.failedPayments} failed payments recovered
-                    </p>
-                  </div>
-
-                  <Separator />
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-3">
+                        <span className="text-sm font-medium text-muted-foreground">Payment Recovery Rate</span>
+                        <div className="text-3xl font-bold">{summary.recoveryRate}%</div>
+                        <Progress value={summary.recoveryRate} className="h-2" />
+                        <p className="text-xs text-muted-foreground">
+                          {summary.recoveries} of {summary.failedPayments} failed payments recovered
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Cancellation Save Rate */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Cancellation Save Rate</span>
-                      <span className="text-2xl font-bold">{summary.saveRate}%</span>
-                    </div>
-                    <Progress value={summary.saveRate} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {summary.saved} of {summary.cancellationAttempts} cancellation attempts saved
-                    </p>
-                  </div>
-
-                  <Separator />
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-3">
+                        <span className="text-sm font-medium text-muted-foreground">Cancellation Save Rate</span>
+                        <div className="text-3xl font-bold">{summary.saveRate}%</div>
+                        <Progress value={summary.saveRate} className="h-2" />
+                        <p className="text-xs text-muted-foreground">
+                          {summary.saved} of {summary.cancellationAttempts} cancellation attempts saved
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Discount Acceptance Rate */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Discount Acceptance Rate</span>
-                      <span className="text-2xl font-bold">{discountData?.acceptanceRate || 0}%</span>
-                    </div>
-                    <Progress value={discountData?.acceptanceRate || 0} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {discountData?.totalOffersAccepted || 0} of {discountData?.totalOffersShown || 0} discount offers accepted
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-3">
+                        <span className="text-sm font-medium text-muted-foreground">Discount Acceptance Rate</span>
+                        <div className="text-3xl font-bold">{discountData?.acceptanceRate || 0}%</div>
+                        <Progress value={discountData?.acceptanceRate || 0} className="h-2" />
+                        <p className="text-xs text-muted-foreground">
+                          {discountData?.totalOffersAccepted || 0} of {discountData?.totalOffersShown || 0} discount offers accepted
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
 
               {/* Active Discounts Card */}
               {discountData && discountData.activeDiscounts > 0 && (

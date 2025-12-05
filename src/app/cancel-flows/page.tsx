@@ -1799,8 +1799,11 @@ function CancelFlowsPageContent() {
         ) : (
           <div className="space-y-4">
             {flows.map((flow) => {
-              const saveRate = flow.impressions > 0
-                ? Math.round((flow.saves / flow.impressions) * 100)
+              // Save rate = saves / (saves + cancellations)
+              // Abandoned users (closed modal) stayed subscribed, so exclude them from calculation
+              const completedFlows = flow.saves + flow.cancellations;
+              const saveRate = completedFlows > 0
+                ? Math.round((flow.saves / completedFlows) * 100)
                 : 0;
 
               return (
