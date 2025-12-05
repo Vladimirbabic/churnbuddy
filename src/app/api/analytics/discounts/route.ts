@@ -33,7 +33,8 @@ async function getAuthenticatedClient() {
 }
 
 // Helper to get Stripe client from user's settings
-async function getStripeClient(supabase: ReturnType<typeof createServerClient>, orgId: string): Promise<Stripe | null> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getStripeClient(supabase: any, orgId: string): Promise<Stripe | null> {
   try {
     const { data: settings } = await supabase
       .from('settings')
@@ -86,21 +87,21 @@ export async function GET() {
 
     if (isSupabaseConfigured()) {
       // Get total offer attempts (offer was shown)
-      const { count: totalOffers } = await (supabase as ReturnType<typeof createServerClient>)
+      const { count: totalOffers } = await (supabase as any)
         .from('churn_events')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', orgId)
         .in('event_type', ['offer_accepted', 'subscription_canceled']);
 
       // Get accepted offers
-      const { count: acceptedOffers } = await (supabase as ReturnType<typeof createServerClient>)
+      const { count: acceptedOffers } = await (supabase as any)
         .from('churn_events')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', orgId)
         .eq('event_type', 'offer_accepted');
 
       // Get recent accepted discounts
-      const { data: recentEvents } = await (supabase as ReturnType<typeof createServerClient>)
+      const { data: recentEvents } = await (supabase as any)
         .from('churn_events')
         .select('customer_id, customer_email, details, timestamp')
         .eq('organization_id', orgId)

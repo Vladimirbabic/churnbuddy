@@ -135,7 +135,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Fetch existing settings to preserve sensitive keys when masked value is sent
-    const { data: existingSettings } = await (supabase as ReturnType<typeof createServerClient>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingSettings } = await (supabase as any)
       .from('settings')
       .select('stripe_config, email_config')
       .eq('organization_id', orgId)
