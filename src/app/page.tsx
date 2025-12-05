@@ -4,17 +4,25 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Shield,
-  CreditCard,
-  Target,
-  BarChart3,
   ArrowRight,
   Check,
   Zap,
-  Users,
-  TrendingUp,
+  Menu,
+  X,
+  Play,
+  BarChart3,
   Mail,
+  MessageSquare,
+  Users,
   Code,
-  ChevronRight,
+  Layers,
+  CreditCard,
+  TrendingUp,
+  PieChart,
+  RefreshCcw,
+  Rocket,
+  HeartHandshake,
+  Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,388 +31,530 @@ import { CancelFlowModal } from '@/components/CancelFlowModal';
 import { useAuth } from '@/context/AuthContext';
 
 export default function HomePage() {
-  const [showModal, setShowModal] = useState(false);
-  const { user, loading } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const { user } = useAuth();
+
+  // Demo modal state handler
+  const handleDemoClick = () => {
+    setShowDemoModal(true);
+  };
+
+  const features = [
+    {
+      title: "Cancel Flow Interceptor",
+      description: "Trigger a friendly, branded modal the exact moment someone clicks Cancel. Offer better options, not a dead end.",
+      icon: Shield
+    },
+    {
+      title: "Smart Recovery Nudges",
+      description: "When payments fail, ExitLoop sends polite, automated messages and retries to recover revenue without awkward emails.",
+      icon: RefreshCcw
+    },
+    {
+      title: "Churn Reasons and Insights",
+      description: "See why people leave in plain language. Track top churn reasons over time and find easy wins.",
+      icon: PieChart
+    },
+    {
+      title: "Win back recently churned users",
+      description: "Set up one time or ongoing win back campaigns. Send offers to users who churned in the last 7, 30, or 90 days.",
+      icon: HeartHandshake
+    },
+    {
+      title: "Startup friendly setup",
+      description: "No engineering marathon. Start with templates, customize copy, and ship your first save flow in minutes.",
+      icon: Rocket
+    },
+    {
+      title: "Built for SaaS stacks",
+      description: "Connect your billing and analytics tools so ExitLoop fits right into the stack you already use.",
+      icon: Layers
+    }
+  ];
+
+  const faqs = [
+    {
+      question: "How long does it take to get ExitLoop live?",
+      answer: "Most teams get a basic cancel flow live in under an afternoon. If you can copy paste a snippet, you can ship ExitLoop."
+    },
+    {
+      question: "Do I need engineers to maintain this?",
+      answer: "You might need a dev once to connect billing or events, after that, product or growth can manage flows and copy without code."
+    },
+    {
+      question: "Will this annoy my users?",
+      answer: "ExitLoop is designed to be friendly and honest, not dark pattern. You can keep the cancel option visible while still offering better alternatives."
+    },
+    {
+      question: "Does ExitLoop work with my current stack?",
+      answer: "We integrate with popular billing and analytics tools and can start simple even if your stack is messy. Start small, improve over time."
+    },
+    {
+      question: "What if I am pre product market fit?",
+      answer: "ExitLoop still helps you understand cancel reasons and keep early users longer, which can be critical for finding product market fit faster."
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="min-h-screen bg-background font-sans">
+      {/* 1) Top Navigation */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Shield className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center gap-2 font-bold text-xl">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Shield className="h-5 w-5" />
             </div>
-            <span className="text-lg font-semibold">Exit Loop</span>
+            ExitLoop
           </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Features
-            </a>
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              How it works
-            </a>
-            <a href="#integration" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Integration
-            </a>
-            <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8">
+            <Link href="#product" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Product</Link>
+            <Link href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">How it works</Link>
+            <Link href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
+            <Link href="#resources" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Resources</Link>
           </nav>
-          <div className="flex items-center gap-3">
-            {loading ? (
-              <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
-            ) : user ? (
-              <Button size="sm" asChild>
-                <Link href="/dashboard">
-                  Go to Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">Sign in</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/login">Get Started</Link>
-                </Button>
-              </>
-            )}
+
+          <div className="hidden md:flex items-center gap-4">
+            <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              Log in
+            </Link>
+            <Button asChild>
+              <Link href="/signup">Start free</Link>
+            </Button>
           </div>
+
+          {/* Mobile Menu Toggle */}
+          <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t p-4 bg-background absolute w-full">
+            <div className="flex flex-col space-y-4">
+              <Link href="#product" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Product</Link>
+              <Link href="#how-it-works" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>How it works</Link>
+              <Link href="#pricing" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
+              <Link href="#resources" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Resources</Link>
+              <div className="pt-4 border-t flex flex-col gap-3">
+                <Link href="/login" className="text-sm font-medium text-center" onClick={() => setIsMenuOpen(false)}>Log in</Link>
+                <Button asChild className="w-full">
+                  <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Start free</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section className="container py-24 md:py-32">
-        <div className="flex flex-col items-center text-center space-y-8">
-          <Badge variant="secondary" className="px-4 py-1">
-            <Zap className="mr-1 h-3 w-3" />
-            Reduce churn by up to 40%
-          </Badge>
+      <main>
+        {/* 2) Hero Section */}
+        <section className="container py-24 md:py-32">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="flex flex-col gap-6 text-left">
+              <Badge variant="secondary" className="w-fit">
+                Retention for SaaS startups
+              </Badge>
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+                Do not let users fall into the <span className="text-primary">exit loop</span>
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                ExitLoop intercepts cancellations in real time and guides customers toward smarter options like downgrading, pausing, or staying. Save more customers, keep more MRR, without enterprise pricing.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <Button size="lg" asChild>
+                  <Link href="/signup">Start saving customers</Link>
+                </Button>
+                <Button size="lg" variant="ghost" className="gap-2" onClick={handleDemoClick}>
+                  <Play className="h-4 w-4" />
+                  Watch a 90 second demo
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                No code to start, cancel any time
+              </p>
+            </div>
 
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl max-w-4xl">
-            Stop Losing Customers to{' '}
-            <span className="text-primary">Preventable Churn</span>
-          </h1>
-
-          <p className="text-xl text-muted-foreground max-w-2xl">
-            Exit Loop helps SaaS founders reduce churn with automated dunning emails
-            and intelligent cancel-save flows. Recover failed payments and save customers
-            before they leave.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="gap-2" asChild>
-              <Link href="/onboarding">
-                Start Free Trial
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => setShowModal(true)}>
-              Try Cancel Flow Demo
-            </Button>
+            {/* Visual Mockup */}
+            <div className="relative mx-auto w-full max-w-[500px] aspect-square lg:aspect-auto lg:h-[500px] bg-muted rounded-xl border p-4 flex items-center justify-center overflow-hidden">
+              {/* Background Dashboard Mock */}
+              <div className="absolute inset-0 bg-background/50 p-6 opacity-50 pointer-events-none">
+                 <div className="h-8 w-32 bg-muted-foreground/20 rounded mb-8"></div>
+                 <div className="grid grid-cols-3 gap-4 mb-8">
+                    <div className="h-24 bg-muted-foreground/20 rounded"></div>
+                    <div className="h-24 bg-muted-foreground/20 rounded"></div>
+                    <div className="h-24 bg-muted-foreground/20 rounded"></div>
+                 </div>
+                 <div className="space-y-4">
+                    <div className="h-4 w-full bg-muted-foreground/20 rounded"></div>
+                    <div className="h-4 w-5/6 bg-muted-foreground/20 rounded"></div>
+                    <div className="h-4 w-4/6 bg-muted-foreground/20 rounded"></div>
+                 </div>
+              </div>
+              
+              {/* Modal Mock */}
+              <div className="relative z-10 w-full max-w-sm bg-background border rounded-lg shadow-2xl p-6 space-y-6">
+                <div className="space-y-2 text-center">
+                    <h3 className="text-lg font-semibold">Wait, before you go...</h3>
+                    <p className="text-sm text-muted-foreground">We'd hate to see you leave. Would you consider pausing your subscription instead?</p>
+                </div>
+                <div className="space-y-3">
+                    <div className="p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <Zap className="h-4 w-4" />
+                        </div>
+                        <div className="text-sm">
+                            <p className="font-medium">Pause for 3 months</p>
+                            <p className="text-xs text-muted-foreground">Return when you're ready</p>
+                        </div>
+                    </div>
+                     <div className="p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                            <CreditCard className="h-4 w-4" />
+                        </div>
+                        <div className="text-sm">
+                            <p className="font-medium">Get 50% off for 3 months</p>
+                            <p className="text-xs text-muted-foreground">Apply discount immediately</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="pt-2 flex gap-3">
+                    <Button variant="outline" className="w-full text-xs">I still want to cancel</Button>
+                    <Button className="w-full text-xs">Keep my subscription</Button>
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 pt-8 border-t mt-8 w-full max-w-2xl">
-            <div className="text-center">
-              <p className="text-3xl font-bold">75%</p>
-              <p className="text-sm text-muted-foreground">Payment Recovery</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold">60%</p>
-              <p className="text-sm text-muted-foreground">Cancellation Saves</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold">$1.2M+</p>
-              <p className="text-sm text-muted-foreground">MRR Recovered</p>
+        {/* 3) Social Proof Strip */}
+        <section className="border-y bg-muted/30 py-12">
+          <div className="container text-center">
+            <p className="text-sm font-medium text-muted-foreground mb-8 uppercase tracking-wider">Trusted by scrappy SaaS teams</p>
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale opacity-70">
+              {/* Placeholders for logos */}
+              <div className="flex items-center gap-2 font-bold text-xl"><div className="h-8 w-8 bg-foreground/20 rounded-full"></div> Launchboard</div>
+              <div className="flex items-center gap-2 font-bold text-xl"><div className="h-8 w-8 bg-foreground/20 rounded-full"></div> MetricFox</div>
+              <div className="flex items-center gap-2 font-bold text-xl"><div className="h-8 w-8 bg-foreground/20 rounded-full"></div> Shipbright</div>
+              <div className="flex items-center gap-2 font-bold text-xl"><div className="h-8 w-8 bg-foreground/20 rounded-full"></div> Taskline</div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Section */}
-      <section id="features" className="container py-24 space-y-12">
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything you need to fight churn
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A complete toolkit for reducing involuntary and voluntary churn
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full -translate-y-16 translate-x-16" />
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4">
-                <CreditCard className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <CardTitle>Dunning Management</CardTitle>
-              <CardDescription>
-                Automatically email customers when payments fail with secure retry links
-                and billing portal access.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Smart retry sequences
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Customizable email templates
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Stripe billing portal links
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -translate-y-16 translate-x-16" />
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center mb-4">
-                <Target className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <CardTitle>Cancel/Save Flows</CardTitle>
-              <CardDescription>
-                Intercept cancellations with exit surveys and discount offers to retain
-                customers who are about to leave.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Exit survey collection
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Dynamic discount offers
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  One-line integration
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-16 translate-x-16" />
-            <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <CardTitle>Analytics Dashboard</CardTitle>
-              <CardDescription>
-                Track failed payments, cancellations, recoveries, and saved MRR with
-                detailed event logs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Real-time metrics
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Event activity feed
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  MRR impact tracking
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* How it Works Section */}
-      <section id="how-it-works" className="bg-muted/50 py-24">
-        <div className="container space-y-12">
-          <div className="text-center space-y-4">
+        {/* 4) The Problem Section */}
+        <section className="container py-24">
+          <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              How it works
+              Churn is not random, it happens in one moment
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get up and running in minutes with our simple integration
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">1</span>
-              </div>
-              <h3 className="text-xl font-semibold">Connect Stripe</h3>
-              <p className="text-muted-foreground">
-                Add your Stripe webhook endpoint and we'll start receiving payment events automatically.
-              </p>
+          <div className="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+            {/* The Old Way */}
+            <Card className="bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900/50">
+              <CardHeader>
+                <CardTitle className="text-red-600 dark:text-red-400">The old way</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                        <X className="h-5 w-5 text-red-500 mt-0.5" />
+                        <span>Users click Cancel and disappear</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <X className="h-5 w-5 text-red-500 mt-0.5" />
+                        <span>You get no useful feedback</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <X className="h-5 w-5 text-red-500 mt-0.5" />
+                        <span>Failed payments quietly stack up</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <X className="h-5 w-5 text-red-500 mt-0.5" />
+                        <span>You only see the damage in your churn report</span>
+                    </li>
+                </ul>
+                <div className="pt-4 border-t border-red-200 dark:border-red-900/50 mt-4">
+                    <p className="font-medium italic text-red-700 dark:text-red-300">You are losing customers at the exact moment you could have a conversation.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* The ExitLoop Way */}
+            <Card className="bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-900/50 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-emerald-600 dark:text-emerald-400">The ExitLoop way</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-emerald-500 mt-0.5" />
+                        <span>ExitLoop intercepts the cancel click</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-emerald-500 mt-0.5" />
+                        <span>Shows a friendly modal, not a hard wall</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-emerald-500 mt-0.5" />
+                        <span>Offers pause, downgrade, discount, or help</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-emerald-500 mt-0.5" />
+                        <span>Captures churn reasons automatically</span>
+                    </li>
+                </ul>
+                <div className="pt-4 border-t border-emerald-200 dark:border-emerald-900/50 mt-4">
+                    <p className="font-medium italic text-emerald-700 dark:text-emerald-300">Turn cancellations into conversations and conversations into saved revenue.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* 5) How ExitLoop Works */}
+        <section id="how-it-works" className="bg-muted/50 py-24">
+          <div className="container">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                How ExitLoop catches churn in three simple steps
+              </h2>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">2</span>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="bg-background p-8 rounded-xl border shadow-sm relative">
+                <div className="absolute -top-4 left-8 bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
+                <h3 className="text-xl font-bold mb-3 mt-2">Drop in ExitLoop</h3>
+                <p className="text-muted-foreground">Install a tiny snippet in your app or connect via your billing provider. Choose where and when the cancel flow should appear.</p>
               </div>
-              <h3 className="text-xl font-semibold">Add Cancel Flow</h3>
-              <p className="text-muted-foreground">
-                Drop our React component into your settings page to intercept cancellation attempts.
-              </p>
+
+              <div className="bg-background p-8 rounded-xl border shadow-sm relative">
+                 <div className="absolute -top-4 left-8 bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
+                <h3 className="text-xl font-bold mb-3 mt-2">Design your save paths</h3>
+                <p className="text-muted-foreground">Use our visual editor to set up options like pause, downgrade, discount, or talk to support, plus quick feedback questions.</p>
+              </div>
+
+              <div className="bg-background p-8 rounded-xl border shadow-sm relative">
+                 <div className="absolute -top-4 left-8 bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
+                <h3 className="text-xl font-bold mb-3 mt-2">Let ExitLoop intercept churn</h3>
+                <p className="text-muted-foreground">Whenever a user hits Cancel, ExitLoop shows up with a better path. You watch churn go down and MRR stabilize.</p>
+              </div>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">3</span>
-              </div>
-              <h3 className="text-xl font-semibold">Watch MRR Grow</h3>
-              <p className="text-muted-foreground">
-                Monitor your dashboard as Exit Loop recovers failed payments and saves customers.
-              </p>
+            <div className="text-center mt-12">
+                <Button size="lg" asChild>
+                    <Link href="/demo">See ExitLoop in action</Link>
+                </Button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Integration Section */}
-      <section id="integration" className="container py-24 space-y-12">
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Quick Integration
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Add Exit Loop to your app with just a few lines of code
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Code className="h-5 w-5" />
-                <CardTitle className="text-lg">Cancel Flow Modal</CardTitle>
-              </div>
-              <CardDescription>
-                Add the cancel flow modal to your settings page
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-muted rounded-lg p-4 overflow-x-auto text-sm">
-                <code className="text-emerald-600">{`import { CancelFlowModal } from '@churnbuddy/react';
-
-<CancelFlowModal
-  isOpen={showCancel}
-  onClose={() => setShowCancel(false)}
-  customerId="cus_xxx"
-  subscriptionId="sub_xxx"
-  onCancelConfirmed={handleCancel}
-  onOfferAccepted={handleSave}
-/>`}</code>
-              </pre>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                <CardTitle className="text-lg">Stripe Webhooks</CardTitle>
-              </div>
-              <CardDescription>
-                Point your Stripe webhook to our endpoint
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-muted rounded-lg p-4 overflow-x-auto text-sm">
-                <code className="text-blue-600">{`// Webhook URL
-https://your-app.com/api/webhooks/stripe
-
-// Required events
-invoice.payment_failed
-customer.subscription.deleted
-customer.subscription.updated`}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex justify-center">
-          <Button size="lg" variant="outline" asChild>
-            <Link href="/dashboard">
-              View Live Dashboard Demo
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-primary text-primary-foreground py-24">
-        <div className="container text-center space-y-8">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Ready to reduce churn?
-          </h2>
-          <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-            Join hundreds of SaaS founders who are recovering revenue and retaining customers with Exit Loop.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="gap-2" asChild>
-              <Link href="/onboarding">
-                Start Free Trial
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-primary-foreground/20 hover:bg-primary-foreground/10">
-              Schedule Demo
-            </Button>
+        {/* 6) Feature Grid */}
+        <section id="product" className="container py-24">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything you need to stop the exit loop
+            </h2>
           </div>
-        </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <Card key={index} className="border-none shadow-none bg-muted/20 hover:bg-muted/40 transition-colors">
+                <CardHeader>
+                  <feature.icon className="h-10 w-10 text-primary mb-2" />
+                  <CardTitle>{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* 7) Results and Use Cases */}
+        <section className="py-24 bg-muted/30">
+          <div className="container">
+            <div className="text-center mb-16">
+               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                  What ExitLoop does for your metrics
+               </h2>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-primary" />
+                            Drop voluntary churn
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-muted-foreground">Use downgrade and pause options to keep customers who are not ready to leave forever.</p>
+                        <p className="text-sm font-medium text-primary">Keep more of the users who already like you.</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            Protect MRR from failed payments
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-muted-foreground">Recover revenue that would otherwise disappear due to expired cards and payment hiccups.</p>
+                        <p className="text-sm font-medium text-primary">Found money, on autopilot.</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-primary" />
+                            Learn faster from churn
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-muted-foreground">Stop guessing why people leave. Let ExitLoop collect and organize real answers from cancelling users.</p>
+                        <p className="text-sm font-medium text-primary">Direct input for your roadmap, from the customers who matter most.</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Testimonial */}
+            <div className="mt-16 max-w-3xl mx-auto text-center">
+                <blockquote className="text-xl italic font-medium leading-relaxed">
+                    "We plugged in ExitLoop and within weeks we were saving accounts that would never have talked to us. It paid for itself almost immediately."
+                </blockquote>
+                <div className="mt-4">
+                    <div className="font-semibold">Name, Title</div>
+                    <div className="text-sm text-muted-foreground">Company</div>
+                </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 8) Pricing Teaser */}
+        <section id="pricing" className="container py-24">
+           <div className="text-center max-w-3xl mx-auto mb-16">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+                 Pricing that does not put you in your own exit loop
+              </h2>
+              <p className="text-xl text-muted-foreground">
+                ExitLoop is built for SaaS founders and small teams. Simple, transparent pricing, no long term contracts, no per seat tricks.
+              </p>
+           </div>
+
+           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* Starter Plan */}
+              <Card className="relative">
+                  <CardHeader>
+                      <CardTitle className="text-2xl">Starter</CardTitle>
+                      <CardDescription>Perfect for early stage</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      <ul className="space-y-3 text-sm">
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to [X] monthly active users</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Cancel flows</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Basic insights</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Email support</li>
+                      </ul>
+                      <Button className="w-full" variant="outline" asChild>
+                          <Link href="/waitlist">Join the waitlist</Link>
+                      </Button>
+                  </CardContent>
+              </Card>
+
+              {/* Growth Plan */}
+              <Card className="relative border-primary shadow-lg">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">Most Popular</div>
+                  <CardHeader>
+                      <CardTitle className="text-2xl">Growth</CardTitle>
+                      <CardDescription>For scaling SaaS teams</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      <ul className="space-y-3 text-sm">
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Everything in Starter</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Advanced targeting</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Win back campaigns</li>
+                          <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Priority support</li>
+                      </ul>
+                      <Button className="w-full" asChild>
+                          <Link href="/contact">Talk to us</Link>
+                      </Button>
+                  </CardContent>
+              </Card>
+           </div>
+           <div className="text-center mt-8 text-muted-foreground text-sm">
+              Not sure where you fit? Reach out and we will match the plan to your stage.
+           </div>
+        </section>
+
+        {/* 9) FAQ */}
+        <section id="resources" className="bg-muted/30 py-24">
+           <div className="container max-w-3xl">
+              <div className="text-center mb-16">
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                    Questions about leaving the exit loop
+                 </h2>
+              </div>
+              <div className="space-y-6">
+                 {faqs.map((faq, i) => (
+                    <div key={i} className="bg-background rounded-lg p-6 shadow-sm border">
+                        <h3 className="font-bold text-lg mb-2">{faq.question}</h3>
+                        <p className="text-muted-foreground">{faq.answer}</p>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        </section>
+
+        {/* 10) Final CTA */}
+        <section className="container py-24 text-center">
+            <div className="max-w-3xl mx-auto space-y-8">
+                <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                    Ready to catch your next churn before it happens?
+                </h2>
+                <p className="text-xl text-muted-foreground">
+                    Ship your first cancel save flow, watch the first saved customer stay, and never look at your cancel button the same way again.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <Button size="lg" className="h-12 px-8 text-lg" asChild>
+                        <Link href="/signup">Get started on ExitLoop</Link>
+                    </Button>
+                    <Link href="/demo" className="text-muted-foreground hover:text-foreground font-medium hover:underline underline-offset-4">
+                        Or book a quick walkthrough
+                    </Link>
+                </div>
+            </div>
+        </section>
+      </main>
+
+      <footer className="border-t py-12 bg-muted/10">
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
-              <Shield className="h-3 w-3 text-primary-foreground" />
+          <div className="flex items-center gap-2 font-semibold">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground">
+              <Shield className="h-3 w-3" />
             </div>
-            <span className="text-sm font-medium">Exit Loop</span>
+            ExitLoop
           </div>
           <p className="text-sm text-muted-foreground">
-            Built for SaaS founders who care about retention.
+            © {new Date().getFullYear()} ExitLoop. All rights reserved.
           </p>
         </div>
       </footer>
 
-      {/* Cancel Flow Modal Demo */}
+      {/* Re-using the existing component for demo/visual purposes if triggered */}
       <CancelFlowModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        customerId="cus_demo123"
-        subscriptionId="sub_demo456"
-        companyName="Exit Loop"
-        discountPercent={50}
-        discountDuration="3 months"
-        onCancelConfirmed={async (reason) => {
-          console.log('Demo: Cancelled with reason:', reason);
-          setShowModal(false);
-        }}
-        onOfferAccepted={async () => {
-          console.log('Demo: Offer accepted');
-          setShowModal(false);
-        }}
-        onPlanSwitched={async (planId) => {
-          console.log('Demo: Switched to plan:', planId);
-          setShowModal(false);
-        }}
+        isOpen={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+        customerId="demo_customer"
+        subscriptionId="demo_sub"
+        companyName="ExitLoop"
+        onCancelConfirmed={() => setShowDemoModal(false)}
+        onOfferAccepted={() => setShowDemoModal(false)}
       />
     </div>
   );

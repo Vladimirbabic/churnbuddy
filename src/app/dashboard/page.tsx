@@ -357,7 +357,7 @@ export default function DashboardPage() {
                         <div className="text-3xl font-bold">{summary.saveRate}%</div>
                         <Progress value={summary.saveRate} className="h-2" />
                         <p className="text-xs text-muted-foreground">
-                          {summary.saved} of {summary.cancellationAttempts} cancellation attempts saved
+                          {summary.saved} of {summary.saved + summary.cancellations} completed flows saved
                         </p>
                       </div>
                     </CardContent>
@@ -392,44 +392,42 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="rounded-md border">
-                      <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
-                        <div>Customer</div>
-                        <div>Discount</div>
-                        <div>Coupon</div>
-                        <div>Expires</div>
-                      </div>
-                      <div className="divide-y">
-                        {discountData.activeDiscountsList.slice(0, 5).map((discount) => (
-                          <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs">
-                                  {discount.customerEmail ? getInitials(discount.customerEmail) : '??'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {discount.customerEmail || 'Unknown'}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{discount.customerId}</p>
-                              </div>
-                            </div>
-                            <div className="text-sm font-medium">
-                              {discount.discountPercent}% off
-                            </div>
-                            <div className="text-sm text-muted-foreground truncate">
-                              {discount.couponName || 'Retention Offer'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {discount.endsAt
-                                ? new Date(discount.endsAt).toLocaleDateString()
-                                : 'Forever'}
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground rounded-t-md">
+                      <div>Customer</div>
+                      <div>Discount</div>
+                      <div>Coupon</div>
+                      <div>Expires</div>
+                    </div>
+                    <div className="divide-y">
+                      {discountData.activeDiscountsList.slice(0, 5).map((discount) => (
+                        <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">
+                                {discount.customerEmail ? getInitials(discount.customerEmail) : '??'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {discount.customerEmail || 'Unknown'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{discount.customerId}</p>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="text-sm font-medium">
+                            {discount.discountPercent}% off
+                          </div>
+                          <div className="text-sm text-muted-foreground truncate">
+                            {discount.couponName || 'Retention Offer'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {discount.endsAt
+                              ? new Date(discount.endsAt).toLocaleDateString()
+                              : 'Forever'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     {discountData.activeDiscounts > 5 && (
                       <p className="text-xs text-muted-foreground mt-3 text-center">

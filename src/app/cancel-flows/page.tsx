@@ -2287,15 +2287,17 @@ function CancelFlowsPageContent() {
   );
 }
 
-// Loading fallback for Suspense
+// Loading fallback for Suspense - uses AppLayout to prevent sidebar flicker
 function CancelFlowsLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading cancel flows...</p>
+    <AppLayout title="Cancel Flows">
+      <div className="flex items-center justify-center py-16">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading cancel flows...</p>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
 
