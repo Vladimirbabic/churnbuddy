@@ -37,7 +37,8 @@ async function getOrganizationFromCustomer(customerId: string): Promise<string |
     const supabase = getServerSupabase();
 
     // Look for any churn event with this customer to find the org
-    const { data: event } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: event } = await (supabase as any)
       .from('churn_events')
       .select('organization_id')
       .eq('customer_id', customerId)
@@ -50,7 +51,8 @@ async function getOrganizationFromCustomer(customerId: string): Promise<string |
 
     // Fallback: check settings table for orgs with matching Stripe config
     // This assumes there's only one organization (single-tenant mode)
-    const { data: settings } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: settings } = await (supabase as any)
       .from('settings')
       .select('organization_id')
       .limit(1)
@@ -70,7 +72,8 @@ async function getCompanyName(organizationId: string): Promise<string> {
 
   try {
     const supabase = getServerSupabase();
-    const { data: settings } = await (supabase as ReturnType<typeof getServerSupabase>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: settings } = await (supabase as any)
       .from('settings')
       .select('company_name')
       .eq('organization_id', organizationId)
@@ -210,7 +213,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   // Log the payment failed event to database
   const supabase = getServerSupabase();
-  await (supabase as ReturnType<typeof getServerSupabase>)
+  await (supabase as any)
     .from('churn_events')
     .insert({
       organization_id: organizationId,
@@ -251,7 +254,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   // Log that dunning sequence was scheduled
   if (result.success) {
-    await (supabase as ReturnType<typeof getServerSupabase>)
+    await (supabase as any)
       .from('churn_events')
       .insert({
         organization_id: organizationId,
@@ -329,7 +332,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const supabase = getServerSupabase();
 
   if (organizationId) {
-    await (supabase as ReturnType<typeof getServerSupabase>)
+    await (supabase as any)
       .from('churn_events')
       .insert({
         organization_id: organizationId,
@@ -433,7 +436,7 @@ async function handleSubscriptionUpdated(
 
     // Log the recovery event
     if (organizationId) {
-      await (supabase as ReturnType<typeof getServerSupabase>)
+      await (supabase as any)
         .from('churn_events')
         .insert({
           organization_id: organizationId,
@@ -464,7 +467,7 @@ async function handleSubscriptionUpdated(
     console.log(`Subscription ${subscription.id} recovered! MRR recovered: ${monthlyAmount / 100} ${subscription.currency}`);
   } else if (previousStatus && previousStatus !== subscription.status && organizationId) {
     // Log other status changes
-    await (supabase as ReturnType<typeof getServerSupabase>)
+    await (supabase as any)
       .from('churn_events')
       .insert({
         organization_id: organizationId,
