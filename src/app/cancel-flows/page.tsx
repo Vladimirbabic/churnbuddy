@@ -37,6 +37,7 @@ import {
   ConsiderOtherPlansModal,
   SpecialOfferModal,
 } from '@/components/modals';
+import { supabase } from '@/lib/supabase';
 
 interface FeedbackOption {
   id: string;
@@ -961,15 +962,17 @@ function CancelFlowsPageContent() {
     setLoadingStripeProducts(true);
     setStripeError(null);
     try {
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('sb-access-token='))
-        ?.split('=')[1];
-
       // Get the session token from supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error('Please log in to import products from Stripe');
+      }
+
       const response = await fetch('/api/stripe/prices', {
         headers: {
-          'Authorization': `Bearer ${token || ''}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
