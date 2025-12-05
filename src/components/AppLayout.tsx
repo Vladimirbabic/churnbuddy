@@ -26,7 +26,7 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
         <AppSidebar />
         {/* Wrapper with 8px padding on top, right, bottom */}
         <div className="flex-1 p-2 pl-0">
-          <SidebarInset className="bg-white border border-border rounded-xl h-full">
+          <SidebarInset className="bg-background border border-border rounded-xl h-full">
             {/* Header */}
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger className="-ml-1" />
