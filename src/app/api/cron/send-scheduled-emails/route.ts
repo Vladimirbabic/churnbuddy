@@ -10,6 +10,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { sendTemplateEmail, type EmailTemplateType, type EmailContext } from '@/lib/emailService';
 
+// Type for scheduled email records
+interface ScheduledEmail {
+  id: string;
+  organization_id: string;
+  template_type: string;
+  context: Record<string, unknown>;
+  invoice_id?: string;
+  cancel_flow_id?: string;
+  scheduled_for: string;
+  status: string;
+}
+
 // Secret key to protect the cron endpoint
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -51,10 +63,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'No emails to process', processed: 0 });
     }
 
+    const emails = pendingEmails as ScheduledEmail[];
     let processed = 0;
     let failed = 0;
 
-    for (const email of pendingEmails) {
+    for (const email of emails) {
       try {
         // Send the email
         const result = await sendTemplateEmail({
