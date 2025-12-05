@@ -7,18 +7,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
-const DEFAULT_ORG_ID = 'demo-org-001';
+// Security: Get allowed origins from environment
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || '').split(',').filter(Boolean);
 
-// CORS headers for cross-origin requests from embed script
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// Helper to get CORS headers with origin validation
+function getCorsHeaders(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  // Allow if origin matches allowed list, or in development mode
+  const isAllowed = ALLOWED_ORIGINS.length === 0 ||
+    ALLOWED_ORIGINS.some(allowed => origin === allowed || allowed === '*') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1');
+
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0] || '',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 // Handle CORS preflight requests
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, {
     status: 204,
     headers: corsHeaders,
@@ -152,14 +165,40 @@ async function getEmailUtils() {
 
 // POST: Log cancel flow events
 export async function POST(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
+
+  // Rate limiting
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(`cancel-flow:${clientIp}`, RATE_LIMITS.public);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          'Retry-After': String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
     let { eventType, customerId, subscriptionId, details, flowId } = body;
     const { customerEmail: inputEmail } = body;
 
+    // Security: Require flowId for all requests (removes hardcoded default org)
+    if (!flowId) {
+      return NextResponse.json(
+        { error: 'Missing required field: flowId' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     // If email is provided instead of customerId, look up the customer
     let customerEmail: string | undefined = inputEmail;
-    
+
     if (!customerId && inputEmail) {
       const lookup = await lookupCustomerByEmail(inputEmail, flowId);
       if (lookup.customerId) {
@@ -194,9 +233,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get organization_id from flowId if available
-    let organizationId = DEFAULT_ORG_ID;
-    if (flowId && isSupabaseConfigured()) {
+    // Get organization_id from flowId (required)
+    let organizationId: string | null = null;
+    if (isSupabaseConfigured()) {
       const supabase = getServerSupabase();
       const { data: flow } = await (supabase as any)
         .from('cancel_flows')
@@ -206,6 +245,14 @@ export async function POST(request: NextRequest) {
       if (flow?.organization_id) {
         organizationId = flow.organization_id;
       }
+    }
+
+    // Security: Fail if organization not found
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'Invalid flowId: organization not found' },
+        { status: 404, headers: corsHeaders }
+      );
     }
 
     // Create the event record
@@ -379,6 +426,8 @@ export async function POST(request: NextRequest) {
 
 // GET: Get cancel flow stats for a customer
 export async function GET(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
+
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');

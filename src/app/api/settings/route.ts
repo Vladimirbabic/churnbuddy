@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { validateCsrfToken } from '@/lib/csrf';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
 // Helper to get authenticated supabase client and user's organization ID
 async function getAuthenticatedClient() {
@@ -115,6 +117,30 @@ export async function GET(request: NextRequest) {
 
 // POST: Save settings
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(`settings:${clientIp}`, RATE_LIMITS.settings);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
+  // CSRF protection
+  const csrfValid = await validateCsrfToken(request);
+  if (!csrfValid) {
+    return NextResponse.json(
+      { error: 'Invalid CSRF token' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { supabase, orgId } = await getAuthenticatedClient();
 
@@ -276,6 +302,30 @@ export async function POST(request: NextRequest) {
 
 // PATCH: Update specific settings
 export async function PATCH(request: NextRequest) {
+  // Rate limiting
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(`settings:${clientIp}`, RATE_LIMITS.settings);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
+  // CSRF protection
+  const csrfValid = await validateCsrfToken(request);
+  if (!csrfValid) {
+    return NextResponse.json(
+      { error: 'Invalid CSRF token' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { supabase, orgId } = await getAuthenticatedClient();
 

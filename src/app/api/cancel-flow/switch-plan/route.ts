@@ -1,24 +1,53 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 import { createStripeClient, switchSubscriptionPlan } from '@/lib/stripe';
+import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
-// Create Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Security: Get allowed origins from environment
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || '').split(',').filter(Boolean);
 
-// CORS headers for cross-origin embed widget requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// Helper to get CORS headers with origin validation
+function getCorsHeaders(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  // Allow if origin matches allowed list, or in development mode
+  const isAllowed = ALLOWED_ORIGINS.length === 0 ||
+    ALLOWED_ORIGINS.some(allowed => origin === allowed || allowed === '*') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1');
+
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0] || '',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 // Handle preflight requests
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
+
+  // Rate limiting (restrictive for plan switches)
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(`switch-plan:${clientIp}`, RATE_LIMITS.discountApply);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          'Retry-After': String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
 
@@ -41,10 +70,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Security: Use server supabase instead of service role key
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const supabase = getServerSupabase();
 
     // Get flow to find organization
-    const { data: flow, error: flowError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: flow, error: flowError } = await (supabase as any)
       .from('cancel_flows')
       .select('organization_id')
       .eq('id', flowId)
@@ -58,7 +96,8 @@ export async function POST(request: Request) {
     const organizationId = flow.organization_id;
 
     // Get organization's Stripe settings
-    const { data: settings, error: settingsError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: settings, error: settingsError } = await (supabase as any)
       .from('settings')
       .select('stripe_config')
       .eq('organization_id', organizationId)
@@ -92,7 +131,8 @@ export async function POST(request: Request) {
     }
 
     // Log the plan switch event
-    await supabase.from('churn_events').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('churn_events').insert({
       organization_id: organizationId,
       event_type: 'plan_switched',
       customer_id: customerId || 'unknown',
@@ -111,10 +151,12 @@ export async function POST(request: Request) {
 
     // Update flow stats - increment saves
     try {
-      const { error: rpcError } = await supabase.rpc('increment_flow_saves', { flow_id: flowId });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: rpcError } = await (supabase as any).rpc('increment_flow_saves', { flow_id: flowId });
       if (rpcError) {
         // If RPC doesn't exist or fails, try direct update
-        await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
           .from('cancel_flows')
           .update({ saves: 1 })
           .eq('id', flowId);

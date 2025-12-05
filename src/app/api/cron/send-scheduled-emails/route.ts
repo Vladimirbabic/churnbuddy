@@ -29,12 +29,19 @@ export const runtime = 'nodejs';
 export const maxDuration = 60; // Allow up to 60 seconds for processing
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret (if configured)
-  if (CRON_SECRET) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Security: Always require cron secret
+  if (!CRON_SECRET) {
+    console.error('CRON_SECRET environment variable is not configured');
+    return NextResponse.json(
+      { error: 'Cron endpoint not configured' },
+      { status: 500 }
+    );
+  }
+
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    console.warn('Unauthorized cron request attempt');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   if (!isSupabaseConfigured()) {
