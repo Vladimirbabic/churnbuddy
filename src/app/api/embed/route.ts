@@ -200,6 +200,7 @@ export async function GET(request: NextRequest) {
     }
     .cb-other-input {
       width: 100%;
+      max-width: 100%;
       margin-top: 8px;
       padding: 12px 16px;
       border: 1px solid #E9D5FF;
@@ -207,9 +208,11 @@ export async function GET(request: NextRequest) {
       background: white;
       color: #1F2937;
       font-size: 14px;
-      resize: none;
+      resize: vertical;
       min-height: 80px;
+      max-height: 200px;
       font-family: inherit;
+      box-sizing: border-box;
     }
     .cb-other-input:focus {
       outline: none;
@@ -626,6 +629,180 @@ export async function GET(request: NextRequest) {
     document.head.appendChild(style);
   }
 
+  // Inject dynamic color styles based on config
+  function injectDynamicColors(cfg) {
+    var existingDynamic = document.getElementById('cb-dynamic-styles');
+    if (existingDynamic) existingDynamic.remove();
+
+    var feedbackColors = cfg.feedbackColors || { primary: '#9333EA', background: '#F5F3FF', text: '#1F2937' };
+    var plansColors = cfg.plansColors || { primary: '#2563EB', background: '#F0F4FF', text: '#1F2937' };
+    var offerColors = cfg.offerColors || { primary: '#DC2626', background: '#FEF2F2', text: '#1F2937' };
+
+    // Helper to create lighter/darker variants
+    function hexToRgb(hex) {
+      var result = /^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 147, g: 51, b: 234 };
+    }
+
+    var fbRgb = hexToRgb(feedbackColors.primary);
+    var plRgb = hexToRgb(plansColors.primary);
+    var ofRgb = hexToRgb(offerColors.primary);
+
+    var dynamicStyles = \`
+      /* Feedback Step - Dynamic Colors */
+      .cb-feedback .cb-header-bar {
+        background: \${feedbackColors.background};
+      }
+      .cb-feedback .cb-header-bar-left svg {
+        color: \${feedbackColors.primary};
+        fill: \${feedbackColors.primary};
+      }
+      .cb-feedback .cb-header-bar-title {
+        color: \${feedbackColors.primary};
+      }
+      .cb-feedback .cb-close {
+        color: \${feedbackColors.primary};
+      }
+      .cb-feedback .cb-close:hover {
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1);
+      }
+      .cb-option {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3);
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.05);
+      }
+      .cb-option:hover {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.5);
+      }
+      .cb-option.selected {
+        border-color: \${feedbackColors.primary};
+      }
+      .cb-option.selected .cb-option-letter {
+        background: \${feedbackColors.primary};
+        border-color: \${feedbackColors.primary};
+      }
+      .cb-option-check {
+        color: \${feedbackColors.primary};
+      }
+      .cb-other-input {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3);
+      }
+      .cb-other-input:focus {
+        border-color: \${feedbackColors.primary};
+        box-shadow: 0 0 0 2px rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2);
+      }
+      .cb-btn-back-purple {
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1);
+        color: \${feedbackColors.primary};
+      }
+      .cb-btn-back-purple:hover {
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2);
+      }
+
+      /* Plans Step - Dynamic Colors */
+      .cb-plans .cb-header-bar {
+        background: \${plansColors.background};
+      }
+      .cb-plans .cb-header-bar-left svg {
+        color: \${plansColors.primary};
+        fill: none;
+        stroke: \${plansColors.primary};
+      }
+      .cb-plans .cb-header-bar-title {
+        color: \${plansColors.primary};
+      }
+      .cb-plans .cb-close {
+        color: \${plansColors.primary};
+      }
+      .cb-plans .cb-close:hover {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1);
+      }
+      .cb-plan-card.selected {
+        border-color: \${plansColors.primary};
+        box-shadow: 0 0 0 2px rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.2);
+      }
+      .cb-plan-badge {
+        background: \${plansColors.primary};
+      }
+      .cb-plan-price {
+        color: \${plansColors.primary};
+      }
+      .cb-plan-check {
+        color: \${plansColors.primary};
+      }
+      .cb-plan-btn {
+        background: \${plansColors.primary};
+      }
+      .cb-plan-btn:hover {
+        background: \${plansColors.primary};
+        opacity: 0.9;
+      }
+      .cb-btn-back-blue {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1);
+        color: \${plansColors.primary};
+      }
+      .cb-btn-back-blue:hover {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.2);
+      }
+
+      /* Offer Step - Dynamic Colors */
+      .cb-offer .cb-header-bar {
+        background: \${offerColors.background};
+      }
+      .cb-offer .cb-header-bar-left svg {
+        color: \${offerColors.primary};
+        fill: none;
+        stroke: \${offerColors.primary};
+      }
+      .cb-offer .cb-header-bar-title {
+        color: \${offerColors.primary};
+      }
+      .cb-offer .cb-close {
+        color: \${offerColors.primary};
+      }
+      .cb-offer .cb-close:hover {
+        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1);
+      }
+      .cb-discount {
+        color: \${offerColors.primary};
+      }
+      .cb-btn-primary-red {
+        background: \${offerColors.primary};
+      }
+      .cb-btn-primary-red:hover {
+        background: \${offerColors.primary};
+        opacity: 0.9;
+      }
+      .cb-btn-back-red {
+        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1);
+        color: \${offerColors.primary};
+      }
+      .cb-btn-back-red:hover {
+        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.2);
+      }
+      .cb-countdown svg {
+        color: \${offerColors.primary};
+      }
+      .cb-countdown-label {
+        color: \${offerColors.primary};
+      }
+      .cb-countdown-time {
+        color: \${offerColors.primary};
+      }
+      .cb-countdown {
+        background: \${offerColors.background};
+      }
+    \`;
+
+    var style = document.createElement('style');
+    style.id = 'cb-dynamic-styles';
+    style.textContent = dynamicStyles;
+    document.head.appendChild(style);
+  }
+
   function formatCountdown(seconds) {
     var mins = Math.floor(seconds / 60);
     var secs = seconds % 60;
@@ -708,6 +885,7 @@ export async function GET(request: NextRequest) {
           config.discountDuration = state.discountDurationOverride;
         }
         state.config = config;
+        injectDynamicColors(config);
         state.isLoading = false;
         // Determine first step based on config - default to true if undefined
         var showFeedback = config.showFeedback !== false;
@@ -1051,6 +1229,27 @@ export async function GET(request: NextRequest) {
       var plan = (cfg.alternativePlans || []).find(function(p) { return p.id === planId; });
       if (!plan) return;
 
+      // Validate that we have the required data for plan switching
+      if (!plan.stripePriceId) {
+        state.message = {
+          type: 'error',
+          title: 'Plan Not Available',
+          text: 'This plan is not configured for automatic switching. Please contact support.'
+        };
+        render();
+        return;
+      }
+
+      if (!state.subscriptionId) {
+        state.message = {
+          type: 'error',
+          title: 'Subscription Required',
+          text: 'No subscription ID provided. Please ensure your cancel button includes data-subscription-id attribute.'
+        };
+        render();
+        return;
+      }
+
       // If plan has a Stripe price ID, call the switch-plan API
       if (plan.stripePriceId && state.subscriptionId) {
         state.isProcessing = true;
@@ -1089,15 +1288,13 @@ export async function GET(request: NextRequest) {
         })
         .catch(function(err) {
           state.isProcessing = false;
-          state.error = { title: 'Switch Failed', message: err.message || 'Could not switch your plan. Please try again.' };
+          state.message = {
+            type: 'error',
+            title: 'Switch Failed',
+            text: err.message || 'Could not switch your plan. Please try again.'
+          };
           render();
         });
-      } else {
-        // No Stripe price ID - just log event and close (manual plan handling)
-        logEvent('plan_switched', { planId: planId, planName: plan.name });
-        state.isOpen = false;
-        render();
-        if (state.onPlanSwitch) state.onPlanSwitch(plan);
       }
     },
 
