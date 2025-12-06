@@ -233,8 +233,7 @@ export default function DashboardPage() {
               {/* MRR Overview cards - only show when Stripe is connected */}
               {stripeConnected && summary.totalMrr !== undefined && (
                 <div className="space-y-4">
-                  <h2 className="text-2xl font-semibold tracking-tight">Dashboard</h2>
-                  <div className="relative rounded-xl p-6" style={{ backgroundImage: 'url(/img/bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                  <div className="relative rounded-xl p-6">
                     <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
                       {/* MRR Card with embedded chart */}
                       <Card>

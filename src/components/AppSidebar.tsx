@@ -10,7 +10,7 @@ import {
   Users,
   Mail,
   Settings,
-  Receipt,
+  CreditCard,
   LogOut,
   ChevronUp,
   Moon,
@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   { href: '/cancel-flows', label: 'Cancel Flows', icon: Shield },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/email-templates', label: 'Email Templates', icon: Mail },
-  { href: '/billing', label: 'Billing', icon: Receipt },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -67,7 +67,14 @@ export function AppSidebar() {
             alt="Exit Loop"
             width={90}
             height={24}
-            className="h-6 w-auto"
+            className="h-6 w-auto dark:hidden"
+          />
+          <Image
+            src="/img/logo-dark-mode.svg"
+            alt="Exit Loop"
+            width={90}
+            height={24}
+            className="h-6 w-auto hidden dark:block"
           />
         </Link>
       </SidebarHeader>
@@ -137,7 +144,7 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/billing" className="cursor-pointer">
-                    <Receipt className="mr-2 h-4 w-4" />
+                    <CreditCard className="mr-2 h-4 w-4" />
                     Billing
                   </Link>
                 </DropdownMenuItem>
