@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Heart, Check } from 'lucide-react';
+import { getDesignStyleConfig, type DesignStyleConfig } from '@/lib/designStyles';
 
 interface FeedbackOption {
   id: string;
@@ -30,6 +31,7 @@ interface YourFeedbackModalProps {
   copy?: CopySettings;
   colors?: ColorSettings;
   allowOtherOption?: boolean;
+  designStyle?: number;
 }
 
 const DEFAULT_OPTIONS: FeedbackOption[] = [
@@ -60,9 +62,11 @@ export function YourFeedbackModal({
   copy = DEFAULT_COPY,
   colors = DEFAULT_COLORS,
   allowOtherOption = true,
+  designStyle = 1,
 }: YourFeedbackModalProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
+  const styleConfig = getDesignStyleConfig(designStyle);
 
   // Reset selection when options change (for preview)
   useEffect(() => {
@@ -92,84 +96,116 @@ export function YourFeedbackModal({
   const isNextDisabled = !selectedOption || (selectedOption === 'other' && !otherText.trim());
 
   // Preview mode - render without backdrop and fixed positioning
+  // Uses style configuration for different visual styles
   if (previewMode) {
+    const sc = styleConfig; // shorthand
+    const showLetterBadge = sc.option.default.letterBadge.background !== 'hidden';
+
+    // For style 1 (Classic Card), use the colors prop for dynamic coloring
+    const useColorsProp = designStyle === 1;
+
     return (
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="feedback-title"
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className={`w-full max-w-md overflow-hidden ${sc.container.background} ${sc.container.border} ${sc.container.borderRadius} ${sc.container.shadow} ${sc.container.extraClasses || ''}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2" style={{ backgroundColor: colors.background }}>
+        <div
+          className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
+          style={useColorsProp ? { backgroundColor: colors.background } : undefined}
+        >
           <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4" style={{ color: colors.primary, fill: colors.primary }} />
-            <span className="font-semibold text-sm" style={{ color: colors.primary }}>
-              Your Feedback
+            {sc.header.iconBackground ? (
+              <div className={`w-8 h-8 rounded-full ${sc.header.iconBackground} flex items-center justify-center`}>
+                <Heart className={`h-4 w-4 ${sc.header.iconColor}`} />
+              </div>
+            ) : (
+              <Heart
+                className="h-4 w-4"
+                style={useColorsProp ? { color: colors.primary, fill: colors.primary } : undefined}
+              />
+            )}
+            <span
+              className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
+              style={useColorsProp ? { color: colors.primary } : undefined}
+            >
+              {designStyle === 4 ? 'FEEDBACK' : 'Your Feedback'}
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:opacity-80 transition-colors cursor-pointer"
+            className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={{ color: colors.primary }} />
+            <X className="h-4 w-4" style={useColorsProp ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4">
+        <div className={sc.content.padding}>
           {/* Main Title */}
           <h2
             id="feedback-title"
-            className="font-bold text-[22px] mt-2"
-            style={{ color: colors.text }}
+            className={`${sc.content.titleClasses} ${sc.fonts?.heading || ''}`}
+            style={useColorsProp ? { color: colors.text } : undefined}
           >
-            {copy.title}
+            {designStyle === 4 ? copy.title.toUpperCase() : copy.title}
           </h2>
 
           {/* Subtext */}
-          <p className="text-sm mt-1 mb-6" style={{ color: colors.text, opacity: 0.7 }}>
+          <p className={sc.content.subtitleClasses} style={useColorsProp ? { color: colors.text, opacity: 0.7 } : undefined}>
             {copy.subtitle}
           </p>
 
           {/* Option List */}
-          <div className="space-y-3">
+          <div className={designStyle === 2 ? 'space-y-2' : 'space-y-3'}>
             {displayOptions.map((option) => {
               const isSelected = selectedOption === option.id;
+              const optionStyle = isSelected ? sc.option.selected : sc.option.default;
+
               return (
                 <button
                   key={option.id}
                   onClick={() => setSelectedOption(option.id)}
-                  className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
-                    isSelected ? 'border-2' : ''
-                  }`}
-                  style={{
+                  className={`w-full flex items-center gap-3 p-4 ${optionStyle.borderRadius} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
+                  style={useColorsProp ? {
                     backgroundColor: colors.background,
                     borderColor: isSelected ? colors.primary : `${colors.primary}40`,
-                  }}
+                    borderWidth: isSelected ? '2px' : '1px',
+                  } : undefined}
                   aria-pressed={isSelected}
                 >
                   {/* Letter Badge */}
-                  <span
-                    className="flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold"
-                    style={{
-                      backgroundColor: isSelected ? colors.primary : 'white',
-                      color: isSelected ? 'white' : colors.text,
-                      border: isSelected ? 'none' : `1px solid ${colors.primary}40`,
-                    }}
-                  >
-                    {option.letter}
-                  </span>
+                  {showLetterBadge && (
+                    <span
+                      className={`flex items-center justify-center w-7 h-7 ${designStyle === 4 ? '' : 'rounded-full'} text-sm font-semibold ${
+                        isSelected
+                          ? `${sc.option.selected.letterBadge.background} ${sc.option.selected.letterBadge.textColor}`
+                          : `${sc.option.default.letterBadge.background} ${sc.option.default.letterBadge.textColor} ${sc.option.default.letterBadge.border}`
+                      }`}
+                      style={useColorsProp ? {
+                        backgroundColor: isSelected ? colors.primary : 'white',
+                        color: isSelected ? 'white' : colors.text,
+                        border: isSelected ? 'none' : `1px solid ${colors.primary}40`,
+                      } : undefined}
+                    >
+                      {option.letter}
+                    </span>
+                  )}
 
                   {/* Label */}
-                  <span className="flex-1 font-medium" style={{ color: colors.text }}>
+                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'}`} style={useColorsProp ? { color: colors.text } : undefined}>
                     {option.label}
                   </span>
 
                   {/* Checkmark for selected */}
-                  {isSelected && (
-                    <Check className="h-5 w-5" style={{ color: colors.primary }} />
+                  {isSelected && designStyle !== 4 && (
+                    <Check
+                      className={`h-5 w-5 ${sc.isDark ? 'text-purple-400' : ''}`}
+                      style={useColorsProp ? { color: colors.primary } : undefined}
+                    />
                   )}
                 </button>
               );
@@ -180,35 +216,42 @@ export function YourFeedbackModal({
               <div className="space-y-2">
                 <button
                   onClick={() => setSelectedOption('other')}
-                  className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-all text-left ${
-                    selectedOption === 'other' ? 'border-2' : ''
-                  }`}
-                  style={{
+                  className={`w-full flex items-center gap-3 p-4 ${sc.option.default.borderRadius} ${
+                    selectedOption === 'other' ? `${sc.option.selected.border} ${sc.option.selected.background}` : `${sc.option.default.border} ${sc.option.default.background}`
+                  } ${selectedOption === 'other' && sc.option.selected.shadow ? sc.option.selected.shadow : ''} ${selectedOption === 'other' && sc.option.selected.transform ? sc.option.selected.transform : ''} transition-all text-left`}
+                  style={useColorsProp ? {
                     backgroundColor: colors.background,
                     borderColor: selectedOption === 'other' ? colors.primary : `${colors.primary}40`,
-                  }}
+                    borderWidth: selectedOption === 'other' ? '2px' : '1px',
+                  } : undefined}
                   aria-pressed={selectedOption === 'other'}
                 >
                   {/* Letter Badge */}
-                  <span
-                    className="flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold"
-                    style={{
-                      backgroundColor: selectedOption === 'other' ? colors.primary : 'white',
-                      color: selectedOption === 'other' ? 'white' : colors.text,
-                      border: selectedOption === 'other' ? 'none' : `1px solid ${colors.primary}40`,
-                    }}
-                  >
-                    {otherOptionLetter}
-                  </span>
+                  {showLetterBadge && (
+                    <span
+                      className={`flex items-center justify-center w-7 h-7 ${designStyle === 4 ? '' : 'rounded-full'} text-sm font-semibold ${
+                        selectedOption === 'other'
+                          ? `${sc.option.selected.letterBadge.background} ${sc.option.selected.letterBadge.textColor}`
+                          : `${sc.option.default.letterBadge.background} ${sc.option.default.letterBadge.textColor} ${sc.option.default.letterBadge.border}`
+                      }`}
+                      style={useColorsProp ? {
+                        backgroundColor: selectedOption === 'other' ? colors.primary : 'white',
+                        color: selectedOption === 'other' ? 'white' : colors.text,
+                        border: selectedOption === 'other' ? 'none' : `1px solid ${colors.primary}40`,
+                      } : undefined}
+                    >
+                      {otherOptionLetter}
+                    </span>
+                  )}
 
                   {/* Label */}
-                  <span className="flex-1 font-medium" style={{ color: colors.text }}>
+                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'} ${sc.option.default.textColor}`} style={useColorsProp ? { color: colors.text } : undefined}>
                     Other reason
                   </span>
 
                   {/* Checkmark for selected */}
-                  {selectedOption === 'other' && (
-                    <Check className="h-5 w-5" style={{ color: colors.primary }} />
+                  {selectedOption === 'other' && designStyle !== 4 && (
+                    <Check className={`h-5 w-5 ${sc.isDark ? 'text-purple-400' : ''}`} style={useColorsProp ? { color: colors.primary } : undefined} />
                   )}
                 </button>
 
@@ -218,12 +261,12 @@ export function YourFeedbackModal({
                     value={otherText}
                     onChange={(e) => setOtherText(e.target.value)}
                     placeholder="Please tell us more..."
-                    className="w-full px-4 py-3 rounded-lg border text-sm resize-none focus:outline-none focus:ring-2"
-                    style={{
+                    className={`w-full px-4 py-3 ${sc.option.default.borderRadius} border text-sm resize-none focus:outline-none focus:ring-2 ${sc.isDark ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-white'}`}
+                    style={useColorsProp ? {
                       borderColor: `${colors.primary}40`,
                       backgroundColor: 'white',
                       color: colors.text,
-                    }}
+                    } : undefined}
                     rows={3}
                     autoFocus
                   />
@@ -233,20 +276,20 @@ export function YourFeedbackModal({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between mt-6">
+          <div className={`flex ${designStyle === 3 || designStyle === 8 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
             <button
               onClick={onBack}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{ backgroundColor: colors.background, color: colors.text }}
+              className={`${sc.footer.backButton} transition-colors`}
+              style={useColorsProp ? { backgroundColor: colors.background, color: colors.text } : undefined}
             >
-              Back
+              {designStyle === 4 ? 'BACK' : 'Back'}
             </button>
             <button
               onClick={handleNext}
               disabled={isNextDisabled}
-              className="bg-black text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${sc.footer.primaryButton} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              Next
+              {designStyle === 4 ? 'NEXT →' : 'Next'}
             </button>
           </div>
         </div>

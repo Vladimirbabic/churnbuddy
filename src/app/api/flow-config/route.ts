@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
       showFeedback: true,
       showPlans: true,
       showOffer: true,
+      designStyle: 1,
       headerTitle: "We're sorry to see you go",
       headerDescription: "Before you go, please help us improve by sharing why you're canceling",
     }, { headers: corsHeaders });
@@ -141,6 +142,8 @@ export async function GET(request: NextRequest) {
       // Countdown settings
       showCountdown: flow.show_countdown ?? true,
       countdownMinutes: flow.countdown_minutes ?? 10,
+      // Design style (1-9)
+      designStyle: flow.design_style ?? 1,
       // Color settings for each step
       feedbackColors,
       plansColors,
@@ -177,7 +180,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(config, {
       headers: {
         ...corsHeaders,
-        'Cache-Control': 'public, max-age=60', // Cache for 1 minute
+        // No caching - changes apply immediately to all embedded sites
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       }
     });
   } catch (error) {

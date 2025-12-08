@@ -5,10 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
-  Activity,
-  Shield,
   Users,
-  Mail,
   Settings,
   CreditCard,
   LogOut,
@@ -16,6 +13,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  LucideIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -43,11 +41,36 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: Activity },
-  { href: '/cancel-flows', label: 'Cancel Flows', icon: Shield },
+// Custom icon component for SVG images
+function CustomIcon({ src, alt, size = 20 }: { src: string; alt: string; size?: number }) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={size}
+      height={size}
+      className="rounded"
+    />
+  );
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon?: LucideIcon;
+  customIcon?: string;
+}
+
+// Automation section - core product features
+const AUTOMATION_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', customIcon: '/img/dashboard.svg' },
+  { href: '/cancel-flows', label: 'Cancel Flows', customIcon: '/img/cancel-flows.svg' },
+  { href: '/email-templates', label: 'Email Templates', customIcon: '/img/email-templates.svg' },
+];
+
+// Workspace section - account management
+const WORKSPACE_ITEMS: NavItem[] = [
   { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/email-templates', label: 'Email Templates', icon: Mail },
   { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -81,18 +104,50 @@ export function AppSidebar() {
 
       {/* Main Navigation */}
       <SidebarContent>
+        {/* Automation Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Automation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
+              {AUTOMATION_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                       <Link href={item.href}>
-                        <Icon />
+                        {item.customIcon ? (
+                          <CustomIcon src={item.customIcon} alt={item.label} size={24} />
+                        ) : Icon ? (
+                          <Icon />
+                        ) : null}
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Workspace Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {WORKSPACE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <Link href={item.href}>
+                        {item.customIcon ? (
+                          <CustomIcon src={item.customIcon} alt={item.label} />
+                        ) : Icon ? (
+                          <Icon />
+                        ) : null}
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

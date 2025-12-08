@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, RotateCcw } from 'lucide-react';
+import { getDesignStyleConfig } from '@/lib/designStyles';
 
 interface Plan {
   id: string;
@@ -36,6 +37,7 @@ interface ConsiderOtherPlansModalProps {
   previewMode?: boolean;
   copy?: CopySettings;
   colors?: ColorSettings;
+  designStyle?: number;
 }
 
 const DEFAULT_PLANS: Plan[] = [
@@ -95,48 +97,73 @@ export function ConsiderOtherPlansModal({
   previewMode = false,
   copy = DEFAULT_COPY,
   colors = DEFAULT_COLORS,
+  designStyle = 1,
 }: ConsiderOtherPlansModalProps) {
+  const styleConfig = getDesignStyleConfig(designStyle);
+
   if (!isOpen) return null;
 
   // Preview mode - render without backdrop and fixed positioning
+  // Uses style configuration for different visual styles
   if (previewMode) {
+    const sc = styleConfig; // shorthand
+    const useColorsProp = designStyle === 1; // Only use colors prop for Classic Card
+
     return (
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="consider-plans-title"
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className={`w-full max-w-lg overflow-hidden ${sc.container.background} ${sc.container.border} ${sc.container.borderRadius} ${sc.container.shadow} ${sc.container.extraClasses || ''}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2" style={{ backgroundColor: colors.background }}>
+        <div
+          className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
+          style={useColorsProp ? { backgroundColor: colors.background } : undefined}
+        >
           <div className="flex items-center gap-2">
-            <RotateCcw className="h-4 w-4" style={{ color: colors.primary }} />
-            <span className="font-semibold text-sm" style={{ color: colors.primary }}>
-              Consider Other Plans
+            {sc.header.iconBackground ? (
+              <div className={`w-8 h-8 rounded-full ${sc.header.iconBackground} flex items-center justify-center`}>
+                <RotateCcw className={`h-4 w-4 ${sc.header.iconColor}`} />
+              </div>
+            ) : (
+              <RotateCcw
+                className="h-4 w-4"
+                style={useColorsProp ? { color: colors.primary } : undefined}
+              />
+            )}
+            <span
+              className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
+              style={useColorsProp ? { color: colors.primary } : undefined}
+            >
+              {designStyle === 4 ? 'OTHER PLANS' : 'Consider Other Plans'}
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:opacity-80 transition-colors cursor-pointer"
+            className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={{ color: colors.primary }} />
+            <X className="h-4 w-4" style={useColorsProp ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4">
+        <div className={sc.content.padding}>
           {/* Main Title */}
           <h2
             id="consider-plans-title"
-            className="text-center font-bold text-[22px] mt-4"
-            style={{ color: colors.text }}
+            className={`text-center ${sc.content.titleClasses} ${sc.fonts?.heading || ''}`}
+            style={useColorsProp ? { color: colors.text } : undefined}
           >
-            {copy.title}
+            {designStyle === 4 ? copy.title.toUpperCase() : copy.title}
           </h2>
 
           {/* Subtext */}
-          <p className="text-center text-sm mt-2 mb-6" style={{ color: colors.text, opacity: 0.7 }}>
+          <p
+            className={`text-center ${sc.content.subtitleClasses}`}
+            style={useColorsProp ? { color: colors.text, opacity: 0.7 } : undefined}
+          >
             {copy.subtitle}
           </p>
 
@@ -145,35 +172,38 @@ export function ConsiderOtherPlansModal({
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100"
+                className={`p-4 ${sc.isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-100'} ${sc.container.borderRadius || 'rounded-2xl'} shadow-lg border`}
               >
                 {/* Plan Name */}
-                <h3 className="font-semibold text-lg mb-2" style={{ color: colors.text }}>
-                  {plan.name}
+                <h3 className={`font-semibold text-lg mb-2 ${sc.isDark ? 'text-white' : ''} ${sc.fonts?.heading || ''}`} style={useColorsProp ? { color: colors.text } : undefined}>
+                  {designStyle === 4 ? plan.name.toUpperCase() : plan.name}
                 </h3>
 
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-gray-400 line-through text-sm">
+                  <span className={`line-through text-sm ${sc.isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                     ${plan.originalPrice}
                   </span>
-                  <span className="font-bold text-2xl" style={{ color: colors.primary }}>
+                  <span
+                    className={`font-bold text-2xl ${designStyle === 3 ? 'bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent' : ''} ${designStyle === 4 ? 'text-lime-500' : ''} ${designStyle === 5 ? 'text-purple-400' : ''} ${designStyle === 6 ? 'text-purple-500' : ''} ${designStyle === 8 ? 'text-purple-600' : ''}`}
+                    style={useColorsProp ? { color: colors.primary } : undefined}
+                  >
                     ${getDiscountedPrice(plan.originalPrice, plan.discountPercent)}
                   </span>
-                  <span className="text-gray-500 text-sm">{plan.period}</span>
+                  <span className={`text-sm ${sc.isDark ? 'text-gray-400' : 'text-gray-500'}`}>{plan.period}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-4">
+                <p className={`text-xs mb-4 ${sc.isDark ? 'text-gray-500' : 'text-muted-foreground'}`}>
                   {plan.discountPercent}% off for {plan.discountDurationMonths} months
                 </p>
 
                 {/* Highlights */}
                 <div className="mb-4">
-                  <p className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-2">
+                  <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${sc.isDark ? 'text-gray-500' : 'text-[#9CA3AF]'}`}>
                     Highlights
                   </p>
                   <ul className="space-y-1">
                     {plan.highlights.map((feature, index) => (
-                      <li key={index} className="text-sm" style={{ color: colors.text, opacity: 0.8 }}>
+                      <li key={index} className={`text-sm ${sc.isDark ? 'text-gray-300' : ''}`} style={useColorsProp ? { color: colors.text, opacity: 0.8 } : undefined}>
                         {feature}
                       </li>
                     ))}
@@ -183,29 +213,38 @@ export function ConsiderOtherPlansModal({
                 {/* CTA Button */}
                 <button
                   onClick={() => onSwitchPlan(plan.id)}
-                  className="w-full text-white font-medium py-2 px-4 rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: colors.primary }}
+                  className={`w-full font-medium py-2 px-4 transition-colors ${
+                    designStyle === 3 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl' :
+                    designStyle === 4 ? 'bg-black text-white border-[3px] border-black font-black uppercase' :
+                    designStyle === 5 ? 'bg-purple-500 text-white rounded-lg' :
+                    designStyle === 6 ? 'bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-2xl' :
+                    designStyle === 7 ? 'bg-blue-600 text-white' :
+                    designStyle === 8 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl' :
+                    designStyle === 9 ? 'bg-stone-800 text-white rounded-md' :
+                    'text-white rounded-lg hover:opacity-90'
+                  }`}
+                  style={useColorsProp ? { backgroundColor: colors.primary } : undefined}
                 >
-                  Switch Plan
+                  {designStyle === 4 ? 'SWITCH PLAN' : 'Switch Plan'}
                 </button>
               </div>
             ))}
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between mt-6">
+          <div className={`flex ${designStyle === 3 || designStyle === 8 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
             <button
               onClick={onBack}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{ backgroundColor: colors.background, color: colors.text }}
+              className={`${sc.footer.backButton} transition-colors`}
+              style={useColorsProp ? { backgroundColor: colors.background, color: colors.text } : undefined}
             >
-              Back
+              {designStyle === 4 ? 'BACK' : 'Back'}
             </button>
             <button
               onClick={onDecline}
-              className="bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+              className={`${sc.footer.primaryButton} transition-colors`}
             >
-              Decline Offer
+              {designStyle === 4 ? 'DECLINE OFFER' : 'Decline Offer'}
             </button>
           </div>
         </div>

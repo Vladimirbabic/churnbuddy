@@ -39,7 +39,12 @@ export type EmailTemplateType =
   | 'cancel_goodbye'
   | 'winback_1'
   | 'winback_2'
-  | 'winback_3';
+  | 'winback_3'
+  | 'expiration_reminder_30'
+  | 'expiration_reminder_14'
+  | 'expiration_reminder_7'
+  | 'expiration_reminder_3'
+  | 'expiration_reminder_1';
 
 export interface EmailTemplate {
   id: string;
@@ -63,6 +68,8 @@ export interface EmailContext {
   // Subscription info
   subscription_id?: string;
   end_date?: string;
+  plan_name?: string;
+  days_remaining?: number;
 
   // Discount info
   discount_percent?: number;
@@ -78,6 +85,10 @@ export interface EmailContext {
   new_feature_2?: string;
   new_feature_3?: string;
   return_link?: string;
+
+  // Renewal/Expiration
+  renewal_link?: string;
+  billing_portal_link?: string;
 
   // Organization
   company_name?: string;
@@ -279,6 +290,87 @@ We're rooting for you.
 
 — {{team_name}}`,
   },
+
+  // ==========================================================================
+  // Expiration Reminder Emails
+  // ==========================================================================
+
+  // Expiration Reminder - 30 days before
+  expiration_reminder_30: {
+    subject: 'Your subscription renews in 30 days',
+    body: `Hi {{name}},
+
+Just a friendly heads up — your {{plan_name}} subscription will renew on {{end_date}}.
+
+Everything is set up for automatic renewal, so you don't need to do anything. But if you'd like to review your plan or update your payment method, you can do that here:
+{{billing_portal_link}}
+
+If you have any questions, just reply to this email.
+
+— {{team_name}}`,
+  },
+
+  // Expiration Reminder - 14 days before
+  expiration_reminder_14: {
+    subject: 'Your subscription renews in 2 weeks',
+    body: `Hey {{name}},
+
+Your {{plan_name}} subscription will renew on {{end_date}} — that's just 2 weeks away.
+
+If you want to make any changes to your plan or payment method, now's a good time:
+{{billing_portal_link}}
+
+No action needed if everything looks good. We'll take care of the rest.
+
+— {{team_name}}`,
+  },
+
+  // Expiration Reminder - 7 days before
+  expiration_reminder_7: {
+    subject: 'One week until your subscription renews',
+    body: `Hi {{name}},
+
+Quick reminder: your {{plan_name}} subscription renews in 7 days on {{end_date}}.
+
+If you need to update your payment method or have any questions about your plan, you can manage everything here:
+{{billing_portal_link}}
+
+Thanks for being with us!
+
+— {{team_name}}`,
+  },
+
+  // Expiration Reminder - 3 days before
+  expiration_reminder_3: {
+    subject: 'Your subscription renews in 3 days',
+    body: `Hey {{name}},
+
+Just a heads up — your {{plan_name}} subscription will renew in 3 days on {{end_date}}.
+
+If you need to make any last-minute changes:
+{{billing_portal_link}}
+
+We're here if you need anything.
+
+— {{team_name}}`,
+  },
+
+  // Expiration Reminder - 1 day before
+  expiration_reminder_1: {
+    subject: 'Your subscription renews tomorrow',
+    body: `Hi {{name}},
+
+Your {{plan_name}} subscription will renew tomorrow on {{end_date}}.
+
+If everything looks good, no action needed — we'll handle the renewal automatically.
+
+Need to make changes? You still have time:
+{{billing_portal_link}}
+
+Thanks for being a valued customer.
+
+— {{team_name}}`,
+  },
 };
 
 // =============================================================================
@@ -330,12 +422,16 @@ function replaceVariables(text: string, context: EmailContext): string {
     '{{amount}}': context.amount,
     '{{update_link}}': context.update_link,
     '{{end_date}}': context.end_date,
+    '{{plan_name}}': context.plan_name || 'subscription',
+    '{{days_remaining}}': context.days_remaining?.toString(),
     '{{discount_percent}}': context.discount_percent?.toString(),
     '{{discount_duration}}': context.discount_duration,
     '{{discount_link}}': context.discount_link,
     '{{return_to_cancel_flow_link}}': context.return_to_cancel_flow_link,
     '{{reactivate_link}}': context.reactivate_link,
     '{{return_link}}': context.return_link,
+    '{{renewal_link}}': context.renewal_link,
+    '{{billing_portal_link}}': context.billing_portal_link,
     '{{new_feature_1}}': context.new_feature_1 || 'Improved performance and reliability',
     '{{new_feature_2}}': context.new_feature_2 || 'New intuitive dashboard',
     '{{new_feature_3}}': context.new_feature_3 || 'Better customer support',

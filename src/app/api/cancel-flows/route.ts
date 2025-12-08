@@ -393,6 +393,10 @@ export async function POST(request: NextRequest) {
       if (body.countdown_minutes !== undefined || body.countdownMinutes !== undefined) {
         updateData.countdown_minutes = body.countdown_minutes ?? body.countdownMinutes;
       }
+      // Design style (1-9)
+      if (body.design_style !== undefined || body.designStyle !== undefined) {
+        updateData.design_style = body.design_style ?? body.designStyle;
+      }
 
       console.log('Update data being sent:', JSON.stringify(updateData, null, 2));
 
@@ -411,11 +415,23 @@ export async function POST(request: NextRequest) {
       flow = result.data;
       error = result.error;
 
-      // If alternative_plans column not found in cache, retry without it
-      if (error?.code === 'PGRST204' && error?.message?.includes('alternative_plans')) {
-        console.log('Retrying without alternative_plans (schema cache not updated)');
+      // If column not found in cache, retry without problematic fields
+      if (error?.code === 'PGRST204' || (error?.message && (error.message.includes('column') || error.message.includes('does not exist')))) {
+        console.log('Column error detected, retrying without optional fields:', error.message);
         const retryData = { ...updateData };
-        delete retryData.alternative_plans;
+        
+        // Remove fields that might not exist in database
+        if (error.message?.includes('alternative_plans')) {
+          delete retryData.alternative_plans;
+        }
+        if (error.message?.includes('design_style')) {
+          delete retryData.design_style;
+        }
+        // If generic column error, remove both optional fields
+        if (!error.message?.includes('alternative_plans') && !error.message?.includes('design_style')) {
+          delete retryData.alternative_plans;
+          delete retryData.design_style;
+        }
 
         const retryResult = await (supabase as any)
           .from('cancel_flows')
@@ -487,6 +503,8 @@ export async function POST(request: NextRequest) {
         // Countdown settings
         show_countdown: body.show_countdown ?? body.showCountdown ?? true,
         countdown_minutes: body.countdown_minutes ?? body.countdownMinutes ?? 10,
+        // Design style (1-9)
+        design_style: body.design_style ?? body.designStyle ?? 1,
       };
 
       console.log('Insert data being sent:', JSON.stringify(insertData, null, 2));
@@ -504,11 +522,23 @@ export async function POST(request: NextRequest) {
       flow = result.data;
       error = result.error;
 
-      // If alternative_plans column not found in cache, retry without it
-      if (error?.code === 'PGRST204' && error?.message?.includes('alternative_plans')) {
-        console.log('Retrying insert without alternative_plans (schema cache not updated)');
-        const retryData = { ...insertData };
-        delete retryData.alternative_plans;
+      // If column not found in cache, retry without problematic fields
+      if (error?.code === 'PGRST204' || (error?.message && (error.message.includes('column') || error.message.includes('does not exist')))) {
+        console.log('Column error detected on insert, retrying without optional fields:', error.message);
+        const retryData: Record<string, unknown> = { ...insertData };
+        
+        // Remove fields that might not exist in database
+        if (error.message?.includes('alternative_plans')) {
+          delete retryData.alternative_plans;
+        }
+        if (error.message?.includes('design_style')) {
+          delete retryData.design_style;
+        }
+        // If generic column error, remove both optional fields
+        if (!error.message?.includes('alternative_plans') && !error.message?.includes('design_style')) {
+          delete retryData.alternative_plans;
+          delete retryData.design_style;
+        }
 
         const retryResult = await (supabase as any)
           .from('cancel_flows')

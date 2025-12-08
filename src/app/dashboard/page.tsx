@@ -2,12 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   CreditCard,
-  Users,
-  DollarSign,
   Activity,
-  Shield,
   Settings,
   Plus,
 } from 'lucide-react';
@@ -79,6 +77,9 @@ interface DiscountAnalytics {
     discountPercent: number | null;
     couponName: string | null;
     endsAt: string | null;
+    planName: string | null;
+    originalAmount: number | null;
+    currentAmount: number | null;
   }>;
   totalOffersShown: number;
   totalOffersAccepted: number;
@@ -232,16 +233,14 @@ export default function DashboardPage() {
 
               {/* MRR Overview cards - only show when Stripe is connected */}
               {stripeConnected && summary.totalMrr !== undefined && (
-                <div className="space-y-4">
-                  <div className="relative rounded-xl p-6">
-                    <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
+                <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
                       {/* MRR Card with embedded chart */}
                       <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                           <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
                             Monthly Recurring Revenue
                           </CardTitle>
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <Image src="/img/mrr.png" alt="MRR" width={48} height={48} />
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div>
@@ -300,7 +299,7 @@ export default function DashboardPage() {
                             <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
                               Revenue Saved
                             </CardTitle>
-                            <Shield className="h-4 w-4 text-muted-foreground" />
+                            <Image src="/img/rev-saved.png" alt="Revenue Saved" width={48} height={48} />
                           </CardHeader>
                           <CardContent>
                             <div className="text-3xl font-medium text-green-700">{formatCurrency(summary.savedMrr || 0)}</div>
@@ -315,7 +314,7 @@ export default function DashboardPage() {
                             <CardTitle className="text-sm font-medium text-muted-foreground tracking-tight">
                               Active Subscriptions
                             </CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <Image src="/img/users.png" alt="Users" width={48} height={48} />
                           </CardHeader>
                           <CardContent>
                             <div className="text-3xl font-medium">{summary.activeSubscriptions}</div>
@@ -326,8 +325,6 @@ export default function DashboardPage() {
                         </Card>
                       </div>
                     </div>
-                  </div>
-                </div>
               )}
 
               {/* Performance Overview */}
@@ -382,25 +379,23 @@ export default function DashboardPage() {
               {discountData && discountData.activeDiscounts > 0 && (
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Active Discounts</CardTitle>
-                        <CardDescription>
-                          {discountData.activeDiscounts} customers with retention discounts
-                        </CardDescription>
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-semibold">Active Discounts</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {discountData.activeDiscounts} customers with retention discounts
+                      </p>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground rounded-t-md">
+                    <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground rounded-t-md">
                       <div>Customer</div>
+                      <div>Plan</div>
                       <div>Discount</div>
-                      <div>Coupon</div>
                       <div>Expires</div>
                     </div>
                     <div className="divide-y">
                       {discountData.activeDiscountsList.slice(0, 5).map((discount) => (
-                        <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
+                        <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="text-xs">
@@ -414,11 +409,17 @@ export default function DashboardPage() {
                               <p className="text-xs text-muted-foreground">{discount.customerId}</p>
                             </div>
                           </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {discount.planName || 'Subscription'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {discount.originalAmount ? formatCurrency(discount.originalAmount) : '—'}/mo
+                              {discount.currentAmount ? ` (now ${formatCurrency(discount.currentAmount)}/mo)` : ''}
+                            </p>
+                          </div>
                           <div className="text-sm font-medium">
                             {discount.discountPercent}% off
-                          </div>
-                          <div className="text-sm text-muted-foreground truncate">
-                            {discount.couponName || 'Retention Offer'}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {discount.endsAt

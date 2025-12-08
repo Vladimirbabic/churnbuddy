@@ -789,6 +789,217 @@ export async function GET(request: NextRequest) {
     document.head.appendChild(style);
   }
 
+  // Inject design style-specific CSS based on config.designStyle
+  function injectDesignStyles(cfg) {
+    var existingDesign = document.getElementById('cb-design-styles');
+    if (existingDesign) existingDesign.remove();
+
+    var designStyle = cfg.designStyle || 1;
+    var designStyles = '';
+
+    // Design style configurations
+    var DESIGN_CONFIGS = {
+      // Style 1: Classic Card (Default) - already the base styles
+      1: {},
+      
+      // Style 2: Minimal Flat
+      2: {
+        modal: 'border-radius: 0; border: 1px solid #e5e7eb; box-shadow: none;',
+        header: 'background: transparent !important; border-bottom: 1px solid #f3f4f6; padding: 20px 24px;',
+        headerTitle: 'color: #9ca3af !important;',
+        headerIcon: 'color: #9ca3af !important; fill: none !important;',
+        closeBtn: 'color: #9ca3af;',
+        content: 'padding: 24px;',
+        title: 'font-size: 24px; font-weight: 300; margin-bottom: 4px;',
+        subtitle: 'color: #9ca3af;',
+        option: 'border-radius: 0; background: white; border: 1px solid #e5e7eb;',
+        optionSelected: 'background: #f9fafb; border-color: #111827;',
+        optionLetter: 'display: none;',
+        backBtn: 'background: transparent; color: #6b7280; border: none;',
+        primaryBtn: 'border-radius: 0; background: #111827;',
+      },
+      
+      // Style 3: Glassmorphism
+      3: {
+        overlay: 'background: rgba(0, 0, 0, 0.3);',
+        modal: 'border-radius: 24px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5);',
+        header: 'background: linear-gradient(to right, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)) !important; border-radius: 24px 24px 0 0;',
+        headerTitle: 'color: #374151 !important;',
+        headerIcon: 'color: white !important; fill: white !important; background: linear-gradient(to bottom right, #8b5cf6, #a855f7); padding: 6px; border-radius: 8px;',
+        closeBtn: 'width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center;',
+        title: 'font-weight: 700; background: linear-gradient(to right, #7c3aed, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;',
+        option: 'border-radius: 16px; background: rgba(255, 255, 255, 0.5); border: 2px solid transparent;',
+        optionSelected: 'background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.2);',
+        optionLetter: 'background: #e5e7eb; color: #6b7280;',
+        optionLetterSelected: 'background: linear-gradient(to bottom right, #8b5cf6, #a855f7); color: white;',
+        backBtn: 'flex: 1; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.5); color: #6b7280;',
+        primaryBtn: 'flex: 1; padding: 12px; border-radius: 12px; background: linear-gradient(to right, #8b5cf6, #a855f7); box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);',
+        planBtn: 'background: linear-gradient(to right, #8b5cf6, #a855f7);',
+        offerBtn: 'background: linear-gradient(to right, #8b5cf6, #a855f7);',
+      },
+      
+      // Style 4: Brutalist
+      4: {
+        modal: 'border-radius: 0; border: 4px solid black; box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);',
+        header: 'background: #fbbf24 !important; border-bottom: 4px solid black; padding: 12px 16px;',
+        headerTitle: 'color: black !important; font-weight: 900; text-transform: uppercase;',
+        headerIcon: 'color: black !important; fill: none !important;',
+        closeBtn: 'width: 32px; height: 32px; background: white; border: 2px solid black; display: flex; align-items: center; justify-content: center; border-radius: 0;',
+        title: 'font-size: 24px; font-weight: 900; text-transform: uppercase;',
+        option: 'border-radius: 0; border: 3px solid black; background: white;',
+        optionSelected: 'background: #bef264; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); transform: translate(-2px, -2px);',
+        optionLetter: 'background: white; color: black; border: 2px solid black; border-radius: 0;',
+        optionLetterSelected: 'background: black; color: #bef264;',
+        backBtn: 'border-radius: 0; background: white; border: 3px solid black; color: black; font-weight: 900; text-transform: uppercase;',
+        primaryBtn: 'border-radius: 0; background: black; border: 3px solid black; font-weight: 900; text-transform: uppercase;',
+        planBtn: 'border-radius: 0; background: black; border: 3px solid black; font-weight: 900;',
+        offerBtn: 'border-radius: 0; background: black; border: 3px solid black; font-weight: 900;',
+        plan: 'border-radius: 0; border: 3px solid black;',
+        offerCard: 'border-radius: 0; border: 3px solid black;',
+      },
+      
+      // Style 5: Dark Mode
+      5: {
+        overlay: 'background: rgba(0, 0, 0, 0.7);',
+        modal: 'background: #111827; border: 1px solid #374151;',
+        header: 'background: transparent !important; border-bottom: 1px solid #374151;',
+        headerTitle: 'color: white !important;',
+        headerIcon: 'color: white !important; fill: white !important; background: linear-gradient(to bottom right, #a855f7, #ec4899); padding: 6px; border-radius: 8px;',
+        closeBtn: 'color: #6b7280;',
+        content: 'background: #111827;',
+        title: 'color: white;',
+        subtitle: 'color: #9ca3af;',
+        option: 'background: rgba(55, 65, 81, 0.5); border: 1px solid #374151; color: #e5e7eb;',
+        optionSelected: 'background: rgba(168, 85, 247, 0.2); border-color: #a855f7;',
+        optionText: 'color: #e5e7eb;',
+        optionLetter: 'background: #374151; color: #9ca3af;',
+        optionLetterSelected: 'background: #a855f7; color: white;',
+        backBtn: 'background: #374151; color: #9ca3af; border-radius: 12px;',
+        primaryBtn: 'background: linear-gradient(to right, #a855f7, #ec4899); border-radius: 12px;',
+        planBtn: 'background: linear-gradient(to right, #a855f7, #ec4899);',
+        offerBtn: 'background: linear-gradient(to right, #a855f7, #ec4899);',
+        plan: 'background: #1f2937; border-color: #374151;',
+        planName: 'color: white;',
+        planFeature: 'color: #d1d5db;',
+        offerCard: 'background: #1f2937; border-color: #374151;',
+        countdown: 'background: #1f2937;',
+      },
+      
+      // Style 6: Soft Rounded
+      6: {
+        modal: 'border-radius: 32px; box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.2);',
+        header: 'background: linear-gradient(to right, #fce7f3, #f3e8ff) !important; border-radius: 32px 32px 0 0;',
+        headerTitle: 'color: #7e22ce !important;',
+        headerIcon: 'color: white !important; fill: white !important; background: linear-gradient(to bottom right, #f472b6, #c084fc); padding: 6px; border-radius: 8px;',
+        closeBtn: 'width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 255, 255, 0.8); color: #c084fc;',
+        option: 'border-radius: 16px; background: rgba(168, 85, 247, 0.05); border: 2px solid transparent;',
+        optionSelected: 'background: linear-gradient(to right, #fce7f3, #f3e8ff); border-color: #c084fc;',
+        optionLetter: 'background: white; color: #9333ea; border: 2px solid #e9d5ff;',
+        optionLetterSelected: 'background: linear-gradient(to bottom right, #f472b6, #c084fc); color: white; border: none;',
+        backBtn: 'border-radius: 16px; background: #f3f4f6; color: #6b7280; padding: 12px 24px;',
+        primaryBtn: 'border-radius: 16px; background: linear-gradient(to right, #f472b6, #a855f7); padding: 12px;',
+        planBtn: 'border-radius: 16px; background: linear-gradient(to right, #f472b6, #a855f7);',
+        offerBtn: 'border-radius: 16px; background: linear-gradient(to right, #f472b6, #a855f7);',
+        plan: 'border-radius: 20px;',
+        offerCard: 'border-radius: 20px;',
+      },
+      
+      // Style 7: Corporate
+      7: {
+        modal: 'border-radius: 0; border: 1px solid #e2e8f0;',
+        header: 'background: #0f172a !important; border-radius: 0;',
+        headerTitle: 'color: white !important;',
+        headerIcon: 'color: white !important; fill: none !important;',
+        closeBtn: 'color: #94a3b8;',
+        option: 'border-radius: 0; background: #f8fafc; border: 1px solid #e2e8f0;',
+        optionSelected: 'background: #eff6ff; border: 2px solid #2563eb;',
+        optionLetter: 'background: #e2e8f0; color: #64748b; border-radius: 0;',
+        optionLetterSelected: 'background: #2563eb; color: white;',
+        backBtn: 'border-radius: 0; border: 1px solid #cbd5e1; background: transparent; color: #64748b;',
+        primaryBtn: 'border-radius: 0; background: #2563eb;',
+        planBtn: 'border-radius: 0; background: #2563eb;',
+        offerBtn: 'border-radius: 0; background: #2563eb;',
+        plan: 'border-radius: 0;',
+        offerCard: 'border-radius: 0;',
+      },
+      
+      // Style 8: Playful
+      8: {
+        modal: 'border-radius: 24px;',
+        header: 'background: linear-gradient(to right, #ec4899, #8b5cf6, #06b6d4) !important; border-radius: 24px 24px 0 0;',
+        headerTitle: 'color: white !important;',
+        headerIcon: 'color: white !important; fill: white !important;',
+        closeBtn: 'width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); color: white;',
+        option: 'border-radius: 16px; background: #f9fafb; border: 2px solid transparent;',
+        optionSelected: 'background: linear-gradient(to right, #fce7f3, #f3e8ff); border-color: #c084fc;',
+        optionLetter: 'background: linear-gradient(to bottom right, #fbcfe8, #e9d5ff); color: #7e22ce;',
+        optionLetterSelected: 'background: linear-gradient(to bottom right, #ec4899, #8b5cf6); color: white;',
+        backBtn: 'border-radius: 12px; background: #f3f4f6; color: #6b7280; padding: 12px 20px;',
+        primaryBtn: 'border-radius: 12px; background: linear-gradient(to right, #ec4899, #8b5cf6, #06b6d4); font-weight: 700;',
+        planBtn: 'background: linear-gradient(to right, #ec4899, #8b5cf6, #06b6d4);',
+        offerBtn: 'background: linear-gradient(to right, #ec4899, #8b5cf6, #06b6d4);',
+      },
+      
+      // Style 9: Elegant Serif
+      9: {
+        modal: 'background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);',
+        header: 'background: #f5f5f4 !important; border-bottom: 1px solid #e7e5e4;',
+        headerTitle: 'color: #78716c !important; font-family: Georgia, serif;',
+        headerIcon: 'color: #78716c !important; fill: none !important;',
+        closeBtn: 'color: #a8a29e;',
+        title: 'font-family: Georgia, serif; font-weight: normal;',
+        option: 'border-radius: 6px; background: white; border: 1px solid #e7e5e4;',
+        optionSelected: 'background: #fffbeb; border: 2px solid #d97706;',
+        optionLetter: 'background: #f5f5f4; color: #78716c; border: 1px solid #d6d3d1;',
+        optionLetterSelected: 'background: #d97706; color: white; border: none;',
+        backBtn: 'border-radius: 6px; border: 1px solid #d6d3d1; background: transparent; color: #78716c;',
+        primaryBtn: 'border-radius: 6px; background: #292524;',
+        planBtn: 'border-radius: 6px; background: #292524;',
+        offerBtn: 'border-radius: 6px; background: #292524;',
+        plan: 'border-radius: 6px; background: white;',
+        offerCard: 'border-radius: 6px; background: white;',
+      },
+    };
+
+    var config = DESIGN_CONFIGS[designStyle] || {};
+
+    // Build CSS based on design config
+    if (Object.keys(config).length > 0) {
+      designStyles = '/* Design Style ' + designStyle + ' */\\n';
+      
+      if (config.overlay) designStyles += '.cb-overlay { ' + config.overlay + ' }\\n';
+      if (config.modal) designStyles += '.cb-modal { ' + config.modal + ' }\\n';
+      if (config.header) designStyles += '.cb-header-bar { ' + config.header + ' }\\n';
+      if (config.headerTitle) designStyles += '.cb-header-bar-title { ' + config.headerTitle + ' }\\n';
+      if (config.headerIcon) designStyles += '.cb-header-bar-left svg { ' + config.headerIcon + ' }\\n';
+      if (config.closeBtn) designStyles += '.cb-close { ' + config.closeBtn + ' }\\n';
+      if (config.content) designStyles += '.cb-content { ' + config.content + ' }\\n';
+      if (config.title) designStyles += '.cb-feedback h2, .cb-plans h2, .cb-offer h2 { ' + config.title + ' }\\n';
+      if (config.subtitle) designStyles += '.cb-subtitle { ' + config.subtitle + ' }\\n';
+      if (config.option) designStyles += '.cb-option { ' + config.option + ' }\\n';
+      if (config.optionSelected) designStyles += '.cb-option.selected { ' + config.optionSelected + ' }\\n';
+      if (config.optionText) designStyles += '.cb-option-text { ' + config.optionText + ' }\\n';
+      if (config.optionLetter) designStyles += '.cb-option-letter { ' + config.optionLetter + ' }\\n';
+      if (config.optionLetterSelected) designStyles += '.cb-option.selected .cb-option-letter { ' + config.optionLetterSelected + ' }\\n';
+      if (config.backBtn) designStyles += '.cb-btn-back-purple, .cb-btn-back-gray { ' + config.backBtn + ' }\\n';
+      if (config.primaryBtn) designStyles += '.cb-btn-primary-black { ' + config.primaryBtn + ' }\\n';
+      if (config.planBtn) designStyles += '.cb-btn-plan { ' + config.planBtn + ' }\\n';
+      if (config.offerBtn) designStyles += '.cb-btn-offer { ' + config.offerBtn + ' }\\n';
+      if (config.plan) designStyles += '.cb-plan { ' + config.plan + ' }\\n';
+      if (config.planName) designStyles += '.cb-plan-name { ' + config.planName + ' }\\n';
+      if (config.planFeature) designStyles += '.cb-plan-feature { ' + config.planFeature + ' }\\n';
+      if (config.offerCard) designStyles += '.cb-offer-card { ' + config.offerCard + ' }\\n';
+      if (config.countdown) designStyles += '.cb-countdown { ' + config.countdown + ' }\\n';
+    }
+
+    if (designStyles) {
+      var designStyleEl = document.createElement('style');
+      designStyleEl.id = 'cb-design-styles';
+      designStyleEl.textContent = designStyles;
+      document.head.appendChild(designStyleEl);
+    }
+  }
+
   function formatCountdown(seconds) {
     var mins = Math.floor(seconds / 60);
     var secs = seconds % 60;
@@ -872,6 +1083,7 @@ export async function GET(request: NextRequest) {
         }
         state.config = config;
         injectDynamicColors(config);
+        injectDesignStyles(config);
         state.isLoading = false;
         // Determine first step based on config - default to true if undefined
         var showFeedback = config.showFeedback !== false;

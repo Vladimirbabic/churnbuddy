@@ -149,36 +149,40 @@ export async function GET(request: NextRequest) {
 
         activeSubscriptions = subscriptions.data.length;
 
-        // Calculate total MRR and saved MRR from discounted subscriptions
+        // Calculate total MRR (actual amount billed) and saved MRR from discounted subscriptions
         subscriptions.data.forEach(sub => {
           const item = sub.items.data[0];
-          let subMrr = 0;
+          let baseMrr = 0; // Full price before any discounts
 
           if (item?.price?.recurring?.interval === 'month') {
-            subMrr = item.price.unit_amount || 0;
+            baseMrr = item.price.unit_amount || 0;
           } else if (item?.price?.recurring?.interval === 'year') {
-            subMrr = (item.price.unit_amount || 0) / 12;
+            baseMrr = (item.price.unit_amount || 0) / 12;
           }
 
-          totalMrr += subMrr;
+          // Calculate actual MRR after applying discounts
+          let actualMrr = baseMrr;
 
-          // If subscription has a discount, calculate saved MRR
-          // savedMrr = the discounted amount they're paying (revenue we kept)
+          // If subscription has a discount, apply it
           if (sub.discount && sub.discount.coupon) {
             const coupon = sub.discount.coupon;
-            let discountedMrr = subMrr;
 
             if (coupon.percent_off) {
-              // Apply percentage discount: $19 with 50% off = $9.50 saved
-              discountedMrr = subMrr * (1 - coupon.percent_off / 100);
+              // Apply percentage discount: $19 with 50% off = $9.50 actual
+              actualMrr = baseMrr * (1 - coupon.percent_off / 100);
             } else if (coupon.amount_off) {
               // Apply fixed amount discount
-              discountedMrr = Math.max(0, subMrr - coupon.amount_off);
+              actualMrr = Math.max(0, baseMrr - coupon.amount_off);
             }
 
-            savedMrr += discountedMrr;
+            // savedMrr = what we're actually collecting from discounted customers
+            // (they would have churned without the offer)
+            savedMrr += actualMrr;
             offerAccepted++;
           }
+
+          // totalMrr is the actual amount being billed (after discounts)
+          totalMrr += actualMrr;
         });
 
         // Fetch canceled subscriptions in period

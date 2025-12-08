@@ -139,22 +139,69 @@ export async function GET() {
       couponName: string | null;
       startedAt: string;
       endsAt: string | null;
+      planName: string | null;
+      originalAmount: number | null;
+      currentAmount: number | null;
     }> = [];
 
     if (stripe) {
       try {
         // List all active subscriptions with discounts
+        // Note: Stripe limits expansion to 4 levels, so we can't expand data.items.data.price.product
         const subscriptions = await stripe.subscriptions.list({
           status: 'active',
           limit: 100,
-          expand: ['data.customer', 'data.discount.coupon'],
+          expand: ['data.customer', 'data.discount.coupon', 'data.items.data.price'],
         });
+
+        // Get product IDs to fetch product names separately
+        const productIds = new Set<string>();
+        subscriptions.data.forEach(sub => {
+          sub.items.data.forEach(item => {
+            if (item.price?.product && typeof item.price.product === 'string') {
+              productIds.add(item.price.product);
+            }
+          });
+        });
+
+        // Fetch all products in one batch
+        const productMap = new Map<string, string>();
+        if (productIds.size > 0) {
+          const products = await stripe.products.list({
+            ids: Array.from(productIds),
+            limit: 100,
+          });
+          products.data.forEach(product => {
+            productMap.set(product.id, product.name);
+          });
+        }
 
         activeDiscounts = subscriptions.data
           .filter(sub => sub.discount)
           .map(sub => {
             const customer = sub.customer as { id: string; email?: string | null };
             const discount = sub.discount!;
+            // Calculate total subscription amount from items (this is the base/original price)
+            const originalAmountCents = sub.items.data.reduce((total, item) => {
+              const unitAmount = item.price?.unit_amount || 0;
+              const quantity = item.quantity || 1;
+              return total + (unitAmount * quantity);
+            }, 0);
+            const originalAmount = originalAmountCents / 100;
+
+            // Get the plan/product name from the first item
+            const firstItem = sub.items.data[0];
+            const productId = typeof firstItem?.price?.product === 'string' ? firstItem.price.product : null;
+            const planName = productId ? productMap.get(productId) : (firstItem?.price?.nickname || null);
+
+            // Calculate current amount after discount
+            let currentAmount = originalAmount;
+            if (discount.coupon?.percent_off) {
+              currentAmount = originalAmount * (1 - discount.coupon.percent_off / 100);
+            } else if (discount.coupon?.amount_off) {
+              currentAmount = originalAmount - (discount.coupon.amount_off / 100);
+            }
+
             return {
               customerId: typeof customer === 'string' ? customer : customer.id,
               customerEmail: typeof customer === 'string' ? null : (customer.email || null),
@@ -164,6 +211,9 @@ export async function GET() {
               couponName: discount.coupon?.name || null,
               startedAt: discount.start ? new Date(discount.start * 1000).toISOString() : new Date().toISOString(),
               endsAt: discount.end ? new Date(discount.end * 1000).toISOString() : null,
+              planName: planName || null,
+              originalAmount,
+              currentAmount: Math.max(0, currentAmount), // Ensure non-negative
             };
           });
       } catch (err) {

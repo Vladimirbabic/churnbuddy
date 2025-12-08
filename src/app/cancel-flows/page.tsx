@@ -113,6 +113,8 @@ interface CancelFlow {
   // Countdown settings
   showCountdown: boolean;
   countdownMinutes: number;
+  // Design style (1-9)
+  designStyle: number;
 }
 
 const DEFAULT_FEEDBACK_OPTIONS: FeedbackOption[] = [
@@ -214,6 +216,26 @@ const COLOR_PRESETS: ColorPreset[] = [
     name: 'Teal',
     colors: { primary: '#0D9488', background: '#F0FDFA', text: '#1F2937' },
   },
+];
+
+// Design style options
+interface DesignStyle {
+  id: number;
+  name: string;
+  description: string;
+  thumbnail: string; // CSS gradient/color for preview
+}
+
+const DESIGN_STYLES: DesignStyle[] = [
+  { id: 1, name: 'Classic Card', description: 'Colored headers and rounded cards', thumbnail: 'linear-gradient(to bottom, #F5F3FF 30%, white 30%)' },
+  { id: 2, name: 'Minimal Flat', description: 'Clean, flat design with subtle borders', thumbnail: 'linear-gradient(to right, #f8fafc, white)' },
+  { id: 3, name: 'Glassmorphism', description: 'Frosted glass with gradients', thumbnail: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { id: 4, name: 'Brutalist', description: 'Bold borders and hard shadows', thumbnail: 'linear-gradient(to bottom, #fbbf24, #f59e0b)' },
+  { id: 5, name: 'Dark Mode', description: 'Sleek dark interface', thumbnail: 'linear-gradient(to bottom, #1f2937, #111827)' },
+  { id: 6, name: 'Soft Rounded', description: 'Extra rounded with pastels', thumbnail: 'linear-gradient(to bottom, #fce7f3, #fbcfe8)' },
+  { id: 7, name: 'Corporate', description: 'Professional with sharp corners', thumbnail: 'linear-gradient(to bottom, #1e293b, white 30%)' },
+  { id: 8, name: 'Playful', description: 'Bright gradients and emojis', thumbnail: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #06b6d4 100%)' },
+  { id: 9, name: 'Elegant Serif', description: 'Sophisticated typography', thumbnail: 'linear-gradient(to bottom, #f5f5f4, #e7e5e4)' },
 ];
 
 // Helper to find matching preset or return 'custom'
@@ -662,19 +684,19 @@ function ResultsModal({
               <p className="text-2xl font-bold">{flow.impressions || 0}</p>
               <p className="text-xs text-muted-foreground">Total Impressions</p>
             </div>
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
-              <p className="text-2xl font-bold text-emerald-600">{flow.saves || 0}</p>
-              <p className="text-xs text-emerald-600/80">Saved</p>
+            <div className="p-4 bg-[#C4F9C8] dark:bg-[#C4F9C8]/20 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[#3A603D]">{flow.saves || 0}</p>
+              <p className="text-xs text-[#3A603D]/80">Saved</p>
             </div>
-            <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
-              <p className="text-2xl font-bold text-red-600">{flow.cancellations || 0}</p>
-              <p className="text-xs text-red-600/80">Cancelled</p>
+            <div className="p-4 bg-[#E1DDF4] dark:bg-[#E1DDF4]/20 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[#5F5785]">{flow.cancellations || 0}</p>
+              <p className="text-xs text-[#5F5785]/80">Cancelled</p>
             </div>
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-center">
-              <p className="text-2xl font-bold text-amber-600">
+            <div className="p-4 bg-[#F9E9C4] dark:bg-[#F9E9C4]/20 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[#907E54]">
                 {Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0))}
               </p>
-              <p className="text-xs text-amber-600/80">Abandoned</p>
+              <p className="text-xs text-[#907E54]/80">Abandoned</p>
             </div>
           </div>
 
@@ -742,31 +764,31 @@ function ResultsModal({
 
                       {/* Outcome breakdown */}
                       <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
-                            <span className="text-sm font-bold text-emerald-600">{outcome.saves}</span>
+                        <div className="flex items-center gap-2 p-2 bg-[#C4F9C8] dark:bg-[#C4F9C8]/20 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-[#C4F9C8] dark:bg-[#3A603D]/30 flex items-center justify-center">
+                            <span className="text-sm font-bold text-[#3A603D]">{outcome.saves}</span>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-emerald-600">Saved</p>
-                            <p className="text-xs text-emerald-500">{saveRate}%</p>
+                            <p className="text-xs font-medium text-[#3A603D]">Saved</p>
+                            <p className="text-xs text-[#3A603D]/80">{saveRate}%</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                            <span className="text-sm font-bold text-red-600">{outcome.cancellations}</span>
+                        <div className="flex items-center gap-2 p-2 bg-[#E1DDF4] dark:bg-[#E1DDF4]/20 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-[#E1DDF4] dark:bg-[#5F5785]/30 flex items-center justify-center">
+                            <span className="text-sm font-bold text-[#5F5785]">{outcome.cancellations}</span>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-red-600">Cancelled</p>
-                            <p className="text-xs text-red-500">{cancelRate}%</p>
+                            <p className="text-xs font-medium text-[#5F5785]">Cancelled</p>
+                            <p className="text-xs text-[#5F5785]/80">{cancelRate}%</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <span className="text-sm font-bold text-muted-foreground">{outcome.abandoned}</span>
+                        <div className="flex items-center gap-2 p-2 bg-[#F9E9C4] dark:bg-[#F9E9C4]/20 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-[#F9E9C4] dark:bg-[#907E54]/30 flex items-center justify-center">
+                            <span className="text-sm font-bold text-[#907E54]">{outcome.abandoned}</span>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-muted-foreground">Abandoned</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs font-medium text-[#907E54]">Abandoned</p>
+                            <p className="text-xs text-[#907E54]/80">
                               {outcome.total > 0 ? Math.round((outcome.abandoned / outcome.total) * 100) : 0}%
                             </p>
                           </div>
@@ -776,15 +798,15 @@ function ResultsModal({
                       {/* Visual bar */}
                       <div className="h-2 bg-muted rounded-full overflow-hidden flex">
                         <div
-                          className="bg-emerald-500 h-full transition-all"
+                          className="bg-[#3A603D] h-full transition-all"
                           style={{ width: `${outcome.total > 0 ? (outcome.saves / outcome.total) * 100 : 0}%` }}
                         />
                         <div
-                          className="bg-red-500 h-full transition-all"
+                          className="bg-[#5F5785] h-full transition-all"
                           style={{ width: `${outcome.total > 0 ? (outcome.cancellations / outcome.total) * 100 : 0}%` }}
                         />
                         <div
-                          className="bg-gray-300 dark:bg-gray-600 h-full transition-all"
+                          className="bg-[#907E54] h-full transition-all"
                           style={{ width: `${outcome.total > 0 ? (outcome.abandoned / outcome.total) * 100 : 0}%` }}
                         />
                       </div>
@@ -924,6 +946,8 @@ function CancelFlowsInner() {
     // Countdown settings
     showCountdown: (f.show_countdown ?? f.showCountdown ?? true) as boolean,
     countdownMinutes: (f.countdown_minutes ?? f.countdownMinutes ?? 10) as number,
+    // Design style
+    designStyle: (f.design_style ?? f.designStyle ?? 1) as number,
   }), []);
 
   const fetchFlows = useCallback(async () => {
@@ -1002,6 +1026,7 @@ function CancelFlowsInner() {
           offerColors: { ...DEFAULT_OFFER_COLORS },
           showCountdown: true,
           countdownMinutes: 10,
+          designStyle: 1,
         });
       }
     };
@@ -1066,6 +1091,8 @@ function CancelFlowsInner() {
         // Countdown settings
         show_countdown: editingFlow.showCountdown,
         countdown_minutes: editingFlow.countdownMinutes,
+        // Design style
+        design_style: editingFlow.designStyle,
       };
 
       const response = await fetch('/api/cancel-flows', {
@@ -1447,6 +1474,61 @@ function CancelFlowsInner() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Side - Editor (40%) */}
           <div className="w-[40%] border-r overflow-y-auto p-6 space-y-4">
+            {/* Design Style Selector */}
+            <div className="rounded-lg overflow-hidden bg-card border border-border">
+              <div className="flex items-center cursor-pointer px-4 py-3">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                    <Sparkles className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="font-medium flex-1 text-left">Design</span>
+                </div>
+                <Link
+                  href="/design-showcase"
+                  target="_blank"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Preview all →
+                </Link>
+              </div>
+              <div className="px-4 pb-4 pt-2 border-t border-border">
+                <div className="grid grid-cols-3 gap-2">
+                  {DESIGN_STYLES.map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => updateEditingFlow('designStyle', style.id)}
+                      className={`relative rounded-lg overflow-hidden transition-all ${
+                        editingFlow.designStyle === style.id
+                          ? 'ring-2 ring-primary ring-offset-2'
+                          : 'border border-border hover:border-primary/50'
+                      }`}
+                    >
+                      {/* Thumbnail Preview */}
+                      <div
+                        className="h-12 w-full"
+                        style={{ background: style.thumbnail }}
+                      />
+                      {/* Style Info */}
+                      <div className="p-2 bg-background">
+                        <p className="text-xs font-medium truncate">{style.name}</p>
+                      </div>
+                      {/* Selected Checkmark */}
+                      {editingFlow.designStyle === style.id && (
+                        <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-2.5 w-2.5 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {/* Selected Style Description */}
+                <p className="mt-3 text-xs text-muted-foreground text-center">
+                  {DESIGN_STYLES.find(s => s.id === editingFlow.designStyle)?.description}
+                </p>
+              </div>
+            </div>
+
             {/* Step 1: Feedback Options */}
             <StepSection
               title="Feedback Survey"
@@ -1901,6 +1983,7 @@ function CancelFlowsInner() {
                     copy={editingFlow.feedbackCopy}
                     colors={editingFlow.feedbackColors}
                     allowOtherOption={editingFlow.allowOtherOption}
+                    designStyle={editingFlow.designStyle}
                   />
                 )}
                 {editingFlow.showPlans && (
@@ -1914,6 +1997,7 @@ function CancelFlowsInner() {
                     previewMode
                     copy={editingFlow.plansCopy}
                     colors={editingFlow.plansColors}
+                    designStyle={editingFlow.designStyle}
                   />
                 )}
                 {editingFlow.showOffer && (
@@ -1930,6 +2014,7 @@ function CancelFlowsInner() {
                     colors={editingFlow.offerColors}
                     showCountdown={editingFlow.showCountdown}
                     countdownMinutes={editingFlow.countdownMinutes}
+                    designStyle={editingFlow.designStyle}
                   />
                 )}
 
@@ -2088,7 +2173,68 @@ function CancelFlowsInner() {
                 : 0;
 
               return (
-                <Card key={flow.id} className={`${!flow.isActive ? 'opacity-60' : ''}`}>
+                <Card key={flow.id} className={`${!flow.isActive ? 'opacity-60' : ''} relative overflow-visible`}>
+                  {/* Sticky Note - All Feedback Responses (positioned at top right) */}
+                  {(Object.keys(flow.feedbackResults || {}).length > 0 || (flow.otherFeedback && flow.otherFeedback.length > 0)) && (
+                    <div
+                      className="absolute -top-2 -right-3 w-[300px] p-4 bg-amber-100 dark:bg-amber-200 rounded shadow-lg z-10"
+                      style={{ transform: 'rotate(3deg)' }}
+                    >
+                      <p className="text-xs font-semibold text-amber-800 mb-3">
+                        Feedback Responses
+                      </p>
+
+                      {/* Feedback Reasons with Progress Bars (including Other) */}
+                      <div className="space-y-2">
+                        {(() => {
+                          const results = { ...flow.feedbackResults };
+                          // Add "Other" to the results if there are other responses
+                          const otherCount = flow.otherFeedback?.length || 0;
+                          if (otherCount > 0) {
+                            results['other'] = otherCount;
+                          }
+                          const total = Object.values(results).reduce((a, b) => a + b, 0);
+                          const sortedReasons = Object.entries(results)
+                            .sort(([, a], [, b]) => b - a);
+
+                          return sortedReasons.map(([reason, count]) => {
+                            const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                            const option = flow.feedbackOptions.find(o => o.id === reason);
+                            const label = reason === 'other' ? 'Other' : (option?.label || reason.replace(/_/g, ' '));
+
+                            return (
+                              <div key={reason}>
+                                <div className="flex items-center justify-between text-xs mb-0.5">
+                                  <span className="truncate text-amber-900">{label}</span>
+                                  <span className="text-amber-700 ml-2">{count} ({percent}%)</span>
+                                </div>
+                                <div className="h-1.5 bg-amber-200 dark:bg-amber-300 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-amber-600 rounded-full"
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {/* See Results Button */}
+                      <div className="pt-3 mt-3 border-t border-amber-300">
+                        <button
+                          onClick={() => {
+                            setSelectedFlowForResults(flow);
+                            setShowResultsModal(true);
+                          }}
+                          className="w-full text-xs font-medium text-amber-800 hover:text-amber-900 flex items-center justify-center gap-1.5 py-1.5 rounded hover:bg-amber-200/50 transition-colors"
+                        >
+                          <BarChart3 className="h-3.5 w-3.5" />
+                          See Results
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -2125,136 +2271,90 @@ function CancelFlowsInner() {
 
                         {/* Results Section - Always show */}
                         <div className="mt-4 pt-4 border-t space-y-4">
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFlowForResults(flow);
+                                setShowResultsModal(true);
+                              }}
+                              className="gap-2"
+                            >
+                              <BarChart3 className="h-4 w-4" />
+                              See Results
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(flow)}
+                              className="gap-2"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </Button>
+                            <div className="flex items-center gap-2 px-3 py-1.5 border rounded-md">
+                              <span className="text-sm font-medium">{flow.isActive ? 'Active' : 'Inactive'}</span>
+                              <button
+                                onClick={() => handleToggleActive(flow)}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                  flow.isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                                    flow.isActive ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+
                           {/* Outcomes */}
-                          <div>
+                          <div className="max-w-md">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Outcomes</p>
                             <div className="grid grid-cols-3 gap-3">
-                              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-center">
-                                <p className="text-lg font-bold text-emerald-600">{flow.saves || 0}</p>
-                                <p className="text-xs text-emerald-600/80">Saved</p>
+                              <div className="p-3 bg-[#C4F9C8] dark:bg-[#C4F9C8]/20 rounded-lg text-center">
+                                <p className="text-lg font-bold text-[#3A603D]">{flow.saves || 0}</p>
+                                <p className="text-xs text-[#3A603D]/80">Saved</p>
                               </div>
-                              <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-center">
-                                <p className="text-lg font-bold text-red-600">{flow.cancellations || 0}</p>
-                                <p className="text-xs text-red-600/80">Cancelled</p>
+                              <div className="p-3 bg-[#E1DDF4] dark:bg-[#E1DDF4]/20 rounded-lg text-center">
+                                <p className="text-lg font-bold text-[#5F5785]">{flow.cancellations || 0}</p>
+                                <p className="text-xs text-[#5F5785]/80">Cancelled</p>
                               </div>
-                              <div className="p-3 bg-muted rounded-lg text-center">
-                                <p className="text-lg font-bold text-muted-foreground">
+                              <div className="p-3 bg-[#F9E9C4] dark:bg-[#F9E9C4]/20 rounded-lg text-center">
+                                <p className="text-lg font-bold text-[#907E54]">
                                   {Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0))}
                                 </p>
-                                <p className="text-xs text-muted-foreground">Abandoned</p>
+                                <p className="text-xs text-[#907E54]/80">Abandoned</p>
                               </div>
                             </div>
                           </div>
 
-                            {/* Feedback Reasons */}
-                            {Object.keys(flow.feedbackResults || {}).length > 0 && (
-                              <div>
-                                <p className="text-xs font-medium text-muted-foreground mb-2">Feedback Reasons</p>
-                                <div className="space-y-2">
-                                  {(() => {
-                                    const results = flow.feedbackResults;
-                                    const total = Object.values(results).reduce((a, b) => a + b, 0);
-                                    const sortedReasons = Object.entries(results)
-                                      .sort(([, a], [, b]) => b - a)
-                                      .slice(0, 5);
-
-                                    return sortedReasons.map(([reason, count]) => {
-                                      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                                      const option = flow.feedbackOptions.find(o => o.id === reason);
-                                      const label = option?.label || reason.replace(/_/g, ' ');
-
-                                      return (
-                                        <div key={reason} className="flex items-center gap-2">
-                                          <div className="flex-1">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                              <span className="truncate">{label}</span>
-                                              <span className="text-muted-foreground ml-2">{count} ({percent}%)</span>
-                                            </div>
-                                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                              <div
-                                                className="h-full bg-primary rounded-full"
-                                                style={{ width: `${percent}%` }}
-                                              />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    });
-                                  })()}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Other Feedback */}
-                            {flow.otherFeedback && flow.otherFeedback.length > 0 && (
-                              <div>
-                                <p className="text-xs font-medium text-muted-foreground mb-2">
-                                  &quot;Other&quot; Responses ({flow.otherFeedback.length})
-                                </p>
-                                <div className="space-y-2 max-h-32 overflow-y-auto">
-                                  {flow.otherFeedback.slice(0, 5).map((feedback, idx) => (
-                                    <div key={idx} className="text-xs p-2 bg-muted/50 rounded-lg text-muted-foreground italic">
-                                      &quot;{feedback}&quot;
-                                    </div>
-                                  ))}
-                                  {flow.otherFeedback.length > 5 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      +{flow.otherFeedback.length - 5} more responses
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedFlowForResults(flow);
-                            setShowResultsModal(true);
-                          }}
-                          className="gap-2"
-                        >
-                          <BarChart3 className="h-4 w-4" />
-                          See Results
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(flow)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(flow)}
-                        >
-                          {flow.isActive ? 'Disable' : 'Enable'}
-                        </Button>
-                        {!flow.isDefault && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSetDefault(flow)}
-                            >
-                              Set Default
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(flow.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      {/* Additional Actions */}
+                      {!flow.isDefault && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetDefault(flow)}
+                          >
+                            Set Default
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(flow.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
