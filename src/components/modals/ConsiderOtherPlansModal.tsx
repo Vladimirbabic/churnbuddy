@@ -242,7 +242,8 @@ export function ConsiderOtherPlansModal({
             </button>
             <button
               onClick={onDecline}
-              className={`${sc.footer.primaryButton} transition-colors`}
+              className={`${sc.footer.backButton} transition-colors`}
+              style={useColorsProp ? { backgroundColor: '#f3f4f6', color: '#6b7280' } : undefined}
             >
               {designStyle === 4 ? 'DECLINE OFFER' : 'Decline Offer'}
             </button>

@@ -171,9 +171,9 @@ export function YourFeedbackModal({
                   onClick={() => setSelectedOption(option.id)}
                   className={`w-full flex items-center gap-3 p-4 ${'borderRadius' in optionStyle ? optionStyle.borderRadius : ''} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && 'shadow' in optionStyle && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && 'transform' in optionStyle && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
                   style={useColorsProp ? {
-                    backgroundColor: colors.background,
-                    borderColor: isSelected ? colors.primary : `${colors.primary}40`,
-                    borderWidth: isSelected ? '2px' : '1px',
+                    backgroundColor: isSelected ? colors.background : 'white',
+                    borderColor: isSelected ? colors.primary : '#e5e7eb',
+                    borderWidth: '2px',
                   } : undefined}
                   aria-pressed={isSelected}
                 >
@@ -187,8 +187,8 @@ export function YourFeedbackModal({
                       }`}
                       style={useColorsProp ? {
                         backgroundColor: isSelected ? colors.primary : 'white',
-                        color: isSelected ? 'white' : colors.text,
-                        border: isSelected ? 'none' : `1px solid ${colors.primary}40`,
+                        color: isSelected ? 'white' : '#6b7280',
+                        border: isSelected ? 'none' : '1px solid #e5e7eb',
                       } : undefined}
                     >
                       {option.letter}
@@ -220,9 +220,9 @@ export function YourFeedbackModal({
                     selectedOption === 'other' ? `${sc.option.selected.border} ${sc.option.selected.background}` : `${sc.option.default.border} ${sc.option.default.background}`
                   } ${selectedOption === 'other' && sc.option.selected.shadow ? sc.option.selected.shadow : ''} ${selectedOption === 'other' && sc.option.selected.transform ? sc.option.selected.transform : ''} transition-all text-left`}
                   style={useColorsProp ? {
-                    backgroundColor: colors.background,
-                    borderColor: selectedOption === 'other' ? colors.primary : `${colors.primary}40`,
-                    borderWidth: selectedOption === 'other' ? '2px' : '1px',
+                    backgroundColor: selectedOption === 'other' ? colors.background : 'white',
+                    borderColor: selectedOption === 'other' ? colors.primary : '#e5e7eb',
+                    borderWidth: '2px',
                   } : undefined}
                   aria-pressed={selectedOption === 'other'}
                 >
@@ -236,8 +236,8 @@ export function YourFeedbackModal({
                       }`}
                       style={useColorsProp ? {
                         backgroundColor: selectedOption === 'other' ? colors.primary : 'white',
-                        color: selectedOption === 'other' ? 'white' : colors.text,
-                        border: selectedOption === 'other' ? 'none' : `1px solid ${colors.primary}40`,
+                        color: selectedOption === 'other' ? 'white' : '#6b7280',
+                        border: selectedOption === 'other' ? 'none' : '1px solid #e5e7eb',
                       } : undefined}
                     >
                       {otherOptionLetter}
@@ -263,7 +263,7 @@ export function YourFeedbackModal({
                     placeholder="Please tell us more..."
                     className={`w-full px-4 py-3 ${sc.option.default.borderRadius} border text-sm resize-none focus:outline-none focus:ring-2 ${sc.isDark ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-white'}`}
                     style={useColorsProp ? {
-                      borderColor: `${colors.primary}40`,
+                      borderColor: '#e5e7eb',
                       backgroundColor: 'white',
                       color: colors.text,
                     } : undefined}

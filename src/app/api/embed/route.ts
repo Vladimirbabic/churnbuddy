@@ -263,6 +263,15 @@ export async function GET(request: NextRequest) {
       cursor: not-allowed;
       opacity: 0.5;
     }
+    /* Secondary button - for Decline Offer (less prominent) */
+    .cb-btn-secondary {
+      background: #F3F4F6;
+      color: #6B7280;
+      padding: 8px 24px;
+    }
+    .cb-btn-secondary:hover {
+      background: #E5E7EB;
+    }
 
     /* Plans Step - Gray/Slate Theme */
     .cb-plans .cb-header-bar {
@@ -670,16 +679,18 @@ export async function GET(request: NextRequest) {
       .cb-feedback .cb-close:hover {
         background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1) !important;
       }
+      /* Unselected options - neutral styling */
       .cb-feedback .cb-option {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.05) !important;
+        border-color: #e5e7eb !important;
+        background: white !important;
       }
       .cb-feedback .cb-option:hover {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.5) !important;
+        border-color: #d1d5db !important;
       }
+      /* Selected options - accent colors */
       .cb-feedback .cb-option.selected {
         border-color: \${feedbackColors.primary} !important;
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1) !important;
+        background: \${feedbackColors.background} !important;
       }
       .cb-feedback .cb-option.selected .cb-option-letter {
         background: \${feedbackColors.primary} !important;
@@ -689,11 +700,13 @@ export async function GET(request: NextRequest) {
       .cb-feedback .cb-option-check {
         color: \${feedbackColors.primary} !important;
       }
+      /* Unselected letter badge - neutral */
       .cb-feedback .cb-option-letter {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
+        border-color: #e5e7eb !important;
+        color: #6b7280 !important;
       }
       .cb-feedback .cb-other-input {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
+        border-color: #e5e7eb !important;
       }
       .cb-feedback .cb-other-input:focus {
         border-color: \${feedbackColors.primary} !important;
@@ -1300,7 +1313,7 @@ export async function GET(request: NextRequest) {
         html += '</div>';
         html += '<div class="cb-footer">';
         html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()"' + (state.isProcessing ? ' disabled' : '') + '>' + (copy.plansBackButton || 'Back') + '</button>';
-        html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.nextStep()"' + (state.isProcessing ? ' disabled' : '') + '>' + (copy.plansDeclineButton || 'Decline Offer') + '</button>';
+        html += '<button class="cb-btn cb-btn-secondary" onclick="ChurnBuddy.nextStep()"' + (state.isProcessing ? ' disabled' : '') + '>' + (copy.plansDeclineButton || 'Decline Offer') + '</button>';
         html += '</div>';
         html += '</div>';
         html += '</div>';
@@ -1339,7 +1352,7 @@ export async function GET(request: NextRequest) {
       html += '</div>';
       html += '<div class="cb-footer">';
       html += '<button class="cb-btn cb-btn-back-gray" onclick="ChurnBuddy.goBack()">' + (copy.offerBackButton || 'Back') + '</button>';
-      html += '<button class="cb-btn cb-btn-primary-black" onclick="ChurnBuddy.confirmCancel()">' + (copy.offerDeclineButton || 'Decline Offer') + '</button>';
+      html += '<button class="cb-btn cb-btn-secondary" onclick="ChurnBuddy.confirmCancel()">' + (copy.offerDeclineButton || 'Decline Offer') + '</button>';
       html += '</div>';
       html += '</div>';
       html += '</div>';
