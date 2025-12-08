@@ -101,8 +101,8 @@ export function YourFeedbackModal({
     const sc = styleConfig; // shorthand
     const showLetterBadge = sc.option.default.letterBadge.background !== 'hidden';
 
-    // For style 1 (Classic Card), use the colors prop for dynamic coloring
-    const useColorsProp = designStyle === 1;
+    // Always use colors prop for dynamic coloring (applies to all design styles)
+    const useColorsProp = true;
 
     return (
       <div

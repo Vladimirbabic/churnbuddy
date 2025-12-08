@@ -653,133 +653,146 @@ export async function GET(request: NextRequest) {
     var ofRgb = hexToRgb(offerColors.primary);
 
     var dynamicStyles = \`
-      /* Feedback Step - Dynamic Colors */
+      /* Feedback Step - Dynamic Colors (using !important to override design styles) */
       .cb-feedback .cb-header-bar {
-        background: \${feedbackColors.background};
+        background: \${feedbackColors.background} !important;
       }
       .cb-feedback .cb-header-bar-left svg {
-        color: \${feedbackColors.primary};
-        fill: \${feedbackColors.primary};
+        color: \${feedbackColors.primary} !important;
+        fill: \${feedbackColors.primary} !important;
       }
       .cb-feedback .cb-header-bar-title {
-        color: \${feedbackColors.primary};
+        color: \${feedbackColors.primary} !important;
       }
       .cb-feedback .cb-close {
-        color: \${feedbackColors.primary};
+        color: \${feedbackColors.primary} !important;
       }
       .cb-feedback .cb-close:hover {
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1);
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1) !important;
       }
-      .cb-option {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3);
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.05);
+      .cb-feedback .cb-option {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.05) !important;
       }
-      .cb-option:hover {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.5);
+      .cb-feedback .cb-option:hover {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.5) !important;
       }
-      .cb-option.selected {
-        border-color: \${feedbackColors.primary};
+      .cb-feedback .cb-option.selected {
+        border-color: \${feedbackColors.primary} !important;
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1) !important;
       }
-      .cb-option.selected .cb-option-letter {
-        background: \${feedbackColors.primary};
-        border-color: \${feedbackColors.primary};
+      .cb-feedback .cb-option.selected .cb-option-letter {
+        background: \${feedbackColors.primary} !important;
+        border-color: \${feedbackColors.primary} !important;
+        color: white !important;
       }
-      .cb-option-check {
-        color: \${feedbackColors.primary};
+      .cb-feedback .cb-option-check {
+        color: \${feedbackColors.primary} !important;
       }
-      .cb-other-input {
-        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3);
+      .cb-feedback .cb-option-letter {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
       }
-      .cb-other-input:focus {
-        border-color: \${feedbackColors.primary};
-        box-shadow: 0 0 0 2px rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2);
+      .cb-feedback .cb-other-input {
+        border-color: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.3) !important;
       }
-      .cb-btn-back-purple {
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1);
-        color: \${feedbackColors.primary};
+      .cb-feedback .cb-other-input:focus {
+        border-color: \${feedbackColors.primary} !important;
+        box-shadow: 0 0 0 2px rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2) !important;
       }
-      .cb-btn-back-purple:hover {
-        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2);
+      .cb-feedback .cb-btn-back-purple {
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.1) !important;
+        color: \${feedbackColors.primary} !important;
+      }
+      .cb-feedback .cb-btn-back-purple:hover {
+        background: rgba(\${fbRgb.r}, \${fbRgb.g}, \${fbRgb.b}, 0.2) !important;
       }
 
       /* Plans Step - Dynamic Colors */
       .cb-plans .cb-header-bar {
-        background: \${plansColors.background};
+        background: \${plansColors.background} !important;
       }
       .cb-plans .cb-header-bar-left svg {
-        color: \${plansColors.primary};
-        fill: none;
-        stroke: \${plansColors.primary};
+        color: \${plansColors.primary} !important;
+        fill: none !important;
+        stroke: \${plansColors.primary} !important;
       }
       .cb-plans .cb-header-bar-title {
-        color: \${plansColors.primary};
+        color: \${plansColors.primary} !important;
       }
       .cb-plans .cb-close {
-        color: \${plansColors.primary};
+        color: \${plansColors.primary} !important;
       }
       .cb-plans .cb-close:hover {
-        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1);
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1) !important;
       }
-      .cb-plan-price-new {
-        color: \${plansColors.primary};
+      .cb-plans .cb-plan-price-new {
+        color: \${plansColors.primary} !important;
       }
-      .cb-btn-plan {
-        background: \${plansColors.primary};
+      .cb-plans .cb-btn-plan {
+        background: \${plansColors.primary} !important;
       }
-      .cb-btn-plan:hover {
-        background: \${plansColors.primary};
+      .cb-plans .cb-btn-plan:hover {
+        background: \${plansColors.primary} !important;
         opacity: 0.9;
       }
-      .cb-btn-plan:disabled {
-        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.5);
+      .cb-plans .cb-btn-plan:disabled {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.5) !important;
+      }
+      .cb-plans .cb-btn-back-gray {
+        background: rgba(\${plRgb.r}, \${plRgb.g}, \${plRgb.b}, 0.1) !important;
+        color: \${plansColors.text} !important;
       }
 
       /* Offer Step - Dynamic Colors */
       .cb-offer .cb-header-bar {
-        background: \${offerColors.background};
+        background: \${offerColors.background} !important;
       }
       .cb-offer .cb-header-bar-left svg {
-        color: \${offerColors.primary};
-        fill: none;
-        stroke: \${offerColors.primary};
+        color: \${offerColors.primary} !important;
+        fill: none !important;
+        stroke: \${offerColors.primary} !important;
       }
       .cb-offer .cb-header-bar-title {
-        color: \${offerColors.primary};
+        color: \${offerColors.primary} !important;
       }
       .cb-offer .cb-close {
-        color: \${offerColors.primary};
+        color: \${offerColors.primary} !important;
       }
       .cb-offer .cb-close:hover {
-        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1);
+        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1) !important;
       }
-      .cb-offer-card {
-        background: \${offerColors.background};
-        border-color: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.3);
+      .cb-offer .cb-offer-card {
+        background: \${offerColors.background} !important;
+        border-color: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.3) !important;
       }
-      .cb-offer-badge svg {
-        color: \${offerColors.primary};
+      .cb-offer .cb-offer-badge svg {
+        color: \${offerColors.primary} !important;
       }
-      .cb-offer-badge-text {
-        color: \${offerColors.primary};
+      .cb-offer .cb-offer-badge-text {
+        color: \${offerColors.primary} !important;
       }
-      .cb-btn-offer {
-        background: \${offerColors.primary};
+      .cb-offer .cb-btn-offer {
+        background: \${offerColors.primary} !important;
       }
-      .cb-btn-offer:hover {
-        background: \${offerColors.primary};
+      .cb-offer .cb-btn-offer:hover {
+        background: \${offerColors.primary} !important;
         opacity: 0.9;
       }
-      .cb-countdown svg {
-        color: \${offerColors.primary};
+      .cb-offer .cb-countdown svg {
+        color: \${offerColors.primary} !important;
       }
-      .cb-countdown-label {
-        color: \${offerColors.primary};
+      .cb-offer .cb-countdown-label {
+        color: \${offerColors.primary} !important;
       }
-      .cb-countdown-time {
-        color: \${offerColors.primary};
+      .cb-offer .cb-countdown-time {
+        color: \${offerColors.primary} !important;
       }
-      .cb-countdown {
-        background: \${offerColors.background};
+      .cb-offer .cb-countdown {
+        background: \${offerColors.background} !important;
+      }
+      .cb-offer .cb-btn-back-gray {
+        background: rgba(\${ofRgb.r}, \${ofRgb.g}, \${ofRgb.b}, 0.1) !important;
+        color: \${offerColors.text} !important;
       }
     \`;
 
@@ -1082,8 +1095,9 @@ export async function GET(request: NextRequest) {
           config.discountDuration = state.discountDurationOverride;
         }
         state.config = config;
-        injectDynamicColors(config);
+        // Inject design styles first, then dynamic colors (with !important) override
         injectDesignStyles(config);
+        injectDynamicColors(config);
         state.isLoading = false;
         // Determine first step based on config - default to true if undefined
         var showFeedback = config.showFeedback !== false;

@@ -76,7 +76,7 @@ export function SpecialOfferModal({
   // Uses style configuration for different visual styles
   if (previewMode) {
     const sc = styleConfig; // shorthand
-    const useColorsProp = designStyle === 1; // Only use colors prop for Classic Card
+    const useColorsProp = true; // Always use colors prop for dynamic coloring
 
     return (
       <div
