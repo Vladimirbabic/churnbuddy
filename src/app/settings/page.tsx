@@ -10,16 +10,13 @@ import {
   Check,
   Eye,
   EyeOff,
-  Bell,
-  Palette,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CancelFlowModal } from '@/components/CancelFlowModal';
 import { AppLayout } from '@/components/AppLayout';
+import { EmailSettingsTab } from '@/components/EmailSettingsTab';
 
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +24,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   const [settings, setSettings] = useState({
     stripe: {
@@ -53,21 +50,24 @@ export default function SettingsPage() {
       enabled: true,
       maxAttempts: 3,
     },
-    branding: {
-      companyName: '',
-      primaryColor: '#3b82f6',
-      modalTheme: 'minimal',
-    },
-    notifications: {
-      emailOnFailedPayment: true,
-      emailOnCancellation: true,
-      emailOnRecovery: true,
-    },
   });
 
   useEffect(() => {
+    fetchCsrfToken();
     fetchSettings();
   }, []);
+
+  const fetchCsrfToken = async () => {
+    try {
+      const response = await fetch('/api/csrf');
+      if (response.ok) {
+        const data = await response.json();
+        setCsrfToken(data.token);
+      }
+    } catch (err) {
+      console.error('Failed to fetch CSRF token:', err);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -106,20 +106,6 @@ export default function SettingsPage() {
             enabled: data.dunning_config?.enabled ?? true,
             maxAttempts: data.dunning_config?.max_attempts ?? 3,
           },
-          branding: {
-            ...prev.branding,
-            companyName: data.branding?.company_name || '',
-            primaryColor: data.branding?.primary_color || '#3b82f6',
-            modalTheme: data.branding?.modal_theme || 'minimal',
-            logoUrl: data.branding?.logo_url || '',
-          },
-          notifications: {
-            ...prev.notifications,
-            emailOnFailedPayment: data.notifications?.email_on_failed_payment ?? true,
-            emailOnCancellation: data.notifications?.email_on_cancellation ?? true,
-            emailOnRecovery: data.notifications?.email_on_recovery ?? true,
-            slackWebhookUrl: data.notifications?.slack_webhook_url || '',
-          },
         }));
       }
     } catch (err) {
@@ -135,20 +121,27 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(settings),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save settings');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save settings');
       }
 
       setSuccess('Settings saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Failed to save settings. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings';
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -210,7 +203,7 @@ export default function SettingsPage() {
         )}
 
         <Tabs defaultValue="stripe" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="stripe" className="gap-2">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Stripe</span>
@@ -218,14 +211,6 @@ export default function SettingsPage() {
             <TabsTrigger value="email" className="gap-2">
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">Email</span>
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="gap-2">
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Branding</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Alerts</span>
             </TabsTrigger>
           </TabsList>
 
@@ -317,247 +302,14 @@ export default function SettingsPage() {
 
           {/* Email Tab */}
           <TabsContent value="email">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Email Configuration</CardTitle>
-                    <CardDescription>Configure your email provider for notifications</CardDescription>
-                  </div>
-                  <Badge variant={settings.email.isConnected ? 'success' : 'secondary'}>
-                    {settings.email.isConnected ? 'Connected' : 'Not Connected'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Provider */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Provider</label>
-                  <div className="p-4 rounded-lg border-2 border-primary bg-primary/5">
-                    <p className="font-medium">Resend</p>
-                    <p className="text-sm text-muted-foreground">Modern email API</p>
-                  </div>
-                </div>
-
-                {/* API Key */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">API Key</label>
-                  <div className="relative">
-                    <input
-                      type={showSecrets['emailKey'] ? 'text' : 'password'}
-                      value={settings.email.apiKey}
-                      onChange={(e) => updateSettings('email', 'apiKey', e.target.value)}
-                      placeholder="re_..."
-                      className="w-full px-3 py-2 pr-10 rounded-lg border border-input bg-background"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleSecret('emailKey')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground"
-                    >
-                      {showSecrets['emailKey'] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* From Email */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">From Email</label>
-                  <input
-                    type="email"
-                    value={settings.email.fromEmail}
-                    onChange={(e) => updateSettings('email', 'fromEmail', e.target.value)}
-                    placeholder="billing@yourcompany.com"
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background"
-                  />
-                </div>
-
-                {/* From Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">From Name</label>
-                  <input
-                    type="text"
-                    value={settings.email.fromName}
-                    onChange={(e) => updateSettings('email', 'fromName', e.target.value)}
-                    placeholder="Your Company"
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Branding Tab */}
-          <TabsContent value="branding">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Branding</CardTitle>
-                  <CardDescription>Customize how Exit Loop appears to your customers</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Company Name */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Company Name</label>
-                    <input
-                      type="text"
-                      value={settings.branding.companyName}
-                      onChange={(e) => updateSettings('branding', 'companyName', e.target.value)}
-                      placeholder="Your Company"
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background"
-                    />
-                  </div>
-
-                  {/* Primary Color */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Brand Color</label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={settings.branding.primaryColor}
-                        onChange={(e) => updateSettings('branding', 'primaryColor', e.target.value)}
-                        className="h-10 w-14 rounded border border-input cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.branding.primaryColor}
-                        onChange={(e) => updateSettings('branding', 'primaryColor', e.target.value)}
-                        className="w-28 px-3 py-2 rounded-lg border border-input bg-background"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Cancel Flow Preview */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle>Cancel Flow Preview</CardTitle>
-                        <CardDescription>Your 3-step cancellation flow to reduce churn</CardDescription>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowPreviewModal(true)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* Step 1 */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                      <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-medium">
-                        1
-                      </div>
-                      <div>
-                        <p className="font-medium text-purple-900 dark:text-purple-100">Your Feedback</p>
-                        <p className="text-xs text-purple-600 dark:text-purple-400">Exit survey collection</p>
-                      </div>
-                    </div>
-                    {/* Step 2 */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                      <div className="w-8 h-8 rounded-full bg-slate-600 text-white flex items-center justify-center text-sm font-medium">
-                        2
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-slate-100">Consider Other Plans</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Alternative plan offers at 80% off</p>
-                      </div>
-                    </div>
-                    {/* Step 3 */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                      <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-medium">
-                        3
-                      </div>
-                      <div>
-                        <p className="font-medium text-red-900 dark:text-red-100">Special Offer</p>
-                        <p className="text-xs text-red-600 dark:text-red-400">{settings.cancelFlow.discountPercent}% off for {settings.cancelFlow.discountDuration} months</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Notifications Tab */}
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Configure when you get notified about events</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Failed Payment */}
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <p className="font-medium">Failed Payment Alerts</p>
-                    <p className="text-sm text-muted-foreground">Get notified when a payment fails</p>
-                  </div>
-                  <Button
-                    variant={settings.notifications.emailOnFailedPayment ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSettings('notifications', 'emailOnFailedPayment', !settings.notifications.emailOnFailedPayment)}
-                  >
-                    {settings.notifications.emailOnFailedPayment ? 'On' : 'Off'}
-                  </Button>
-                </div>
-
-                {/* Cancellation */}
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <p className="font-medium">Cancellation Alerts</p>
-                    <p className="text-sm text-muted-foreground">Get notified when a customer cancels</p>
-                  </div>
-                  <Button
-                    variant={settings.notifications.emailOnCancellation ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSettings('notifications', 'emailOnCancellation', !settings.notifications.emailOnCancellation)}
-                  >
-                    {settings.notifications.emailOnCancellation ? 'On' : 'Off'}
-                  </Button>
-                </div>
-
-                {/* Recovery */}
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <p className="font-medium">Recovery Alerts</p>
-                    <p className="text-sm text-muted-foreground">Get notified when a payment is recovered</p>
-                  </div>
-                  <Button
-                    variant={settings.notifications.emailOnRecovery ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSettings('notifications', 'emailOnRecovery', !settings.notifications.emailOnRecovery)}
-                  >
-                    {settings.notifications.emailOnRecovery ? 'On' : 'Off'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <EmailSettingsTab
+              settings={settings.email}
+              onUpdate={(field, value) => updateSettings('email', field, value)}
+              showSecrets={showSecrets}
+              toggleSecret={toggleSecret}
+            />
           </TabsContent>
         </Tabs>
-
-      {/* Preview Modal */}
-      <CancelFlowModal
-        isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        onCancelConfirmed={() => setShowPreviewModal(false)}
-        onOfferAccepted={() => setShowPreviewModal(false)}
-        onPlanSwitched={() => setShowPreviewModal(false)}
-        customerId="preview"
-        subscriptionId="preview"
-        discountPercent={settings.cancelFlow.discountPercent}
-        discountDuration={`${settings.cancelFlow.discountDuration} months`}
-        companyName={settings.branding.companyName || settings.cancelFlow.companyName || 'Your Company'}
-      />
       </div>
     </AppLayout>
   );
