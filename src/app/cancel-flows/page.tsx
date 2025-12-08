@@ -623,21 +623,24 @@ function ResultsModal({
 
   // Calculate total overall outcomes for comparison
   const totalResponses = sortedReasons.reduce((acc, [, outcome]) => acc + outcome.total, 0);
+  const abandoned = Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0));
+  const totalCompleted = (flow.saves || 0) + (flow.cancellations || 0);
+  const overallSaveRate = totalCompleted > 0 ? Math.round(((flow.saves || 0) / totalCompleted) * 100) : 0;
 
   // Find best and worst performing reasons (by save rate)
-  let bestReason: { reason: string; saveRate: number } | null = null;
-  let worstReason: { reason: string; saveRate: number } | null = null;
+  let bestReason: { reason: string; saveRate: number; total: number } | null = null;
+  let worstReason: { reason: string; saveRate: number; total: number } | null = null;
 
   for (const [reason, outcome] of sortedReasons) {
-    if (outcome.total >= 1) { // Only consider reasons with at least 1 response
+    if (outcome.total >= 1) {
       const completed = outcome.saves + outcome.cancellations;
       const saveRate = completed > 0 ? (outcome.saves / completed) * 100 : 0;
 
       if (!bestReason || saveRate > bestReason.saveRate) {
-        bestReason = { reason, saveRate };
+        bestReason = { reason, saveRate, total: outcome.total };
       }
       if (!worstReason || saveRate < worstReason.saveRate) {
-        worstReason = { reason, saveRate };
+        worstReason = { reason, saveRate, total: outcome.total };
       }
     }
   }
@@ -661,172 +664,190 @@ function ResultsModal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col"
+        className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 border-b flex items-center justify-between shrink-0 bg-gradient-to-r from-primary/5 to-transparent">
           <div>
-            <h2 className="text-xl font-bold">{flow.name} Results</h2>
-            <p className="text-sm text-muted-foreground">
-              Detailed breakdown of feedback responses and outcomes
+            <h2 className="text-xl font-bold">{flow.name}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Performance analytics
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Summary Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 bg-muted/50 rounded-lg text-center">
-              <p className="text-2xl font-bold">{flow.impressions || 0}</p>
-              <p className="text-xs text-muted-foreground">Total Impressions</p>
-            </div>
-            <div className="p-4 bg-[#C4F9C8] dark:bg-[#C4F9C8]/20 rounded-lg text-center">
-              <p className="text-2xl font-bold text-[#3A603D]">{flow.saves || 0}</p>
-              <p className="text-xs text-[#3A603D]/80">Saved</p>
-            </div>
-            <div className="p-4 bg-[#E1DDF4] dark:bg-[#E1DDF4]/20 rounded-lg text-center">
-              <p className="text-2xl font-bold text-[#5F5785]">{flow.cancellations || 0}</p>
-              <p className="text-xs text-[#5F5785]/80">Cancelled</p>
-            </div>
-            <div className="p-4 bg-[#F9E9C4] dark:bg-[#F9E9C4]/20 rounded-lg text-center">
-              <p className="text-2xl font-bold text-[#907E54]">
-                {Math.max(0, (flow.impressions || 0) - (flow.saves || 0) - (flow.cancellations || 0))}
+          {/* Key Metrics */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-800/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{overallSaveRate}%</p>
+                  <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80 mt-1">Save Rate</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Check className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+              </div>
+              <p className="text-xs text-emerald-600/70 mt-3">
+                {flow.saves || 0} saved of {totalCompleted} completed
               </p>
-              <p className="text-xs text-[#907E54]/80">Abandoned</p>
+            </div>
+            <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">{flow.impressions || 0}</p>
+                  <p className="text-sm text-blue-600/80 dark:text-blue-400/80 mt-1">Impressions</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+              <p className="text-xs text-blue-600/70 mt-3">
+                {abandoned} abandoned ({flow.impressions ? Math.round((abandoned / flow.impressions) * 100) : 0}%)
+              </p>
             </div>
           </div>
 
-          {/* Insights */}
-          {(bestReason || worstReason) && totalResponses > 0 && (
-            <div className="grid grid-cols-2 gap-4">
+          {/* Outcome Summary Bar */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">Outcome Distribution</span>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  Saved ({flow.saves || 0})
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                  Cancelled ({flow.cancellations || 0})
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                  Abandoned ({abandoned})
+                </span>
+              </div>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden flex">
+              {flow.impressions && flow.impressions > 0 && (
+                <>
+                  <div
+                    className="bg-emerald-500 h-full transition-all"
+                    style={{ width: `${((flow.saves || 0) / flow.impressions) * 100}%` }}
+                  />
+                  <div
+                    className="bg-rose-400 h-full transition-all"
+                    style={{ width: `${((flow.cancellations || 0) / flow.impressions) * 100}%` }}
+                  />
+                  <div
+                    className="bg-amber-400 h-full transition-all"
+                    style={{ width: `${(abandoned / flow.impressions) * 100}%` }}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Insights Cards */}
+          {(bestReason || worstReason) && totalResponses > 0 && bestReason?.reason !== worstReason?.reason && (
+            <div className="grid grid-cols-2 gap-3">
               {bestReason && bestReason.saveRate > 0 && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="p-4 bg-emerald-50/80 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/50 dark:border-emerald-800/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-white" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                      <Check className="h-3 w-3 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Highest Save Rate</span>
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Best Performer</span>
                   </div>
-                  <p className="text-sm font-medium">{getReasonLabel(bestReason.reason)}</p>
-                  <p className="text-xs text-emerald-600">{Math.round(bestReason.saveRate)}% saved</p>
+                  <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100 line-clamp-2">{getReasonLabel(bestReason.reason)}</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">{Math.round(bestReason.saveRate)}% saved</p>
                 </div>
               )}
-              {worstReason && worstReason.saveRate < 100 && (
-                <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
+              {worstReason && (
+                <div className="p-4 bg-rose-50/80 dark:bg-rose-950/30 rounded-xl border border-rose-200/50 dark:border-rose-800/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                      <AlertCircle className="h-4 w-4 text-white" />
+                    <div className="w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center">
+                      <AlertCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-red-700 dark:text-red-400">Lowest Save Rate</span>
+                    <span className="text-xs font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wide">Needs Work</span>
                   </div>
-                  <p className="text-sm font-medium">{getReasonLabel(worstReason.reason)}</p>
-                  <p className="text-xs text-red-600">{Math.round(worstReason.saveRate)}% saved</p>
+                  <p className="text-sm font-medium text-rose-900 dark:text-rose-100 line-clamp-2">{getReasonLabel(worstReason.reason)}</p>
+                  <p className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-1">{Math.round(worstReason.saveRate)}% saved</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Per-Reason Breakdown */}
+          {/* Feedback Breakdown */}
           <div>
-            <h3 className="font-semibold mb-4">Outcomes by Feedback Reason</h3>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              Feedback Breakdown
+            </h3>
             {sortedReasons.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No feedback data yet</p>
-                <p className="text-sm">Results will appear here once users start going through your cancel flow</p>
+              <div className="text-center py-10 text-muted-foreground bg-muted/30 rounded-xl">
+                <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No feedback data yet</p>
+                <p className="text-sm mt-1">Results will appear once users go through your flow</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {sortedReasons.map(([reason, outcome]) => {
                   const label = getReasonLabel(reason);
                   const completed = outcome.saves + outcome.cancellations;
                   const saveRate = completed > 0 ? Math.round((outcome.saves / completed) * 100) : 0;
-                  const cancelRate = completed > 0 ? Math.round((outcome.cancellations / completed) * 100) : 0;
                   const percentOfTotal = totalResponses > 0 ? Math.round((outcome.total / totalResponses) * 100) : 0;
 
                   return (
-                    <div key={reason} className="p-4 bg-muted/30 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <span className="font-medium">{label}</span>
-                          <span className="text-sm text-muted-foreground ml-2">
-                            ({outcome.total} responses, {percentOfTotal}% of total)
+                    <div key={reason} className="group">
+                      <div className="flex items-center gap-3 p-3 bg-muted/40 hover:bg-muted/60 rounded-lg transition-colors">
+                        {/* Save rate indicator */}
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
+                          saveRate >= 50
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
+                            : saveRate > 0
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400'
+                        }`}>
+                          {saveRate}%
+                        </div>
+
+                        {/* Reason info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {outcome.total} responses · {percentOfTotal}% of total
+                          </p>
+                        </div>
+
+                        {/* Quick stats */}
+                        <div className="flex items-center gap-3 text-xs shrink-0">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {outcome.saves} saved
+                          </span>
+                          <span className="text-rose-500 dark:text-rose-400">
+                            {outcome.cancellations} left
                           </span>
                         </div>
-                        <Badge variant={saveRate >= 50 ? 'default' : 'secondary'} className={saveRate >= 50 ? 'bg-emerald-600' : ''}>
-                          {saveRate}% save rate
-                        </Badge>
                       </div>
 
-                      {/* Outcome breakdown */}
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="flex items-center gap-2 p-2 bg-[#C4F9C8] dark:bg-[#C4F9C8]/20 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-[#C4F9C8] dark:bg-[#3A603D]/30 flex items-center justify-center">
-                            <span className="text-sm font-bold text-[#3A603D]">{outcome.saves}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-[#3A603D]">Saved</p>
-                            <p className="text-xs text-[#3A603D]/80">{saveRate}%</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-[#E1DDF4] dark:bg-[#E1DDF4]/20 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-[#E1DDF4] dark:bg-[#5F5785]/30 flex items-center justify-center">
-                            <span className="text-sm font-bold text-[#5F5785]">{outcome.cancellations}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-[#5F5785]">Cancelled</p>
-                            <p className="text-xs text-[#5F5785]/80">{cancelRate}%</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-[#F9E9C4] dark:bg-[#F9E9C4]/20 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-[#F9E9C4] dark:bg-[#907E54]/30 flex items-center justify-center">
-                            <span className="text-sm font-bold text-[#907E54]">{outcome.abandoned}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-[#907E54]">Abandoned</p>
-                            <p className="text-xs text-[#907E54]/80">
-                              {outcome.total > 0 ? Math.round((outcome.abandoned / outcome.total) * 100) : 0}%
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Visual bar */}
-                      <div className="h-2 bg-muted rounded-full overflow-hidden flex">
-                        <div
-                          className="bg-[#3A603D] h-full transition-all"
-                          style={{ width: `${outcome.total > 0 ? (outcome.saves / outcome.total) * 100 : 0}%` }}
-                        />
-                        <div
-                          className="bg-[#5F5785] h-full transition-all"
-                          style={{ width: `${outcome.total > 0 ? (outcome.cancellations / outcome.total) * 100 : 0}%` }}
-                        />
-                        <div
-                          className="bg-[#907E54] h-full transition-all"
-                          style={{ width: `${outcome.total > 0 ? (outcome.abandoned / outcome.total) * 100 : 0}%` }}
-                        />
-                      </div>
-
-                      {/* Other feedback texts for this reason */}
+                      {/* Custom responses for "other" */}
                       {outcome.otherTexts && outcome.otherTexts.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-border">
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Custom responses:</p>
-                          <div className="space-y-1 max-h-24 overflow-y-auto">
-                            {outcome.otherTexts.slice(0, 5).map((text, idx) => (
-                              <div key={idx} className="text-xs p-2 bg-background rounded text-muted-foreground italic">
-                                &quot;{text}&quot;
-                              </div>
-                            ))}
-                            {outcome.otherTexts.length > 5 && (
-                              <p className="text-xs text-muted-foreground">
-                                +{outcome.otherTexts.length - 5} more
-                              </p>
-                            )}
-                          </div>
+                        <div className="ml-14 mt-1 mb-2 space-y-1">
+                          {outcome.otherTexts.slice(0, 3).map((text, idx) => (
+                            <div key={idx} className="text-xs py-1.5 px-3 bg-muted/30 rounded-md text-muted-foreground italic">
+                              &quot;{text}&quot;
+                            </div>
+                          ))}
+                          {outcome.otherTexts.length > 3 && (
+                            <p className="text-xs text-muted-foreground pl-3">
+                              +{outcome.otherTexts.length - 3} more responses
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -839,10 +860,14 @@ function ResultsModal({
           {/* Other Feedback Section */}
           {flow.otherFeedback && flow.otherFeedback.length > 0 && (
             <div>
-              <h3 className="font-semibold mb-4">All &quot;Other&quot; Responses ({flow.otherFeedback.length})</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto p-4 bg-muted/30 rounded-lg">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <span className="text-muted-foreground">💬</span>
+                Custom Responses
+                <Badge variant="secondary" className="ml-1 text-xs">{flow.otherFeedback.length}</Badge>
+              </h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
                 {flow.otherFeedback.map((feedback, idx) => (
-                  <div key={idx} className="text-sm p-3 bg-background rounded-lg">
+                  <div key={idx} className="text-sm py-2 px-3 bg-muted/40 rounded-lg">
                     <span className="text-muted-foreground italic">&quot;{feedback}&quot;</span>
                   </div>
                 ))}
@@ -852,8 +877,8 @@ function ResultsModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t shrink-0">
-          <Button onClick={onClose} className="w-full">
+        <div className="px-6 py-4 border-t shrink-0 bg-muted/30">
+          <Button variant="outline" onClick={onClose} className="w-full">
             Close
           </Button>
         </div>

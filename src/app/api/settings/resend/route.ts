@@ -1,5 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+// Helper to get authenticated supabase client and user's organization ID
+async function getAuthenticatedClient() {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    return { supabase, orgId: user?.id || null };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return { supabase: null, orgId: null };
+  }
+}
 
 // Validate a Resend API key and fetch domains
 export async function POST(request: NextRequest) {
@@ -65,11 +90,45 @@ export async function POST(request: NextRequest) {
 // Send a test email
 export async function PUT(request: NextRequest) {
   try {
-    const { apiKey, fromEmail, fromName, toEmail } = await request.json();
+    const { fromEmail, fromName, toEmail } = await request.json();
 
-    if (!apiKey || !fromEmail || !toEmail) {
+    if (!fromEmail || !toEmail) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Get authenticated user and fetch API key from database
+    const { supabase, orgId } = await getAuthenticatedClient();
+
+    if (!orgId || !supabase) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Fetch the actual API key from the database
+    const { data: settings, error: settingsError } = await (supabase as ReturnType<typeof createServerClient>)
+      .from('settings')
+      .select('email_config')
+      .eq('organization_id', orgId)
+      .single();
+
+    if (settingsError || !settings) {
+      return NextResponse.json(
+        { error: 'Email settings not found. Please configure your email provider first.' },
+        { status: 404 }
+      );
+    }
+
+    const emailConfig = settings.email_config as { api_key?: string } | null;
+    const apiKey = emailConfig?.api_key;
+
+    if (!apiKey || apiKey === '••••••••') {
+      return NextResponse.json(
+        { error: 'Email provider API key not configured. Please save your settings first.' },
         { status: 400 }
       );
     }

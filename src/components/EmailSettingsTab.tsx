@@ -66,11 +66,11 @@ export function EmailSettingsTab({
     setSuccess(null);
 
     try {
+      // Note: API key is fetched server-side from the database for security
       const response = await fetch('/api/settings/resend', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          apiKey: settings.apiKey,
           fromEmail: settings.fromEmail,
           fromName: settings.fromName,
           toEmail: testEmail,
