@@ -187,7 +187,7 @@ export default function DashboardPage() {
     <AppLayout
       title="Dashboard"
     >
-      <div className="space-y-6">
+      <div className="space-y-4">
           {!hasData ? (
             // Empty state
             <div className="flex flex-col items-center justify-center py-16 space-y-6">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
 
               {/* Performance Overview */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Performance Overview</h3>
+                <h3 className="text-lg font-semibold mb-3">Performance Overview</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Payment Recovery Rate */}
                   <Card>

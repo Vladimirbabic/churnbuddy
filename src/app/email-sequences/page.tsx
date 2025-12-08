@@ -21,6 +21,10 @@ import {
   GitBranch,
   Zap,
   ArrowDown,
+  Activity,
+  CheckCircle,
+  MousePointerClick,
+  MailOpen,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,6 +84,20 @@ interface SequenceDefinition {
   };
   steps: SequenceStep[];
   extraSteps?: SequenceStep[];
+}
+
+interface EmailLogEntry {
+  id: string;
+  templateType: string;
+  customerId: string;
+  customerEmail: string;
+  messageId: string | null;
+  sentAt: string;
+  openedAt: string | null;
+  clickedAt: string | null;
+  subscriptionId: string | null;
+  invoiceId: string | null;
+  status: 'sent' | 'opened' | 'clicked';
 }
 
 // Sequence definitions with workflow steps
@@ -608,6 +626,8 @@ export default function EmailSequencesPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [selectedSequence, setSelectedSequence] = useState<string>('dunning');
+  const [emailLogs, setEmailLogs] = useState<EmailLogEntry[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -648,6 +668,28 @@ export default function EmailSequencesPage() {
       console.error('Failed to fetch sequence settings:', err);
     }
   };
+
+  const fetchEmailLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const response = await fetch('/api/email-logs?limit=100');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailLogs(data.emails || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch email logs:', err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  // Fetch logs when activity tab is selected
+  useEffect(() => {
+    if (selectedSequence === 'activity') {
+      fetchEmailLogs();
+    }
+  }, [selectedSequence]);
 
   const saveSequenceSettings = async (newSettings: Partial<SequenceSettings>) => {
     setSavingSettings(true);
@@ -1011,6 +1053,30 @@ export default function EmailSequencesPage() {
             })}
           </div>
 
+          {/* Activity Tab */}
+          <div className="mt-4 pt-4 border-t">
+            <button
+              onClick={() => setSelectedSequence('activity')}
+              className={`w-full p-4 rounded-xl border text-left transition-all ${
+                selectedSequence === 'activity'
+                  ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 shadow-sm'
+                  : 'bg-card hover:bg-muted/50 border-border'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${selectedSequence === 'activity' ? 'bg-white/80 dark:bg-gray-900/50' : 'bg-violet-50 dark:bg-violet-950/30'} flex items-center justify-center`}>
+                  <Activity className="h-5 w-5 text-violet-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Activity Log</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    All sent emails
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
           {/* Info */}
           <div className="mt-6 p-4 bg-muted/50 rounded-xl">
             <div className="flex items-start gap-2">
@@ -1022,9 +1088,106 @@ export default function EmailSequencesPage() {
           </div>
         </div>
 
-        {/* Right Side - Selected Sequence Details */}
+        {/* Right Side - Selected Sequence Details or Activity Log */}
         <div className="flex-1 overflow-y-auto">
-          {currentSequence && (
+          {selectedSequence === 'activity' ? (
+            // Activity Log View
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-violet-600" />
+                      Email Activity Log
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      All emails sent by your sequences
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchEmailLogs}
+                    disabled={loadingLogs}
+                  >
+                    {loadingLogs ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Refresh'
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingLogs ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : emailLogs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Mail className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">No emails sent yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Emails will appear here once your sequences start sending
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Header */}
+                    <div className="grid grid-cols-[2fr_1.5fr_1fr_100px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground border-b">
+                      <div>Recipient</div>
+                      <div>Email Type</div>
+                      <div>Sent</div>
+                      <div>Status</div>
+                    </div>
+                    {/* Rows */}
+                    {emailLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="grid grid-cols-[2fr_1.5fr_1fr_100px] gap-4 px-4 py-3 items-center hover:bg-muted/50 rounded-lg transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium truncate">{log.customerEmail}</p>
+                          <p className="text-xs text-muted-foreground truncate">{log.customerId}</p>
+                        </div>
+                        <div>
+                          <Badge variant="secondary" className="text-xs">
+                            {log.templateType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(log.sentAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                        <div>
+                          {log.status === 'clicked' ? (
+                            <Badge className="bg-emerald-600 text-xs">
+                              <MousePointerClick className="h-3 w-3 mr-1" />
+                              Clicked
+                            </Badge>
+                          ) : log.status === 'opened' ? (
+                            <Badge className="bg-blue-600 text-xs">
+                              <MailOpen className="h-3 w-3 mr-1" />
+                              Opened
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Sent
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : currentSequence ? (
             <SequenceCard
               sequence={currentSequence}
               settings={sequenceSettings}
@@ -1035,7 +1198,7 @@ export default function EmailSequencesPage() {
               saving={savingSettings}
               alwaysExpanded
             />
-          )}
+          ) : null}
         </div>
       </div>
     </AppLayout>
