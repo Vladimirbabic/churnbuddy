@@ -3,9 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Mail,
-  Plus,
   Pencil,
-  Trash2,
   Save,
   Copy,
   Check,
@@ -13,26 +11,22 @@ import {
   ArrowLeft,
   Loader2,
   Eye,
-  Clock,
   CreditCard,
   UserX,
   Heart,
-  Settings2,
   ChevronDown,
   ChevronRight,
+  Send,
+  Timer,
+  GitBranch,
+  Zap,
+  ArrowDown,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { AppLayout } from '@/components/AppLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 
 interface EmailTemplate {
   id: string;
@@ -60,47 +54,100 @@ interface SequenceSettings {
   goodbye_enabled: boolean;
 }
 
-// Template categories
-const TEMPLATE_CATEGORIES = {
+type EnabledFieldType = 'dunning_enabled' | 'cancel_save_enabled' | 'winback_enabled';
+
+interface SequenceStep {
+  type: string;
+  title: string;
+  subtitle: string;
+  dayField?: string;
+  emailType?: string;
+  conditionField?: string;
+}
+
+interface SequenceDefinition {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  enabledField: EnabledFieldType;
+  trigger: {
+    title: string;
+    subtitle: string;
+  };
+  steps: SequenceStep[];
+  extraSteps?: SequenceStep[];
+}
+
+// Sequence definitions with workflow steps
+const SEQUENCES: Record<string, SequenceDefinition> = {
   dunning: {
-    label: 'Dunning Emails',
+    id: 'dunning',
+    name: 'Dunning Sequence',
     description: 'Recover failed payments with empathetic reminders',
     icon: CreditCard,
     color: 'text-amber-600',
     bgColor: 'bg-amber-50 dark:bg-amber-950/30',
-    templates: [
-      { type: 'dunning_1', name: 'Payment Failed - Gentle Notice', dayField: 'dunning_1_days' },
-      { type: 'dunning_2', name: 'Payment Failed - Friendly Reminder', dayField: 'dunning_2_days' },
-      { type: 'dunning_3', name: 'Payment Failed - Concerned Follow-up', dayField: 'dunning_3_days' },
-      { type: 'dunning_4', name: 'Payment Failed - Final Notice', dayField: 'dunning_4_days' },
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    enabledField: 'dunning_enabled',
+    trigger: {
+      title: 'Payment Failed',
+      subtitle: 'When a payment attempt fails',
+    },
+    steps: [
+      { type: 'email', title: 'Gentle Notice', subtitle: 'First payment reminder', dayField: 'dunning_1_days', emailType: 'dunning_1' },
+      { type: 'email', title: 'Friendly Reminder', subtitle: 'Second payment reminder', dayField: 'dunning_2_days', emailType: 'dunning_2' },
+      { type: 'email', title: 'Concerned Follow-up', subtitle: 'Third payment reminder', dayField: 'dunning_3_days', emailType: 'dunning_3' },
+      { type: 'email', title: 'Final Notice', subtitle: 'Last chance before pause', dayField: 'dunning_4_days', emailType: 'dunning_4' },
     ],
   },
   cancel: {
-    label: 'Cancel Flow Emails',
-    description: 'Re-engage customers who start canceling',
+    id: 'cancel',
+    name: 'Cancel Save Sequence',
+    description: 'Re-engage customers who abandon the cancel flow',
     icon: Heart,
     color: 'text-rose-600',
     bgColor: 'bg-rose-50 dark:bg-rose-950/30',
-    templates: [
-      { type: 'cancel_save_1', name: 'Cancel Save - Check-in', dayField: 'cancel_save_1_days' },
-      { type: 'cancel_save_2', name: 'Cancel Save - Discount Offer', dayField: 'cancel_save_2_days' },
-      { type: 'cancel_goodbye', name: 'Cancellation Confirmed', dayField: null },
+    borderColor: 'border-rose-200 dark:border-rose-800',
+    enabledField: 'cancel_save_enabled',
+    trigger: {
+      title: 'Cancel Flow Abandoned',
+      subtitle: 'When a customer leaves without canceling',
+    },
+    steps: [
+      { type: 'email', title: 'Check-in Email', subtitle: 'Offer help & alternatives', dayField: 'cancel_save_1_days', emailType: 'cancel_save_1' },
+      { type: 'email', title: 'Discount Offer', subtitle: 'Special offer to stay', dayField: 'cancel_save_2_days', emailType: 'cancel_save_2' },
+    ],
+    extraSteps: [
+      { type: 'condition', title: 'If Cancelled', subtitle: 'Customer completed cancellation' },
+      { type: 'email', title: 'Goodbye Email', subtitle: 'Graceful farewell', emailType: 'cancel_goodbye', conditionField: 'goodbye_enabled' },
     ],
   },
   winback: {
-    label: 'Win-back Emails',
+    id: 'winback',
+    name: 'Win-back Sequence',
     description: 'Bring back cancelled customers',
     icon: UserX,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-    templates: [
-      { type: 'winback_1', name: 'Win-back - New Features', dayField: 'winback_1_days' },
-      { type: 'winback_2', name: 'Win-back - New Plans', dayField: 'winback_2_days' },
-      { type: 'winback_3', name: 'Win-back - Data Deletion Warning', dayField: 'winback_3_days' },
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    enabledField: 'winback_enabled',
+    trigger: {
+      title: 'Subscription Cancelled',
+      subtitle: 'When a subscription ends',
+    },
+    steps: [
+      { type: 'email', title: 'New Features', subtitle: "What's improved since they left", dayField: 'winback_1_days', emailType: 'winback_1' },
+      { type: 'email', title: 'New Plans', subtitle: 'More flexible options', dayField: 'winback_2_days', emailType: 'winback_2' },
+      { type: 'email', title: 'Data Warning', subtitle: 'Data deletion notice', dayField: 'winback_3_days', emailType: 'winback_3' },
     ],
   },
 };
 
+// Available variables for templates
 const AVAILABLE_VARIABLES = [
   { name: 'name', description: "Customer's name" },
   { name: 'email', description: "Customer's email" },
@@ -301,7 +348,250 @@ We're rooting for you.
   },
 };
 
-export default function EmailTemplatesPage() {
+// Workflow Node Component
+function WorkflowNode({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  title,
+  subtitle,
+  badge,
+  isLast,
+  onClick,
+}: {
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  badge?: React.ReactNode;
+  isLast?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div className="relative">
+      {/* Node */}
+      <div
+        className={`relative flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-xl border shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
+        <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+          <Icon className={`h-5 w-5 ${iconColor}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm">{title}</p>
+          <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+        </div>
+        {badge}
+      </div>
+
+      {/* Connector Line */}
+      {!isLast && (
+        <div className="flex justify-center py-2">
+          <div className="w-0.5 h-8 bg-border relative">
+            <ArrowDown className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-3 w-3 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Sequence Card with Visual Workflow
+function SequenceCard({
+  sequence,
+  settings,
+  templates,
+  onToggle,
+  onEditEmail,
+  onUpdateDay,
+  saving,
+}: {
+  sequence: SequenceDefinition;
+  settings: SequenceSettings | null;
+  templates: EmailTemplate[];
+  onToggle: (field: string, value: boolean) => void;
+  onEditEmail: (type: string, template?: EmailTemplate) => void;
+  onUpdateDay: (field: string, value: number) => void;
+  saving: boolean;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const Icon = sequence.icon;
+  const isEnabled = settings ? (settings as unknown as Record<string, boolean>)[sequence.enabledField] : false;
+
+  const getTemplateForType = (type: string) => templates.find(t => t.type === type);
+
+  return (
+    <Card className={`overflow-hidden transition-all ${!isEnabled ? 'opacity-60' : ''}`}>
+      {/* Header */}
+      <div
+        className={`px-6 py-4 ${sequence.bgColor} border-b ${sequence.borderColor} cursor-pointer`}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl bg-white/80 dark:bg-gray-900/50 flex items-center justify-center`}>
+              <Icon className={`h-5 w-5 ${sequence.color}`} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-base">{sequence.name}</h3>
+              <p className="text-sm text-muted-foreground">{sequence.description}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <span className="text-sm text-muted-foreground">{isEnabled ? 'Active' : 'Paused'}</span>
+              <Switch
+                checked={isEnabled}
+                onCheckedChange={(checked) => onToggle(sequence.enabledField, checked)}
+                disabled={saving}
+              />
+            </div>
+            {expanded ? (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow */}
+      {expanded && (
+        <CardContent className="p-6">
+          <div className="max-w-md mx-auto">
+            {/* Trigger */}
+            <WorkflowNode
+              icon={Zap}
+              iconBg="bg-purple-100 dark:bg-purple-900/50"
+              iconColor="text-purple-600"
+              title={sequence.trigger.title}
+              subtitle={sequence.trigger.subtitle}
+              badge={<Badge variant="secondary" className="text-xs">Trigger</Badge>}
+            />
+
+            {/* Email Steps */}
+            {sequence.steps.map((step, index) => {
+              const template = step.emailType ? getTemplateForType(step.emailType) : undefined;
+              const dayValue = step.dayField && settings
+                ? (settings as unknown as Record<string, number>)[step.dayField]
+                : 0;
+              const isLastMain = index === sequence.steps.length - 1 && !sequence.extraSteps;
+
+              return (
+                <div key={step.emailType || index}>
+                  {/* Delay indicator */}
+                  {step.dayField && (
+                    <div className="flex justify-center py-1">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full text-xs text-muted-foreground">
+                        <Timer className="h-3 w-3" />
+                        <span>Wait</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="90"
+                          value={dayValue}
+                          onChange={(e) => step.dayField && onUpdateDay(step.dayField, parseInt(e.target.value) || 0)}
+                          className="w-12 px-1.5 py-0.5 rounded border border-input bg-background text-center text-xs"
+                          disabled={saving || !isEnabled}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span>days</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <WorkflowNode
+                    icon={Send}
+                    iconBg={sequence.bgColor}
+                    iconColor={sequence.color}
+                    title={step.title}
+                    subtitle={step.subtitle}
+                    isLast={isLastMain && index === sequence.steps.length - 1}
+                    badge={
+                      <Badge
+                        variant={template ? 'default' : 'outline'}
+                        className={`text-xs cursor-pointer ${template ? 'bg-emerald-600 hover:bg-emerald-700' : 'hover:bg-muted'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          step.emailType && onEditEmail(step.emailType, template);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        {template ? 'Edit' : 'Setup'}
+                      </Badge>
+                    }
+                    onClick={() => step.emailType && onEditEmail(step.emailType, template)}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Extra Steps (like goodbye email with condition) */}
+            {sequence.extraSteps && sequence.extraSteps.map((step, index) => {
+              if (step.type === 'condition') {
+                return (
+                  <WorkflowNode
+                    key={`condition-${index}`}
+                    icon={GitBranch}
+                    iconBg="bg-gray-100 dark:bg-gray-800"
+                    iconColor="text-gray-600"
+                    title={step.title}
+                    subtitle={step.subtitle}
+                    badge={<Badge variant="outline" className="text-xs">Condition</Badge>}
+                  />
+                );
+              }
+
+              const template = step.emailType ? getTemplateForType(step.emailType) : undefined;
+              const conditionEnabled = step.conditionField && settings
+                ? (settings as unknown as Record<string, boolean>)[step.conditionField]
+                : true;
+
+              return (
+                <div key={step.emailType || index}>
+                  <WorkflowNode
+                    icon={Send}
+                    iconBg={conditionEnabled ? sequence.bgColor : 'bg-muted'}
+                    iconColor={conditionEnabled ? sequence.color : 'text-muted-foreground'}
+                    title={step.title}
+                    subtitle={step.subtitle}
+                    isLast={index === sequence.extraSteps!.length - 1}
+                    badge={
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {step.conditionField && (
+                          <Switch
+                            checked={conditionEnabled}
+                            onCheckedChange={(checked) => step.conditionField && onToggle(step.conditionField, checked)}
+                            disabled={saving}
+                          />
+                        )}
+                        <Badge
+                          variant={template ? 'default' : 'outline'}
+                          className={`text-xs cursor-pointer ${template ? 'bg-emerald-600 hover:bg-emerald-700' : 'hover:bg-muted'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            step.emailType && onEditEmail(step.emailType, template);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          {template ? 'Edit' : 'Setup'}
+                        </Badge>
+                      </div>
+                    }
+                    onClick={() => step.emailType && onEditEmail(step.emailType, template)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+export default function EmailSequencesPage() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [sequenceSettings, setSequenceSettings] = useState<SequenceSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -312,12 +602,6 @@ export default function EmailTemplatesPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    dunning: true,
-    cancel: true,
-    winback: true,
-  });
-  const [activeTab, setActiveTab] = useState('templates');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -335,7 +619,7 @@ export default function EmailTemplatesPage() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/email-templates');
+      const response = await fetch('/api/email-sequences');
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
@@ -378,10 +662,6 @@ export default function EmailTemplatesPage() {
     }
   };
 
-  const getTemplateForType = (type: string): EmailTemplate | undefined => {
-    return templates.find(t => t.type === type);
-  };
-
   const handleEdit = (type: string, existingTemplate?: EmailTemplate) => {
     if (existingTemplate) {
       setEditingTemplate(existingTemplate);
@@ -394,14 +674,11 @@ export default function EmailTemplatesPage() {
       });
       setIsCreating(false);
     } else {
-      // Create from default template
       const defaultTemplate = DEFAULT_TEMPLATES[type];
       setEditingTemplate(null);
       setFormData({
         type,
-        name: Object.values(TEMPLATE_CATEGORIES)
-          .flatMap(c => c.templates)
-          .find(t => t.type === type)?.name || type,
+        name: getTemplateName(type),
         subject: defaultTemplate?.subject || '',
         body: defaultTemplate?.body || '',
         is_active: true,
@@ -410,6 +687,22 @@ export default function EmailTemplatesPage() {
     }
     setIsEditing(true);
     setError(null);
+  };
+
+  const getTemplateName = (type: string): string => {
+    const names: Record<string, string> = {
+      dunning_1: 'Payment Failed - Gentle Notice',
+      dunning_2: 'Payment Failed - Friendly Reminder',
+      dunning_3: 'Payment Failed - Concerned Follow-up',
+      dunning_4: 'Payment Failed - Final Notice',
+      cancel_save_1: 'Cancel Save - Check-in',
+      cancel_save_2: 'Cancel Save - Discount Offer',
+      cancel_goodbye: 'Cancellation Confirmed',
+      winback_1: 'Win-back - New Features',
+      winback_2: 'Win-back - New Plans',
+      winback_3: 'Win-back - Data Deletion Warning',
+    };
+    return names[type] || type;
   };
 
   const handleBack = () => {
@@ -429,8 +722,8 @@ export default function EmailTemplatesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/email-templates', {
-        method: 'POST',
+      const response = await fetch('/api/email-sequences', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingTemplate?.id,
@@ -449,22 +742,6 @@ export default function EmailTemplatesPage() {
       setError('Failed to save template. Please try again.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this template? It will revert to the default.')) return;
-
-    try {
-      const response = await fetch(`/api/email-templates?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setTemplates(templates.filter(t => t.id !== id));
-      }
-    } catch (err) {
-      console.error('Failed to delete template:', err);
     }
   };
 
@@ -487,17 +764,13 @@ export default function EmailTemplatesPage() {
     return result;
   };
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }));
-  };
-
   if (loading) {
     return (
-      <AppLayout title="Email Templates" description="Customize your automated emails">
+      <AppLayout title="Email Sequences" description="Automated email workflows for customer retention">
         <div className="flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="text-muted-foreground">Loading templates...</p>
+            <p className="text-muted-foreground">Loading sequences...</p>
           </div>
         </div>
       </AppLayout>
@@ -518,7 +791,7 @@ export default function EmailTemplatesPage() {
               </Button>
               <div className="h-6 w-px bg-border" />
               <span className="text-lg font-semibold">
-                {isCreating ? 'Create Email Template' : 'Edit Email Template'}
+                {isCreating ? 'Create Email' : 'Edit Email'}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -531,7 +804,7 @@ export default function EmailTemplatesPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save Template
+                Save Email
               </Button>
             </div>
           </div>
@@ -551,7 +824,7 @@ export default function EmailTemplatesPage() {
           <div className="w-[40%] border-r overflow-y-auto p-6 space-y-6">
             {/* Template Name */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Template Name *</label>
+              <label className="text-sm font-medium">Email Name *</label>
               <input
                 type="text"
                 value={formData.name}
@@ -620,7 +893,7 @@ export default function EmailTemplatesPage() {
                 className="h-4 w-4 rounded border-input"
               />
               <label htmlFor="is_active" className="text-sm font-medium">
-                Template is active
+                Email is active
               </label>
             </div>
           </div>
@@ -679,302 +952,39 @@ export default function EmailTemplatesPage() {
     );
   }
 
-  // List view
+  // Main view - Visual Workflow Cards
   return (
-    <AppLayout title="Email Templates" description="Customize your automated email sequences">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="templates" className="gap-2">
-            <Mail className="h-4 w-4" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings2 className="h-4 w-4" />
-            Sequence Timing
-          </TabsTrigger>
-        </TabsList>
+    <AppLayout title="Email Sequences" description="Automated email workflows for customer retention">
+      <div className="space-y-6 max-w-4xl">
+        {/* Info Banner */}
+        <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
+              <Mail className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-medium text-blue-900 dark:text-blue-100">Email sequences run automatically</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-0.5">
+                Toggle sequences on/off, adjust timing, and customize each email. Changes save automatically.
+              </p>
+            </div>
+          </div>
+        </div>
 
-        <TabsContent value="templates" className="space-y-6">
-          {Object.entries(TEMPLATE_CATEGORIES).map(([key, category]) => {
-            const Icon = category.icon;
-            const isExpanded = expandedCategories[key];
-
-            return (
-              <Card key={key}>
-                <CardHeader
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => toggleCategory(key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${category.bgColor}`}>
-                        <Icon className={`h-5 w-5 ${category.color}`} />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{category.label}</CardTitle>
-                        <CardDescription>{category.description}</CardDescription>
-                      </div>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                </CardHeader>
-                {isExpanded && (
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      {category.templates.map((templateInfo) => {
-                        const existingTemplate = getTemplateForType(templateInfo.type);
-                        const isCustomized = !!existingTemplate;
-                        const dayValue = templateInfo.dayField && sequenceSettings
-                          ? (sequenceSettings as unknown as Record<string, number | boolean>)[templateInfo.dayField]
-                          : null;
-
-                        return (
-                          <div
-                            key={templateInfo.type}
-                            className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                {dayValue !== null && (
-                                  <Badge variant="outline" className="gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    Day {dayValue}
-                                  </Badge>
-                                )}
-                                {templateInfo.dayField === null && (
-                                  <Badge variant="outline" className="gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    Immediate
-                                  </Badge>
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium">{templateInfo.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {isCustomized ? (
-                                    <span className="text-emerald-600">Customized</span>
-                                  ) : (
-                                    'Using default template'
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(templateInfo.type, existingTemplate)}
-                              >
-                                <Pencil className="h-4 w-4 mr-2" />
-                                {isCustomized ? 'Edit' : 'Customize'}
-                              </Button>
-                              {isCustomized && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive"
-                                  onClick={() => handleDelete(existingTemplate.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          {sequenceSettings && (
-            <>
-              {/* Dunning Sequence */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                        <CreditCard className="h-5 w-5 text-amber-600" />
-                      </div>
-                      <div>
-                        <CardTitle>Dunning Email Sequence</CardTitle>
-                        <CardDescription>
-                          Sent after a payment fails
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Enabled</span>
-                      <input
-                        type="checkbox"
-                        checked={sequenceSettings.dunning_enabled}
-                        onChange={(e) => saveSequenceSettings({ dunning_enabled: e.target.checked })}
-                        className="h-4 w-4 rounded border-input"
-                        disabled={savingSettings}
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-4">
-                    {[
-                      { label: 'Email 1', field: 'dunning_1_days' },
-                      { label: 'Email 2', field: 'dunning_2_days' },
-                      { label: 'Email 3', field: 'dunning_3_days' },
-                      { label: 'Email 4', field: 'dunning_4_days' },
-                    ].map(({ label, field }) => (
-                      <div key={field} className="space-y-2">
-                        <label className="text-sm font-medium">{label}</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Day</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="30"
-                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
-                            onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
-                            className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
-                            disabled={savingSettings || !sequenceSettings.dunning_enabled}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Cancel Save Sequence */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30">
-                        <Heart className="h-5 w-5 text-rose-600" />
-                      </div>
-                      <div>
-                        <CardTitle>Cancel Save Emails</CardTitle>
-                        <CardDescription>
-                          Sent after someone abandons the cancel flow
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Enabled</span>
-                      <input
-                        type="checkbox"
-                        checked={sequenceSettings.cancel_save_enabled}
-                        onChange={(e) => saveSequenceSettings({ cancel_save_enabled: e.target.checked })}
-                        className="h-4 w-4 rounded border-input"
-                        disabled={savingSettings}
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    {[
-                      { label: 'Email 1', field: 'cancel_save_1_days' },
-                      { label: 'Email 2', field: 'cancel_save_2_days' },
-                    ].map(({ label, field }) => (
-                      <div key={field} className="space-y-2">
-                        <label className="text-sm font-medium">{label}</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Day</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="30"
-                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
-                            onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
-                            className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
-                            disabled={savingSettings || !sequenceSettings.cancel_save_enabled}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Goodbye Email</label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Enabled</span>
-                        <input
-                          type="checkbox"
-                          checked={sequenceSettings.goodbye_enabled}
-                          onChange={(e) => saveSequenceSettings({ goodbye_enabled: e.target.checked })}
-                          className="h-4 w-4 rounded border-input"
-                          disabled={savingSettings}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Win-back Sequence */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                        <UserX className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <CardTitle>Win-back Email Sequence</CardTitle>
-                        <CardDescription>
-                          Sent after a subscription is cancelled
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Enabled</span>
-                      <input
-                        type="checkbox"
-                        checked={sequenceSettings.winback_enabled}
-                        onChange={(e) => saveSequenceSettings({ winback_enabled: e.target.checked })}
-                        className="h-4 w-4 rounded border-input"
-                        disabled={savingSettings}
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    {[
-                      { label: 'Email 1', field: 'winback_1_days' },
-                      { label: 'Email 2', field: 'winback_2_days' },
-                      { label: 'Email 3', field: 'winback_3_days' },
-                    ].map(({ label, field }) => (
-                      <div key={field} className="space-y-2">
-                        <label className="text-sm font-medium">{label}</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Day</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="90"
-                            value={(sequenceSettings as unknown as Record<string, number>)[field]}
-                            onChange={(e) => saveSequenceSettings({ [field]: parseInt(e.target.value) || 0 })}
-                            className="w-16 px-2 py-1 rounded border border-input bg-background text-sm"
-                            disabled={savingSettings || !sequenceSettings.winback_enabled}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Sequence Cards */}
+        {Object.values(SEQUENCES).map((sequence) => (
+          <SequenceCard
+            key={sequence.id}
+            sequence={sequence}
+            settings={sequenceSettings}
+            templates={templates}
+            onToggle={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
+            onEditEmail={handleEdit}
+            onUpdateDay={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
+            saving={savingSettings}
+          />
+        ))}
+      </div>
     </AppLayout>
   );
 }

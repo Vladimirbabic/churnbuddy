@@ -65,7 +65,7 @@ interface NavItem {
 const AUTOMATION_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', customIcon: '/img/dashboard.svg' },
   { href: '/cancel-flows', label: 'Cancel Flows', customIcon: '/img/cancel-flows.svg' },
-  { href: '/email-templates', label: 'Email Templates', customIcon: '/img/email-templates.svg' },
+  { href: '/email-sequences', label: 'Email Sequences', customIcon: '/img/email-templates.svg' },
 ];
 
 // Workspace section - account management
