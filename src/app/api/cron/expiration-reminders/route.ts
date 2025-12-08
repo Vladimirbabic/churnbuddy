@@ -62,7 +62,7 @@ function getStripeClient(apiKey?: string): Stripe {
   if (!key) {
     throw new Error('Stripe API key not configured');
   }
-  return new Stripe(key, { apiVersion: '2025-04-30.basil' });
+  return new Stripe(key, { apiVersion: '2023-10-16' });
 }
 
 /**
