@@ -900,6 +900,9 @@ function CancelFlowsInner() {
   const [editingFlow, setEditingFlow] = useState<CancelFlow | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [saveToastMessage, setSaveToastMessage] = useState<string | null>(null);
+  const [wasNewFlow, setWasNewFlow] = useState(false); // Track if this was a new flow creation
 
   // Preview state
   const [previewStep, setPreviewStep] = useState<PreviewStep>('feedback');
@@ -1130,15 +1133,24 @@ function CancelFlowsInner() {
 
       const data = await response.json();
       const savedFlow = data.flow ? mapFlowFromApi(data.flow) : null;
+      const isFirstTimeSave = !editingFlow.id; // This was a new flow
 
       if (savedFlow) {
         setEditingFlow(savedFlow);
-        if (!editingFlow.id) {
+        if (isFirstTimeSave) {
           router.replace(`/cancel-flows?edit=${savedFlow.id}`);
         }
       }
 
-      setShowSuccess(true);
+      // Show modal only on first creation, toast for subsequent saves
+      if (isFirstTimeSave) {
+        setWasNewFlow(true);
+        setShowSuccess(true);
+      } else {
+        // Show toast for subsequent saves
+        setSaveToastMessage('Changes saved successfully');
+        setTimeout(() => setSaveToastMessage(null), 3000);
+      }
       fetchFlows();
     } catch (err) {
       setError('Failed to save cancel flow');
@@ -1374,80 +1386,91 @@ function CancelFlowsInner() {
     );
   }
 
-  // Success screen after saving
-  if (showSuccess && editingFlow?.id) {
-    return (
-      <div className="min-h-screen bg-background">
-        {/* Simple Header */}
-        <header className="border-b bg-background">
-          <div className="flex items-center justify-between px-6 h-14">
-            <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <Shield className="h-4 w-4 text-primary-foreground" />
-                </div>
-                <span className="font-semibold">Exit Loop</span>
-              </Link>
-            </div>
-          </div>
-        </header>
+  // Code Modal Component (for both success and "Get Code" button)
+  const CodeModal = ({ isOpen, onClose, isSuccess = false }: { isOpen: boolean; onClose: () => void; isSuccess?: boolean }) => {
+    if (!isOpen || !editingFlow?.id) return null;
 
-        <div className="flex items-center justify-center py-24">
-          <div className="max-w-2xl w-full mx-auto px-6">
-            <Card>
-              <CardHeader className="text-center">
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+        {/* Modal */}
+        <div className="relative bg-background rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <div className="p-6">
+            {/* Header */}
+            <div className="text-center mb-6">
+              {isSuccess && (
                 <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
                   <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                 </div>
-                <CardTitle className="text-2xl">Your cancel flow is ready!</CardTitle>
-                <CardDescription>
-                  Add the following code to your website to enable the cancel flow
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Flow Summary */}
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{editingFlow.name}</span>
-                    <Badge variant="default" className="bg-emerald-600">Active</Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Feedback options: {editingFlow.feedbackOptions.length}</p>
-                    <p>Alternative plans: {editingFlow.alternativePlans.length}</p>
-                    <p>Special offer: {editingFlow.discountPercent}% off for {editingFlow.discountDuration} months</p>
-                  </div>
-                </div>
+              )}
+              <h2 className="text-2xl font-semibold">
+                {isSuccess ? 'Your cancel flow is ready!' : 'Integration Code'}
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Add the following code to your website to enable the cancel flow
+              </p>
+            </div>
 
-                {/* Integration Code */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-muted-foreground" />
-                    <label className="text-sm font-medium">Integration Code</label>
-                  </div>
-                  <CodeSnippet code={getIntegrationCode(editingFlow.id)} />
-                  <p className="text-xs text-muted-foreground">
-                    Replace <code className="bg-muted px-1 rounded">CUSTOMER_ID</code> and <code className="bg-muted px-1 rounded">SUBSCRIPTION_ID</code> with the Stripe IDs from your backend.
-                  </p>
+            {/* Flow Summary (only on success) */}
+            {isSuccess && (
+              <div className="p-4 bg-muted/50 rounded-lg mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">{editingFlow.name}</span>
+                  <Badge variant="default" className="bg-emerald-600">Active</Badge>
                 </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Feedback options: {editingFlow.feedbackOptions.length}</p>
+                  <p>Alternative plans: {editingFlow.alternativePlans.length}</p>
+                  <p>Special offer: {editingFlow.discountPercent}% off for {editingFlow.discountDuration} months</p>
+                </div>
+              </div>
+            )}
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setShowSuccess(false)} className="flex-1">
+            {/* Integration Code */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Code className="h-4 w-4 text-muted-foreground" />
+                <label className="text-sm font-medium">Integration Code</label>
+              </div>
+              <CodeSnippet code={getIntegrationCode(editingFlow.id)} />
+              <p className="text-xs text-muted-foreground">
+                Replace <code className="bg-muted px-1 rounded">CUSTOMER_ID</code> and <code className="bg-muted px-1 rounded">SUBSCRIPTION_ID</code> with the Stripe IDs from your backend.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-6">
+              {isSuccess ? (
+                <>
+                  <Button variant="outline" onClick={onClose} className="flex-1">
                     <Pencil className="mr-2 h-4 w-4" />
-                    Edit Flow
+                    Continue Editing
                   </Button>
                   <Button onClick={handleBack} className="flex-1">
                     Done
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </>
+              ) : (
+                <Button onClick={onClose} className="w-full">
+                  Done
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
-  }
+  };
 
   // Editor view - Full screen with 40/60 split
   if (isEditing && editingFlow) {
@@ -1471,6 +1494,13 @@ function CancelFlowsInner() {
               />
             </div>
             <div className="flex items-center gap-3">
+              {/* Get Code button - only show after flow has been saved */}
+              {editingFlow.id && (
+                <Button variant="outline" size="sm" onClick={() => setShowCodeModal(true)}>
+                  <Code className="h-4 w-4 mr-2" />
+                  Get Code
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleBack}>
                 Cancel
               </Button>
@@ -1485,6 +1515,16 @@ function CancelFlowsInner() {
             </div>
           </div>
         </header>
+
+        {/* Success Toast */}
+        {saveToastMessage && (
+          <div className="fixed top-4 right-4 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg shadow-lg">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="text-sm font-medium">{saveToastMessage}</span>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -2142,6 +2182,20 @@ function CancelFlowsInner() {
             </div>
           </div>
         )}
+
+        {/* Code Modal (for "Get Code" button) */}
+        <CodeModal
+          isOpen={showCodeModal}
+          onClose={() => setShowCodeModal(false)}
+          isSuccess={false}
+        />
+
+        {/* Success Modal (shown on first-time creation) */}
+        <CodeModal
+          isOpen={showSuccess}
+          onClose={() => setShowSuccess(false)}
+          isSuccess={true}
+        />
       </div>
     );
   }
