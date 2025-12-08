@@ -27,9 +27,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Filter to only verified domains
-    const verifiedDomains = domains?.data?.filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const domainList = Array.isArray(domains) ? domains : (domains as any)?.data || [];
+    const verifiedDomains = domainList.filter(
       (domain: { status: string }) => domain.status === 'verified'
-    ) || [];
+    );
 
     // Get the possible sender emails (from verified domains)
     const senderOptions = verifiedDomains.map((domain: { name: string }) => ({
