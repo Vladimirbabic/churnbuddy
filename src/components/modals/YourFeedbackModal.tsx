@@ -114,22 +114,25 @@ export function YourFeedbackModal({
         {/* Header */}
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
-          style={useColorsProp && designStyle !== 9 ? { backgroundColor: colors.background } : undefined}
+          style={useColorsProp && designStyle !== 9 ? {
+            backgroundColor: designStyle === 3 ? 'white' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#374151' : (designStyle === 8 ? undefined : colors.background)))),
+            background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+          } : undefined}
         >
           <div className="flex items-center gap-2">
-            {sc.header.iconBackground ? (
-              <div className={`w-8 h-8 rounded-full ${sc.header.iconBackground} flex items-center justify-center`}>
+            {sc.header.iconBackground && designStyle !== 3 && designStyle !== 8 ? (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center`} style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.primary}dd)` }}>
                 <Heart className={`h-4 w-4 ${sc.header.iconColor}`} />
               </div>
             ) : (
               <Heart
                 className="h-4 w-4"
-                style={useColorsProp && designStyle !== 9 ? { color: colors.primary, fill: colors.primary } : (designStyle === 9 ? { color: '#78716c', fill: '#78716c' } : undefined)}
+                style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary, fill: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : (designStyle === 9 ? { color: '#78716c', fill: '#78716c' } : undefined)}
               />
             )}
             <span
               className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
-              style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined}
+              style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : undefined}
             >
               {designStyle === 4 ? 'FEEDBACK' : 'Your Feedback'}
             </span>
@@ -139,7 +142,7 @@ export function YourFeedbackModal({
             className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
+            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
@@ -149,13 +152,13 @@ export function YourFeedbackModal({
           <h2
             id="feedback-title"
             className={`${sc.content.titleClasses} ${sc.fonts?.heading || ''}`}
-            style={useColorsProp ? { color: colors.text } : undefined}
+            style={useColorsProp ? { color: sc.isDark ? '#f3f4f6' : colors.text } : undefined}
           >
             {designStyle === 4 ? copy.title.toUpperCase() : copy.title}
           </h2>
 
           {/* Subtext */}
-          <p className={sc.content.subtitleClasses} style={useColorsProp ? { color: colors.text, opacity: 0.7 } : undefined}>
+          <p className={sc.content.subtitleClasses} style={useColorsProp ? { color: sc.isDark ? '#9ca3af' : colors.text, opacity: sc.isDark ? 1 : 0.7 } : undefined}>
             {copy.subtitle}
           </p>
 
@@ -173,7 +176,8 @@ export function YourFeedbackModal({
                   style={useColorsProp ? {
                     backgroundColor: isSelected ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
                     borderColor: isSelected ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
-                    borderWidth: '2px',
+                    borderWidth: designStyle === 2 ? '1px' : '2px',
+                    borderRadius: designStyle === 2 ? '0' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined),
                   } : undefined}
                   aria-pressed={isSelected}
                 >
@@ -196,7 +200,7 @@ export function YourFeedbackModal({
                   )}
 
                   {/* Label */}
-                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'}`} style={useColorsProp ? { color: colors.text } : undefined}>
+                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'}`} style={useColorsProp ? { color: sc.isDark ? (isSelected ? colors.text : '#f3f4f6') : colors.text } : undefined}>
                     {option.label}
                   </span>
 
@@ -222,7 +226,8 @@ export function YourFeedbackModal({
                   style={useColorsProp ? {
                     backgroundColor: selectedOption === 'other' ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
                     borderColor: selectedOption === 'other' ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
-                    borderWidth: '2px',
+                    borderWidth: designStyle === 2 ? '1px' : '2px',
+                    borderRadius: designStyle === 2 ? '0' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined),
                   } : undefined}
                   aria-pressed={selectedOption === 'other'}
                 >
@@ -245,7 +250,7 @@ export function YourFeedbackModal({
                   )}
 
                   {/* Label */}
-                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'} ${sc.option.default.textColor}`} style={useColorsProp ? { color: colors.text } : undefined}>
+                  <span className={`flex-1 ${designStyle === 4 ? 'font-bold' : 'font-medium'} ${sc.option.default.textColor}`} style={useColorsProp ? { color: sc.isDark ? (selectedOption === 'other' ? colors.text : '#f3f4f6') : colors.text } : undefined}>
                     Other reason
                   </span>
 
@@ -280,7 +285,12 @@ export function YourFeedbackModal({
             <button
               onClick={onBack}
               className={`${sc.footer.backButton} transition-colors`}
-              style={useColorsProp ? { backgroundColor: colors.background, color: colors.text } : undefined}
+              style={useColorsProp ? {
+                backgroundColor: designStyle === 2 ? 'transparent' : (sc.isDark ? '#374151' : colors.background),
+                color: designStyle === 2 ? '#6b7280' : (sc.isDark ? '#d1d5db' : colors.text),
+                borderRadius: designStyle === 2 ? '0' : undefined,
+                padding: designStyle === 2 ? '0.5rem 1.25rem' : undefined,
+              } : undefined}
             >
               {designStyle === 4 ? 'BACK' : 'Back'}
             </button>
@@ -288,7 +298,11 @@ export function YourFeedbackModal({
               onClick={handleNext}
               disabled={isNextDisabled}
               className={`${sc.footer.primaryButton} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-              style={useColorsProp ? { backgroundColor: colors.primary, backgroundImage: 'none' } : undefined}
+              style={useColorsProp ? {
+                backgroundColor: colors.primary,
+                backgroundImage: 'none',
+                borderRadius: designStyle === 2 ? '0' : undefined,
+              } : undefined}
             >
               {designStyle === 4 ? 'NEXT →' : 'Next'}
             </button>

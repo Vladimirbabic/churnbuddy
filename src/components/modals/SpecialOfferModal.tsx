@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Tag, Clock } from 'lucide-react';
 import { getDesignStyleConfig } from '@/lib/designStyles';
 
@@ -64,6 +64,33 @@ export function SpecialOfferModal({
   designStyle = 1,
 }: SpecialOfferModalProps) {
   const styleConfig = getDesignStyleConfig(designStyle);
+  const [timeLeft, setTimeLeft] = useState(countdownMinutes * 60); // Convert to seconds
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!showCountdown || !isOpen) return;
+
+    setTimeLeft(countdownMinutes * 60); // Reset when modal opens or countdown minutes change
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 0) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, countdownMinutes, showCountdown]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Replace placeholders in title
   const processedTitle = copy.title
@@ -88,22 +115,25 @@ export function SpecialOfferModal({
         {/* Header */}
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
-          style={useColorsProp && designStyle !== 9 ? { backgroundColor: colors.background } : undefined}
+          style={useColorsProp && designStyle !== 9 ? {
+            backgroundColor: designStyle === 3 ? 'white' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#374151' : (designStyle === 8 ? undefined : colors.background)))),
+            background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+          } : undefined}
         >
           <div className="flex items-center gap-2">
-            {sc.header.iconBackground ? (
-              <div className={`w-8 h-8 rounded-full ${sc.header.iconBackground} flex items-center justify-center`}>
+            {sc.header.iconBackground && designStyle !== 3 && designStyle !== 8 ? (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center`} style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.primary}dd)` }}>
                 <Tag className={`h-4 w-4 ${sc.header.iconColor}`} />
               </div>
             ) : (
               <Tag
                 className="h-4 w-4"
-                style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : (designStyle === 9 ? { color: '#78716c' } : undefined)}
+                style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : (designStyle === 9 ? { color: '#78716c' } : undefined)}
               />
             )}
             <span
               className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
-              style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined}
+              style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : undefined}
             >
               {designStyle === 4 ? 'SPECIAL OFFER' : 'Special Offer'}
             </span>
@@ -113,7 +143,7 @@ export function SpecialOfferModal({
             className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
+            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: (designStyle === 4 || designStyle === 8) ? 'white' : colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
@@ -123,13 +153,13 @@ export function SpecialOfferModal({
           <h2
             id="special-offer-title"
             className={`${sc.content.titleClasses} ${sc.fonts?.heading || ''}`}
-            style={useColorsProp ? { color: colors.text } : undefined}
+            style={useColorsProp ? { color: sc.isDark ? '#f3f4f6' : colors.text } : undefined}
           >
             {designStyle === 4 ? processedTitle.toUpperCase() : processedTitle}
           </h2>
 
           {/* Subtext */}
-          <p className={sc.content.subtitleClasses} style={useColorsProp ? { color: colors.text, opacity: 0.7 } : undefined}>
+          <p className={sc.content.subtitleClasses} style={useColorsProp ? { color: sc.isDark ? '#9ca3af' : colors.text, opacity: sc.isDark ? 1 : 0.7 } : undefined}>
             {copy.subtitle}
           </p>
 
@@ -145,7 +175,11 @@ export function SpecialOfferModal({
               designStyle === 9 ? 'rounded-md bg-amber-50 border border-amber-200' :
               'rounded-2xl'
             }`}
-            style={useColorsProp ? { backgroundColor: colors.background, border: `1px solid ${colors.primary}20` } : undefined}
+            style={useColorsProp ? {
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.primary}20`,
+              borderRadius: designStyle === 2 ? '0' : undefined,
+            } : undefined}
           >
             {/* Time-Limited Label */}
             {showCountdown && (
@@ -164,7 +198,7 @@ export function SpecialOfferModal({
                   style={useColorsProp ? { color: colors.primary } : undefined}
                 />
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider ${
+                  className={`text-sm font-bold ${
                     designStyle === 4 ? 'text-black' :
                     designStyle === 5 ? 'text-purple-400' :
                     designStyle === 3 ? 'text-violet-600' :
@@ -176,7 +210,7 @@ export function SpecialOfferModal({
                   }`}
                   style={useColorsProp ? { color: colors.primary } : undefined}
                 >
-                  {countdownMinutes} Minutes Left
+                  {formatTime(timeLeft)} left
                 </span>
               </div>
             )}
@@ -190,7 +224,7 @@ export function SpecialOfferModal({
                 designStyle === 8 ? 'text-purple-600' :
                 sc.isDark ? 'text-white' : ''
               }`}
-              style={useColorsProp ? { color: colors.text } : undefined}
+              style={useColorsProp ? { color: sc.isDark ? '#f3f4f6' : colors.text } : undefined}
             >
               {discountPercent}% off for {discountDuration}
             </p>
@@ -208,7 +242,11 @@ export function SpecialOfferModal({
                 designStyle === 9 ? 'bg-stone-800 text-white rounded-md' :
                 'text-white rounded-lg hover:opacity-90'
               }`}
-              style={useColorsProp ? { backgroundColor: colors.primary, backgroundImage: 'none' } : undefined}
+              style={useColorsProp ? {
+                backgroundColor: colors.primary,
+                backgroundImage: 'none',
+                borderRadius: designStyle === 2 ? '0' : undefined,
+              } : undefined}
             >
               {designStyle === 4 ? 'ACCEPT THIS OFFER' : 'Accept This Offer'}
             </button>
@@ -219,14 +257,24 @@ export function SpecialOfferModal({
             <button
               onClick={onBack}
               className={`${sc.footer.backButton} transition-colors`}
-              style={useColorsProp ? { backgroundColor: colors.background, color: colors.text } : undefined}
+              style={useColorsProp ? {
+                backgroundColor: designStyle === 2 ? 'transparent' : (sc.isDark ? '#374151' : colors.background),
+                color: designStyle === 2 ? '#6b7280' : (sc.isDark ? '#d1d5db' : colors.text),
+                borderRadius: designStyle === 2 ? '0' : undefined,
+                padding: designStyle === 2 ? '0.5rem 1.25rem' : undefined,
+              } : undefined}
             >
               {designStyle === 4 ? 'BACK' : 'Back'}
             </button>
             <button
               onClick={onDecline}
               className={`${sc.footer.backButton} transition-colors`}
-              style={useColorsProp ? { backgroundColor: '#f3f4f6', color: '#6b7280' } : undefined}
+              style={useColorsProp ? {
+                backgroundColor: designStyle === 2 ? 'transparent' : (sc.isDark ? '#4b5563' : '#f3f4f6'),
+                color: sc.isDark ? '#d1d5db' : '#6b7280',
+                borderRadius: designStyle === 2 ? '0' : undefined,
+                padding: designStyle === 2 ? '0.5rem 1.25rem' : undefined,
+              } : undefined}
             >
               {designStyle === 4 ? 'DECLINE OFFER' : 'Decline Offer'}
             </button>
