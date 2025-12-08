@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getSequenceMetrics } from '@/lib/emailService';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import Stripe from 'stripe';
@@ -310,6 +311,12 @@ export async function GET(request: NextRequest) {
       ? Math.round((recoveries / failedPayments) * 100)
       : 0;
 
+    // Get email sequence metrics
+    const sequenceMetrics = await getSequenceMetrics({
+      organizationId: orgId,
+      days,
+    });
+
     return NextResponse.json({
       summary: {
         failedPayments,
@@ -326,6 +333,7 @@ export async function GET(request: NextRequest) {
         totalMrr: totalMrr / 100,
         activeSubscriptions,
       },
+      sequenceMetrics, // Email sequence performance
       events: formattedEvents.slice(0, 50),
       period: {
         days,

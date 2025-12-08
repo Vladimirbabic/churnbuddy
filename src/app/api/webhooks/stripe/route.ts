@@ -14,6 +14,8 @@ import {
   scheduleDunningSequence,
   scheduleWinbackSequence,
   cancelPendingEmails,
+  getEmailsSentToCustomer,
+  recordSequenceAttribution,
   type EmailContext,
 } from '@/lib/emailService';
 
@@ -115,6 +117,10 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
         break;
 
       case 'customer.subscription.deleted':
@@ -462,6 +468,38 @@ async function handleSubscriptionUpdated(
         customerId,
         templateTypes: ['dunning_1', 'dunning_2', 'dunning_3', 'dunning_4'],
       });
+
+      // Check if dunning emails were sent and record attribution
+      const dunningEmailsSent = await getEmailsSentToCustomer({
+        organizationId,
+        customerId,
+        sequenceType: 'dunning',
+        sinceDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+      });
+
+      if (dunningEmailsSent.length > 0) {
+        // Dunning emails were sent, attribute the recovery to the sequence
+        await recordSequenceAttribution({
+          organizationId,
+          customerId,
+          customerEmail,
+          sequenceType: 'dunning',
+          conversionType: 'payment_recovered',
+          emailsSent: dunningEmailsSent.length,
+          lastEmailType: dunningEmailsSent[0]?.template_type,
+          lastEmailSentAt: dunningEmailsSent[0]?.sent_at ? new Date(dunningEmailsSent[0].sent_at) : undefined,
+          subscriptionId: subscription.id,
+          details: {
+            recovered_amount: monthlyAmount,
+            currency: subscription.currency,
+            days_since_first_email: dunningEmailsSent.length > 0
+              ? Math.floor((Date.now() - new Date(dunningEmailsSent[dunningEmailsSent.length - 1].sent_at).getTime()) / (1000 * 60 * 60 * 24))
+              : 0,
+          },
+        });
+
+        console.log(`Attribution recorded: Dunning sequence led to recovery (${dunningEmailsSent.length} emails sent)`);
+      }
     }
 
     console.log(`Subscription ${subscription.id} recovered! MRR recovered: ${monthlyAmount / 100} ${subscription.currency}`);
@@ -486,5 +524,93 @@ async function handleSubscriptionUpdated(
       });
 
     console.log(`Subscription ${subscription.id} status changed: ${previousStatus} -> ${subscription.status}`);
+  }
+}
+
+/**
+ * Handle customer.subscription.created event
+ * Checks if this is a returning customer (winback) and records attribution
+ */
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  console.log('Processing subscription created event:', subscription.id);
+
+  const customerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : subscription.customer?.id;
+
+  if (!customerId) {
+    console.error('No customer ID found on subscription');
+    return;
+  }
+
+  // Get organization ID
+  const organizationId = await getOrganizationFromCustomer(customerId);
+  if (!organizationId) {
+    // This might be a new customer, not a returning one - that's okay
+    console.log('No organization found for customer, may be a new customer');
+    return;
+  }
+
+  // Get customer email
+  let customerEmail: string | undefined;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (!customer.deleted) {
+      customerEmail = customer.email || undefined;
+    }
+  } catch (err) {
+    console.error('Failed to fetch customer:', err);
+  }
+
+  // Check if this customer previously cancelled and received winback emails
+  // This indicates they are a returning customer
+  const winbackEmailsSent = await getEmailsSentToCustomer({
+    organizationId,
+    customerId,
+    sequenceType: 'winback',
+    sinceDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // Last 90 days
+  });
+
+  if (winbackEmailsSent.length > 0) {
+    // Winback emails were sent, this is a returning customer!
+    const monthlyAmount = subscription.items.data.reduce((total, item) => {
+      const price = item.price;
+      if (price.recurring?.interval === 'month') {
+        return total + (price.unit_amount || 0) * (item.quantity || 1);
+      } else if (price.recurring?.interval === 'year') {
+        return total + Math.round((price.unit_amount || 0) * (item.quantity || 1) / 12);
+      }
+      return total;
+    }, 0);
+
+    // Cancel any pending winback emails since they're back
+    await cancelPendingEmails({
+      organizationId,
+      customerId,
+      templateTypes: ['winback_1', 'winback_2', 'winback_3'],
+    });
+
+    // Record winback attribution
+    await recordSequenceAttribution({
+      organizationId,
+      customerId,
+      customerEmail,
+      sequenceType: 'winback',
+      conversionType: 'resubscribed',
+      emailsSent: winbackEmailsSent.length,
+      lastEmailType: winbackEmailsSent[0]?.template_type,
+      lastEmailSentAt: winbackEmailsSent[0]?.sent_at ? new Date(winbackEmailsSent[0].sent_at) : undefined,
+      subscriptionId: subscription.id,
+      details: {
+        reactivated_mrr: monthlyAmount,
+        currency: subscription.currency,
+        plan_id: subscription.items.data[0]?.price.id,
+        days_since_first_email: winbackEmailsSent.length > 0
+          ? Math.floor((Date.now() - new Date(winbackEmailsSent[winbackEmailsSent.length - 1].sent_at).getTime()) / (1000 * 60 * 60 * 24))
+          : 0,
+      },
+    });
+
+    console.log(`Attribution recorded: Winback sequence led to resubscription (${winbackEmailsSent.length} emails sent)`);
   }
 }

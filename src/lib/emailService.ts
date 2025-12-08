@@ -798,3 +798,212 @@ export async function scheduleWinbackSequence(params: {
 
   return { success: true, scheduledCount };
 }
+
+// =============================================================================
+// Attribution Functions - Track which emails led to conversions
+// =============================================================================
+
+export type SequenceType = 'dunning' | 'winback' | 'cancel_save';
+export type ConversionType = 'payment_recovered' | 'resubscribed' | 'stayed';
+
+interface EmailSentRecord {
+  id: string;
+  template_type: string;
+  sent_at: string;
+  customer_id: string;
+  customer_email: string;
+}
+
+/**
+ * Get emails sent to a customer for a specific sequence type
+ */
+export async function getEmailsSentToCustomer(params: {
+  organizationId: string;
+  customerId: string;
+  sequenceType: SequenceType;
+  sinceDate?: Date;
+}): Promise<EmailSentRecord[]> {
+  const { organizationId, customerId, sequenceType, sinceDate } = params;
+
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
+  // Map sequence type to template prefixes
+  const templatePrefixes: Record<SequenceType, string[]> = {
+    dunning: ['dunning_1', 'dunning_2', 'dunning_3', 'dunning_4'],
+    winback: ['winback_1', 'winback_2', 'winback_3', 'cancel_goodbye'],
+    cancel_save: ['cancel_save_1', 'cancel_save_2'],
+  };
+
+  const templates = templatePrefixes[sequenceType];
+
+  try {
+    const supabase = getServerSupabase();
+    let query = (supabase as any)
+      .from('email_sends')
+      .select('id, template_type, sent_at, customer_id, customer_email')
+      .eq('organization_id', organizationId)
+      .eq('customer_id', customerId)
+      .in('template_type', templates)
+      .order('sent_at', { ascending: false });
+
+    if (sinceDate) {
+      query = query.gte('sent_at', sinceDate.toISOString());
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch sent emails:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching sent emails:', err);
+    return [];
+  }
+}
+
+/**
+ * Record a sequence attribution (when an email sequence led to a conversion)
+ */
+export async function recordSequenceAttribution(params: {
+  organizationId: string;
+  customerId: string;
+  customerEmail?: string;
+  sequenceType: SequenceType;
+  conversionType: ConversionType;
+  emailsSent: number;
+  lastEmailType?: string;
+  lastEmailSentAt?: Date;
+  stripeEventId?: string;
+  subscriptionId?: string;
+  invoiceId?: string;
+  details?: Record<string, unknown>;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  try {
+    const supabase = getServerSupabase();
+    const { error } = await (supabase as any)
+      .from('sequence_attribution')
+      .insert({
+        organization_id: params.organizationId,
+        customer_id: params.customerId,
+        customer_email: params.customerEmail,
+        sequence_type: params.sequenceType,
+        conversion_type: params.conversionType,
+        emails_sent: params.emailsSent,
+        last_email_type: params.lastEmailType,
+        last_email_sent_at: params.lastEmailSentAt?.toISOString(),
+        stripe_event_id: params.stripeEventId,
+        subscription_id: params.subscriptionId,
+        invoice_id: params.invoiceId,
+        details: params.details || {},
+      });
+
+    if (error) {
+      // Ignore duplicate key errors (same stripe_event_id)
+      if (error.code === '23505') {
+        return { success: true };
+      }
+      console.error('Failed to record sequence attribution:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error recording sequence attribution:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Get sequence metrics for dashboard
+ */
+export async function getSequenceMetrics(params: {
+  organizationId: string;
+  days?: number;
+}): Promise<{
+  dunning: { emailsSent: number; conversions: number; conversionRate: number; avgEmailsBeforeConversion: number };
+  winback: { emailsSent: number; conversions: number; conversionRate: number; avgEmailsBeforeConversion: number };
+  cancel_save: { emailsSent: number; conversions: number; conversionRate: number; avgEmailsBeforeConversion: number };
+}> {
+  const { organizationId, days = 30 } = params;
+
+  const defaultMetrics = {
+    dunning: { emailsSent: 0, conversions: 0, conversionRate: 0, avgEmailsBeforeConversion: 0 },
+    winback: { emailsSent: 0, conversions: 0, conversionRate: 0, avgEmailsBeforeConversion: 0 },
+    cancel_save: { emailsSent: 0, conversions: 0, conversionRate: 0, avgEmailsBeforeConversion: 0 },
+  };
+
+  if (!isSupabaseConfigured()) {
+    return defaultMetrics;
+  }
+
+  const sinceDate = new Date();
+  sinceDate.setDate(sinceDate.getDate() - days);
+
+  try {
+    const supabase = getServerSupabase();
+
+    // Get attribution data
+    const { data: attributions } = await (supabase as any)
+      .from('sequence_attribution')
+      .select('sequence_type, emails_sent')
+      .eq('organization_id', organizationId)
+      .gte('converted_at', sinceDate.toISOString());
+
+    // Get total emails sent per sequence type
+    const { data: emailsSent } = await (supabase as any)
+      .from('email_sends')
+      .select('template_type')
+      .eq('organization_id', organizationId)
+      .gte('sent_at', sinceDate.toISOString());
+
+    // Count emails by sequence type
+    const emailCounts: Record<SequenceType, number> = { dunning: 0, winback: 0, cancel_save: 0 };
+    for (const email of emailsSent || []) {
+      if (email.template_type.startsWith('dunning_')) emailCounts.dunning++;
+      else if (email.template_type.startsWith('winback_') || email.template_type === 'cancel_goodbye') emailCounts.winback++;
+      else if (email.template_type.startsWith('cancel_save_')) emailCounts.cancel_save++;
+    }
+
+    // Calculate metrics per sequence
+    const sequenceTypes: SequenceType[] = ['dunning', 'winback', 'cancel_save'];
+    const result: Record<string, { emailsSent: number; conversions: number; conversionRate: number; avgEmailsBeforeConversion: number }> = {};
+
+    for (const seqType of sequenceTypes) {
+      const seqAttributions = (attributions || []).filter((a: { sequence_type: string }) => a.sequence_type === seqType);
+      const conversions = seqAttributions.length;
+      const totalEmailsBeforeConversion = seqAttributions.reduce((sum: number, a: { emails_sent: number }) => sum + a.emails_sent, 0);
+      const emailsSentCount = emailCounts[seqType];
+
+      // Get unique customers who received emails (for conversion rate)
+      const { data: uniqueCustomers } = await (supabase as any)
+        .from('email_sends')
+        .select('customer_id')
+        .eq('organization_id', organizationId)
+        .like('template_type', `${seqType === 'cancel_save' ? 'cancel_save' : seqType}%`)
+        .gte('sent_at', sinceDate.toISOString());
+
+      const uniqueCustomerCount = new Set((uniqueCustomers || []).map((c: { customer_id: string }) => c.customer_id)).size;
+
+      result[seqType] = {
+        emailsSent: emailsSentCount,
+        conversions,
+        conversionRate: uniqueCustomerCount > 0 ? Math.round((conversions / uniqueCustomerCount) * 100) : 0,
+        avgEmailsBeforeConversion: conversions > 0 ? Math.round((totalEmailsBeforeConversion / conversions) * 10) / 10 : 0,
+      };
+    }
+
+    return result as typeof defaultMetrics;
+  } catch (err) {
+    console.error('Error fetching sequence metrics:', err);
+    return defaultMetrics;
+  }
+}

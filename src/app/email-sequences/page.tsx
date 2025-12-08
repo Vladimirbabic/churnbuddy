@@ -406,6 +406,7 @@ function SequenceCard({
   onEditEmail,
   onUpdateDay,
   saving,
+  alwaysExpanded = false,
 }: {
   sequence: SequenceDefinition;
   settings: SequenceSettings | null;
@@ -414,8 +415,10 @@ function SequenceCard({
   onEditEmail: (type: string, template?: EmailTemplate) => void;
   onUpdateDay: (field: string, value: number) => void;
   saving: boolean;
+  alwaysExpanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(alwaysExpanded);
+  const isExpanded = alwaysExpanded || expanded;
   const Icon = sequence.icon;
   const isEnabled = settings ? (settings as unknown as Record<string, boolean>)[sequence.enabledField] : false;
 
@@ -425,8 +428,8 @@ function SequenceCard({
     <Card className={`overflow-hidden transition-all ${!isEnabled ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div
-        className={`px-6 py-4 ${sequence.bgColor} border-b ${sequence.borderColor} cursor-pointer`}
-        onClick={() => setExpanded(!expanded)}
+        className={`px-6 py-4 ${sequence.bgColor} border-b ${sequence.borderColor} ${!alwaysExpanded ? 'cursor-pointer' : ''}`}
+        onClick={() => !alwaysExpanded && setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -447,17 +450,19 @@ function SequenceCard({
                 disabled={saving}
               />
             </div>
-            {expanded ? (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            {!alwaysExpanded && (
+              isExpanded ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )
             )}
           </div>
         </div>
       </div>
 
       {/* Workflow */}
-      {expanded && (
+      {isExpanded && (
         <CardContent className="p-6">
           <div className="max-w-md mx-auto">
             {/* Trigger */}
@@ -602,6 +607,7 @@ export default function EmailSequencesPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
+  const [selectedSequence, setSelectedSequence] = useState<string>('dunning');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -952,38 +958,85 @@ export default function EmailSequencesPage() {
     );
   }
 
-  // Main view - Visual Workflow Cards
+  // Get current sequence
+  const currentSequence = SEQUENCES[selectedSequence];
+
+  // Main view - Sidebar Layout
   return (
     <AppLayout title="Email Sequences" description="Automated email workflows for customer retention">
-      <div className="space-y-6 max-w-4xl">
-        {/* Info Banner */}
-        <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
-              <Mail className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-100">Email sequences run automatically</p>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-0.5">
-                Toggle sequences on/off, adjust timing, and customize each email. Changes save automatically.
+      <div className="flex gap-6 h-[calc(100vh-180px)]">
+        {/* Left Sidebar - Sequence List */}
+        <div className="w-72 shrink-0">
+          <div className="space-y-2">
+            {Object.values(SEQUENCES).map((sequence) => {
+              const Icon = sequence.icon;
+              const isSelected = selectedSequence === sequence.id;
+              const isEnabled = sequenceSettings
+                ? (sequenceSettings as unknown as Record<string, boolean>)[sequence.enabledField]
+                : false;
+
+              return (
+                <button
+                  key={sequence.id}
+                  onClick={() => setSelectedSequence(sequence.id)}
+                  className={`w-full p-4 rounded-xl border text-left transition-all ${
+                    isSelected
+                      ? `${sequence.bgColor} ${sequence.borderColor} shadow-sm`
+                      : 'bg-card hover:bg-muted/50 border-border'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isSelected ? 'bg-white/80 dark:bg-gray-900/50' : sequence.bgColor} flex items-center justify-center`}>
+                      <Icon className={`h-5 w-5 ${sequence.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className={`font-medium truncate ${isSelected ? '' : 'text-foreground'}`}>
+                          {sequence.name.replace(' Sequence', '')}
+                        </p>
+                        <Badge
+                          variant={isEnabled ? 'default' : 'secondary'}
+                          className={`ml-2 text-xs ${isEnabled ? 'bg-emerald-600' : ''}`}
+                        >
+                          {isEnabled ? 'On' : 'Off'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {sequence.steps.length + (sequence.extraSteps?.length || 0)} emails
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Info */}
+          <div className="mt-6 p-4 bg-muted/50 rounded-xl">
+            <div className="flex items-start gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Select a sequence to configure timing and customize email templates.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Sequence Cards */}
-        {Object.values(SEQUENCES).map((sequence) => (
-          <SequenceCard
-            key={sequence.id}
-            sequence={sequence}
-            settings={sequenceSettings}
-            templates={templates}
-            onToggle={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
-            onEditEmail={handleEdit}
-            onUpdateDay={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
-            saving={savingSettings}
-          />
-        ))}
+        {/* Right Side - Selected Sequence Details */}
+        <div className="flex-1 overflow-y-auto">
+          {currentSequence && (
+            <SequenceCard
+              sequence={currentSequence}
+              settings={sequenceSettings}
+              templates={templates}
+              onToggle={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
+              onEditEmail={handleEdit}
+              onUpdateDay={(field, value) => saveSequenceSettings({ [field]: value } as Partial<SequenceSettings>)}
+              saving={savingSettings}
+              alwaysExpanded
+            />
+          )}
+        </div>
       </div>
     </AppLayout>
   );
