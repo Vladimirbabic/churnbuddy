@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   X, Heart, Check, RotateCcw, Tag, Clock,
@@ -1291,7 +1291,7 @@ const STYLES = [
 // ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
-export default function DesignShowcasePage() {
+function DesignShowcaseContent() {
   const searchParams = useSearchParams();
   const [selectedStyle, setSelectedStyle] = useState(1);
   const [activeModal, setActiveModal] = useState<'feedback' | 'plans' | 'offer'>('feedback');
@@ -1499,5 +1499,18 @@ export default function DesignShowcasePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrap in Suspense boundary for useSearchParams
+export default function DesignShowcasePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    }>
+      <DesignShowcaseContent />
+    </Suspense>
   );
 }
