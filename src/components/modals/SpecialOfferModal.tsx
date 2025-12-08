@@ -116,8 +116,9 @@ export function SpecialOfferModal({
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
           style={useColorsProp && designStyle !== 9 ? {
-            backgroundColor: designStyle === 3 ? 'white' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#374151' : (designStyle === 8 ? undefined : colors.background)))),
+            backgroundColor: designStyle === 3 ? 'rgba(255,255,255,0.7)' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#f3f4f6' : (designStyle === 8 ? undefined : colors.background)))),
             background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+            backdropFilter: designStyle === 3 ? 'blur(10px)' : undefined,
           } : undefined}
         >
           <div className="flex items-center gap-2">
@@ -176,8 +177,8 @@ export function SpecialOfferModal({
               'rounded-2xl'
             }`}
             style={useColorsProp ? {
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.primary}20`,
+              backgroundColor: designStyle === 5 ? `${colors.primary}33` : colors.background,
+              border: `1px solid ${colors.primary}${designStyle === 5 ? '40' : '20'}`,
               borderRadius: designStyle === 2 ? '0' : undefined,
             } : undefined}
           >
@@ -234,7 +235,7 @@ export function SpecialOfferModal({
               onClick={onAcceptOffer}
               className={`w-full font-semibold py-3 px-4 transition-colors ${
                 designStyle === 3 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-lg shadow-violet-500/30' :
-                designStyle === 4 ? 'bg-black text-lime-300 border-[3px] border-black font-black uppercase' :
+                designStyle === 4 ? 'bg-black text-white border-[3px] border-black font-black uppercase' :
                 designStyle === 5 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl' :
                 designStyle === 6 ? 'bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-2xl' :
                 designStyle === 7 ? 'bg-blue-600 text-white' :
@@ -244,6 +245,7 @@ export function SpecialOfferModal({
               }`}
               style={useColorsProp ? {
                 backgroundColor: colors.primary,
+                color: 'white',
                 backgroundImage: 'none',
                 borderRadius: designStyle === 2 ? '0' : undefined,
               } : undefined}
@@ -253,7 +255,7 @@ export function SpecialOfferModal({
           </div>
 
           {/* Footer */}
-          <div className={`flex ${designStyle === 3 || designStyle === 8 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
+          <div className={`flex ${designStyle === 3 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
             <button
               onClick={onBack}
               className={`${sc.footer.backButton} transition-colors`}

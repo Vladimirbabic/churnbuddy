@@ -115,8 +115,9 @@ export function YourFeedbackModal({
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
           style={useColorsProp && designStyle !== 9 ? {
-            backgroundColor: designStyle === 3 ? 'white' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#374151' : (designStyle === 8 ? undefined : colors.background)))),
+            backgroundColor: designStyle === 3 ? 'rgba(255,255,255,0.7)' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#f3f4f6' : (designStyle === 8 ? undefined : colors.background)))),
             background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+            backdropFilter: designStyle === 3 ? 'blur(10px)' : undefined,
           } : undefined}
         >
           <div className="flex items-center gap-2">
@@ -174,10 +175,12 @@ export function YourFeedbackModal({
                   onClick={() => setSelectedOption(option.id)}
                   className={`w-full flex items-center gap-3 p-4 ${'borderRadius' in optionStyle ? optionStyle.borderRadius : ''} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && 'shadow' in optionStyle && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && 'transform' in optionStyle && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
                   style={useColorsProp ? {
-                    backgroundColor: isSelected ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
+                    backgroundColor: isSelected
+                      ? (designStyle === 5 ? `${colors.primary}1A` : colors.background)
+                      : (sc.isDark ? '#1f2937' : 'white'),
                     borderColor: isSelected ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
                     borderWidth: designStyle === 2 ? '1px' : '2px',
-                    borderRadius: designStyle === 2 ? '0' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined),
+                    borderRadius: designStyle === 2 ? '0' : (designStyle === 6 ? '1rem' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined)),
                   } : undefined}
                   aria-pressed={isSelected}
                 >
@@ -191,7 +194,7 @@ export function YourFeedbackModal({
                       }`}
                       style={useColorsProp ? {
                         backgroundColor: isSelected ? colors.primary : (sc.isDark ? '#374151' : 'white'),
-                        color: isSelected ? 'white' : (sc.isDark ? '#9ca3af' : '#6b7280'),
+                        color: isSelected ? 'white' : (sc.isDark ? '#d1d5db' : '#6b7280'),
                         border: isSelected ? 'none' : (sc.isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'),
                       } : undefined}
                     >
@@ -224,10 +227,12 @@ export function YourFeedbackModal({
                     selectedOption === 'other' ? `${sc.option.selected.border} ${sc.option.selected.background}` : `${sc.option.default.border} ${sc.option.default.background}`
                   } ${selectedOption === 'other' && sc.option.selected.shadow ? sc.option.selected.shadow : ''} ${selectedOption === 'other' && sc.option.selected.transform ? sc.option.selected.transform : ''} transition-all text-left`}
                   style={useColorsProp ? {
-                    backgroundColor: selectedOption === 'other' ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
+                    backgroundColor: selectedOption === 'other'
+                      ? (designStyle === 5 ? `${colors.primary}1A` : colors.background)
+                      : (sc.isDark ? '#1f2937' : 'white'),
                     borderColor: selectedOption === 'other' ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
                     borderWidth: designStyle === 2 ? '1px' : '2px',
-                    borderRadius: designStyle === 2 ? '0' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined),
+                    borderRadius: designStyle === 2 ? '0' : (designStyle === 6 ? '1rem' : (sc.option.default.borderRadius === 'rounded-lg' ? '0.5rem' : undefined)),
                   } : undefined}
                   aria-pressed={selectedOption === 'other'}
                 >
@@ -241,7 +246,7 @@ export function YourFeedbackModal({
                       }`}
                       style={useColorsProp ? {
                         backgroundColor: selectedOption === 'other' ? colors.primary : (sc.isDark ? '#374151' : 'white'),
-                        color: selectedOption === 'other' ? 'white' : (sc.isDark ? '#9ca3af' : '#6b7280'),
+                        color: selectedOption === 'other' ? 'white' : (sc.isDark ? '#d1d5db' : '#6b7280'),
                         border: selectedOption === 'other' ? 'none' : (sc.isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'),
                       } : undefined}
                     >
@@ -281,7 +286,7 @@ export function YourFeedbackModal({
           </div>
 
           {/* Footer */}
-          <div className={`flex ${designStyle === 3 || designStyle === 8 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
+          <div className={`flex ${designStyle === 3 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
             <button
               onClick={onBack}
               className={`${sc.footer.backButton} transition-colors`}

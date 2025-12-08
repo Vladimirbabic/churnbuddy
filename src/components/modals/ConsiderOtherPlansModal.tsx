@@ -120,8 +120,9 @@ export function ConsiderOtherPlansModal({
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
           style={useColorsProp && designStyle !== 9 ? {
-            backgroundColor: designStyle === 3 ? 'white' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#374151' : (designStyle === 8 ? undefined : colors.background)))),
+            backgroundColor: designStyle === 3 ? 'rgba(255,255,255,0.7)' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#f3f4f6' : (designStyle === 8 ? undefined : colors.background)))),
             background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+            backdropFilter: designStyle === 3 ? 'blur(10px)' : undefined,
           } : undefined}
         >
           <div className="flex items-center gap-2">
@@ -243,7 +244,7 @@ export function ConsiderOtherPlansModal({
           </div>
 
           {/* Footer */}
-          <div className={`flex ${designStyle === 3 || designStyle === 8 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
+          <div className={`flex ${designStyle === 3 ? 'gap-3' : 'justify-between gap-4'} mt-6`}>
             <button
               onClick={onBack}
               className={`${sc.footer.backButton} transition-colors`}
