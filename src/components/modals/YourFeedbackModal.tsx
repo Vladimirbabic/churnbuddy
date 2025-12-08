@@ -169,7 +169,7 @@ export function YourFeedbackModal({
                 <button
                   key={option.id}
                   onClick={() => setSelectedOption(option.id)}
-                  className={`w-full flex items-center gap-3 p-4 ${optionStyle.borderRadius} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
+                  className={`w-full flex items-center gap-3 p-4 ${'borderRadius' in optionStyle ? optionStyle.borderRadius : ''} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && 'shadow' in optionStyle && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && 'transform' in optionStyle && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
                   style={useColorsProp ? {
                     backgroundColor: colors.background,
                     borderColor: isSelected ? colors.primary : `${colors.primary}40`,
