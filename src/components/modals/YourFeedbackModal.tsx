@@ -114,7 +114,7 @@ export function YourFeedbackModal({
         {/* Header */}
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
-          style={useColorsProp ? { backgroundColor: colors.background } : undefined}
+          style={useColorsProp && designStyle !== 9 ? { backgroundColor: colors.background } : undefined}
         >
           <div className="flex items-center gap-2">
             {sc.header.iconBackground ? (
@@ -124,12 +124,12 @@ export function YourFeedbackModal({
             ) : (
               <Heart
                 className="h-4 w-4"
-                style={useColorsProp ? { color: colors.primary, fill: colors.primary } : undefined}
+                style={useColorsProp && designStyle !== 9 ? { color: colors.primary, fill: colors.primary } : (designStyle === 9 ? { color: '#78716c', fill: '#78716c' } : undefined)}
               />
             )}
             <span
               className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
-              style={useColorsProp ? { color: colors.primary } : undefined}
+              style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined}
             >
               {designStyle === 4 ? 'FEEDBACK' : 'Your Feedback'}
             </span>
@@ -139,7 +139,7 @@ export function YourFeedbackModal({
             className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={useColorsProp ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
+            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
@@ -171,8 +171,8 @@ export function YourFeedbackModal({
                   onClick={() => setSelectedOption(option.id)}
                   className={`w-full flex items-center gap-3 p-4 ${'borderRadius' in optionStyle ? optionStyle.borderRadius : ''} ${optionStyle.border} ${optionStyle.background} ${optionStyle.textColor} ${isSelected && 'shadow' in optionStyle && optionStyle.shadow ? optionStyle.shadow : ''} ${isSelected && 'transform' in optionStyle && optionStyle.transform ? optionStyle.transform : ''} transition-all text-left ${sc.fonts?.body || ''}`}
                   style={useColorsProp ? {
-                    backgroundColor: isSelected ? colors.background : 'white',
-                    borderColor: isSelected ? colors.primary : '#e5e7eb',
+                    backgroundColor: isSelected ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
+                    borderColor: isSelected ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
                     borderWidth: '2px',
                   } : undefined}
                   aria-pressed={isSelected}
@@ -186,9 +186,9 @@ export function YourFeedbackModal({
                           : `${sc.option.default.letterBadge.background} ${sc.option.default.letterBadge.textColor} ${sc.option.default.letterBadge.border}`
                       }`}
                       style={useColorsProp ? {
-                        backgroundColor: isSelected ? colors.primary : 'white',
-                        color: isSelected ? 'white' : '#6b7280',
-                        border: isSelected ? 'none' : '1px solid #e5e7eb',
+                        backgroundColor: isSelected ? colors.primary : (sc.isDark ? '#374151' : 'white'),
+                        color: isSelected ? 'white' : (sc.isDark ? '#9ca3af' : '#6b7280'),
+                        border: isSelected ? 'none' : (sc.isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'),
                       } : undefined}
                     >
                       {option.letter}
@@ -220,8 +220,8 @@ export function YourFeedbackModal({
                     selectedOption === 'other' ? `${sc.option.selected.border} ${sc.option.selected.background}` : `${sc.option.default.border} ${sc.option.default.background}`
                   } ${selectedOption === 'other' && sc.option.selected.shadow ? sc.option.selected.shadow : ''} ${selectedOption === 'other' && sc.option.selected.transform ? sc.option.selected.transform : ''} transition-all text-left`}
                   style={useColorsProp ? {
-                    backgroundColor: selectedOption === 'other' ? colors.background : 'white',
-                    borderColor: selectedOption === 'other' ? colors.primary : '#e5e7eb',
+                    backgroundColor: selectedOption === 'other' ? colors.background : (sc.isDark ? '#1f2937' : 'white'),
+                    borderColor: selectedOption === 'other' ? colors.primary : (sc.isDark ? '#374151' : '#e5e7eb'),
                     borderWidth: '2px',
                   } : undefined}
                   aria-pressed={selectedOption === 'other'}
@@ -235,9 +235,9 @@ export function YourFeedbackModal({
                           : `${sc.option.default.letterBadge.background} ${sc.option.default.letterBadge.textColor} ${sc.option.default.letterBadge.border}`
                       }`}
                       style={useColorsProp ? {
-                        backgroundColor: selectedOption === 'other' ? colors.primary : 'white',
-                        color: selectedOption === 'other' ? 'white' : '#6b7280',
-                        border: selectedOption === 'other' ? 'none' : '1px solid #e5e7eb',
+                        backgroundColor: selectedOption === 'other' ? colors.primary : (sc.isDark ? '#374151' : 'white'),
+                        color: selectedOption === 'other' ? 'white' : (sc.isDark ? '#9ca3af' : '#6b7280'),
+                        border: selectedOption === 'other' ? 'none' : (sc.isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'),
                       } : undefined}
                     >
                       {otherOptionLetter}
@@ -288,6 +288,7 @@ export function YourFeedbackModal({
               onClick={handleNext}
               disabled={isNextDisabled}
               className={`${sc.footer.primaryButton} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              style={useColorsProp ? { backgroundColor: colors.primary, backgroundImage: 'none' } : undefined}
             >
               {designStyle === 4 ? 'NEXT →' : 'Next'}
             </button>

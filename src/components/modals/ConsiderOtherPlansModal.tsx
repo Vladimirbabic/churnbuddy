@@ -119,7 +119,7 @@ export function ConsiderOtherPlansModal({
         {/* Header */}
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
-          style={useColorsProp ? { backgroundColor: colors.background } : undefined}
+          style={useColorsProp && designStyle !== 9 ? { backgroundColor: colors.background } : undefined}
         >
           <div className="flex items-center gap-2">
             {sc.header.iconBackground ? (
@@ -129,12 +129,12 @@ export function ConsiderOtherPlansModal({
             ) : (
               <RotateCcw
                 className="h-4 w-4"
-                style={useColorsProp ? { color: colors.primary } : undefined}
+                style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : (designStyle === 9 ? { color: '#78716c' } : undefined)}
               />
             )}
             <span
               className={`font-semibold text-sm ${sc.header.titleColor} ${sc.fonts?.heading || ''}`}
-              style={useColorsProp ? { color: colors.primary } : undefined}
+              style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined}
             >
               {designStyle === 4 ? 'OTHER PLANS' : 'Consider Other Plans'}
             </span>
@@ -144,7 +144,7 @@ export function ConsiderOtherPlansModal({
             className={`${sc.header.closeButtonClasses} cursor-pointer`}
             aria-label="Close modal"
           >
-            <X className="h-4 w-4" style={useColorsProp ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
+            <X className="h-4 w-4" style={useColorsProp && designStyle !== 9 ? { color: colors.primary } : undefined} strokeWidth={designStyle === 4 ? 3 : 2} />
           </button>
         </div>
 
@@ -223,7 +223,7 @@ export function ConsiderOtherPlansModal({
                     designStyle === 9 ? 'bg-stone-800 text-white rounded-md' :
                     'text-white rounded-lg hover:opacity-90'
                   }`}
-                  style={useColorsProp ? { backgroundColor: colors.primary } : undefined}
+                  style={useColorsProp ? { backgroundColor: colors.primary, backgroundImage: 'none' } : undefined}
                 >
                   {designStyle === 4 ? 'SWITCH PLAN' : 'Switch Plan'}
                 </button>
