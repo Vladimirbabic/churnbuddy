@@ -3,34 +3,23 @@ import { createStripeClient, switchSubscriptionPlan } from '@/lib/stripe';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
-// Security: Get allowed origins from environment
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || '').split(',').filter(Boolean);
-
-// Helper to get CORS headers with origin validation
-function getCorsHeaders(request: NextRequest) {
-  const origin = request.headers.get('origin') || '';
-  // Allow if origin matches allowed list, or in development mode
-  const isAllowed = ALLOWED_ORIGINS.length === 0 ||
-    ALLOWED_ORIGINS.some(allowed => origin === allowed || allowed === '*') ||
-    origin.includes('localhost') ||
-    origin.includes('127.0.0.1');
-
+// Helper to get CORS headers - allow all origins for embed widget
+function getCorsHeaders() {
   return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0] || '',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Credentials': 'true',
   };
 }
 
 // Handle preflight requests
 export async function OPTIONS(request: NextRequest) {
-  const corsHeaders = getCorsHeaders(request);
+  const corsHeaders = getCorsHeaders();
   return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
 
 export async function POST(request: NextRequest) {
-  const corsHeaders = getCorsHeaders(request);
+  const corsHeaders = getCorsHeaders();
 
   // Rate limiting (restrictive for plan switches)
   const clientIp = getClientIp(request);

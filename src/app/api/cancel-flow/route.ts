@@ -9,29 +9,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
-// Security: Get allowed origins from environment
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || '').split(',').filter(Boolean);
-
-// Helper to get CORS headers with origin validation
-function getCorsHeaders(request: NextRequest) {
-  const origin = request.headers.get('origin') || '';
-  // Allow if origin matches allowed list, or in development mode
-  const isAllowed = ALLOWED_ORIGINS.length === 0 ||
-    ALLOWED_ORIGINS.some(allowed => origin === allowed || allowed === '*') ||
-    origin.includes('localhost') ||
-    origin.includes('127.0.0.1');
-
+// Helper to get CORS headers - allow all origins for embed widget
+function getCorsHeaders() {
   return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0] || '',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Credentials': 'true',
   };
 }
 
 // Handle CORS preflight requests
 export async function OPTIONS(request: NextRequest) {
-  const corsHeaders = getCorsHeaders(request);
+  const corsHeaders = getCorsHeaders();
   return new NextResponse(null, {
     status: 204,
     headers: corsHeaders,
@@ -165,7 +154,7 @@ async function getEmailUtils() {
 
 // POST: Log cancel flow events
 export async function POST(request: NextRequest) {
-  const corsHeaders = getCorsHeaders(request);
+  const corsHeaders = getCorsHeaders();
 
   // Rate limiting
   const clientIp = getClientIp(request);
@@ -426,7 +415,7 @@ export async function POST(request: NextRequest) {
 
 // GET: Get cancel flow stats for a customer
 export async function GET(request: NextRequest) {
-  const corsHeaders = getCorsHeaders(request);
+  const corsHeaders = getCorsHeaders();
 
   try {
     const { searchParams } = new URL(request.url);
