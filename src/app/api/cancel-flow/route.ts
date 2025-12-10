@@ -29,19 +29,20 @@ export async function OPTIONS(request: NextRequest) {
 
 // Lazy load Stripe utilities only when needed
 // If flowId is provided, uses the organization's Stripe key from settings
-async function getStripeUtils(flowId?: string) {
+// mode defaults to 'live' for backwards compatibility
+async function getStripeUtils(flowId?: string, mode: 'test' | 'live' = 'live') {
   try {
     const { stripe, createStripeClient, getOrganizationStripeKey, getSubscriptionDiscount } = await import('@/lib/stripe');
-    
-    // If flowId provided, try to get organization's Stripe key
+
+    // If flowId provided, try to get organization's Stripe key for the specified mode
     let stripeClient = stripe;
     if (flowId) {
-      const orgStripeKey = await getOrganizationStripeKey(flowId);
+      const orgStripeKey = await getOrganizationStripeKey(flowId, mode);
       if (orgStripeKey) {
-        console.log('Using organization Stripe key for flow:', flowId);
+        console.log(`Using organization ${mode} Stripe key for flow:`, flowId);
         stripeClient = createStripeClient(orgStripeKey);
       } else {
-        console.log('No organization Stripe key found, using default');
+        console.log(`No organization ${mode} Stripe key found, using default`);
       }
     }
     
@@ -92,8 +93,8 @@ async function getStripeUtils(flowId?: string) {
 }
 
 // Look up Stripe customer by email and get their active subscription
-async function lookupCustomerByEmail(email: string, flowId?: string) {
-  const stripeUtils = await getStripeUtils(flowId);
+async function lookupCustomerByEmail(email: string, flowId?: string, mode: 'test' | 'live' = 'live') {
+  const stripeUtils = await getStripeUtils(flowId, mode);
   if (!stripeUtils) {
     return { customerId: null, subscriptionId: null, error: 'Stripe not configured' };
   }
@@ -176,6 +177,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     let { eventType, customerId, subscriptionId, details, flowId } = body;
     const { customerEmail: inputEmail } = body;
+    // Extract mode from request, default to 'live' for backwards compatibility
+    const mode: 'test' | 'live' = body.mode === 'test' ? 'test' : 'live';
 
     // Security: Require flowId for all requests (removes hardcoded default org)
     if (!flowId) {
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
     let customerEmail: string | undefined = inputEmail;
 
     if (!customerId && inputEmail) {
-      const lookup = await lookupCustomerByEmail(inputEmail, flowId);
+      const lookup = await lookupCustomerByEmail(inputEmail, flowId, mode);
       if (lookup.customerId) {
         customerId = lookup.customerId;
         subscriptionId = subscriptionId || lookup.subscriptionId;
@@ -209,7 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe utils - uses organization's Stripe key if flowId provided
-    const stripeUtils = await getStripeUtils(flowId);
+    const stripeUtils = await getStripeUtils(flowId, mode);
 
     if (!customerEmail && stripeUtils && customerId && !customerId.startsWith('email:')) {
       try {
@@ -421,6 +424,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
     const flowId = searchParams.get('flowId') || undefined;
+    const mode: 'test' | 'live' = searchParams.get('mode') === 'test' ? 'test' : 'live';
 
     if (!customerId) {
       return NextResponse.json(
@@ -456,7 +460,7 @@ export async function GET(request: NextRequest) {
 
     // Check if customer has an active discount
     let hasActiveDiscount = false;
-    const stripeUtils = await getStripeUtils(flowId);
+    const stripeUtils = await getStripeUtils(flowId, mode);
 
     if (stripeUtils) {
       try {

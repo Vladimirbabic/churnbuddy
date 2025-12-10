@@ -7,9 +7,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { PLANS, PlanType } from '@/models/Subscription';
-import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-const DEFAULT_ORG_ID = 'demo-org-001';
+// Helper to get authenticated supabase client and user's organization ID
+async function getAuthenticatedClient() {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    return { supabase, orgId: user?.id || null, userEmail: user?.email || null };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return { supabase: null, orgId: null, userEmail: null };
+  }
+}
 
 // Initialize Stripe (will be null if not configured)
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -41,17 +64,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get authenticated user
+    const { supabase, orgId, userEmail } = await getAuthenticatedClient();
+
+    if (!orgId || !supabase) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const selectedPlan = PLANS[plan as PlanType];
 
     // Get existing customer ID from Supabase if available
     let customerId: string | undefined;
 
     if (isSupabaseConfigured()) {
-      const supabase = getServerSupabase();
       const { data: existingSub } = await (supabase as any)
         .from('subscriptions')
         .select('stripe_customer_id')
-        .eq('organization_id', DEFAULT_ORG_ID)
+        .eq('organization_id', orgId)
         .single();
 
       const subData = existingSub as { stripe_customer_id?: string } | null;
@@ -65,6 +97,7 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       payment_method_types: ['card'],
       customer: customerId,
+      customer_email: customerId ? undefined : userEmail || undefined,
       line_items: [
         {
           price: selectedPlan.priceId,
@@ -74,16 +107,16 @@ export async function POST(request: NextRequest) {
       subscription_data: {
         trial_period_days: 14, // 14-day free trial
         metadata: {
-          organizationId: DEFAULT_ORG_ID,
+          organizationId: orgId,
           plan: plan,
         },
       },
       metadata: {
-        organizationId: DEFAULT_ORG_ID,
+        organizationId: orgId,
         plan: plan,
       },
-      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/billing?success=true`,
-      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/pricing?canceled=true`,
+      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/billing?success=true`,
+      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/billing?canceled=true`,
       allow_promotion_codes: true,
     });
 

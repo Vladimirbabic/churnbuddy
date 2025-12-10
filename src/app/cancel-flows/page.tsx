@@ -495,7 +495,8 @@ function UpgradeModal({
   if (!isOpen) return null;
 
   const getUpgradePlan = () => {
-    if (currentPlan === 'starter') return { name: 'Growth', price: '$19/mo', flows: 5 };
+    // Handle both legacy 'starter' and new 'basic' plan names
+    if (currentPlan === 'basic' || currentPlan === 'starter') return { name: 'Growth', price: '$19/mo', flows: 5 };
     if (currentPlan === 'growth') return { name: 'Scale', price: '$49/mo', flows: 'Unlimited' };
     return { name: 'Growth', price: '$19/mo', flows: 5 };
   };
@@ -901,6 +902,7 @@ function CancelFlowsInner() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [codeEnvironment, setCodeEnvironment] = useState<'production' | 'staging'>('production');
   const [saveToastMessage, setSaveToastMessage] = useState<string | null>(null);
   const [wasNewFlow, setWasNewFlow] = useState(false); // Track if this was a new flow creation
 
@@ -1363,12 +1365,13 @@ function CancelFlowsInner() {
   }, [showStripePicker]);
 
   // Generate integration code
-  const getIntegrationCode = (flowId: string) => {
+  const getIntegrationCode = (flowId: string, environment: 'production' | 'staging' = 'production') => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+    const modeParam = environment === 'staging' ? '&mode=test' : '';
 
-    return `<script src="${baseUrl}/api/embed?flow=${flowId}"
-  data-customer-id="CUSTOMER_ID"
-  data-subscription-id="SUBSCRIPTION_ID">
+    return `<script src="${baseUrl}/api/embed?flow=${flowId}${modeParam}"
+  data-customer-id="\${stripeCustomerId}"
+  data-subscription-id="\${stripeSubscriptionId}">
 </script>
 <button data-cancel-subscription>Cancel Subscription</button>`;
   };
@@ -1391,81 +1394,139 @@ function CancelFlowsInner() {
     if (!isOpen || !editingFlow?.id) return null;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
         {/* Modal */}
-        <div className="relative bg-background rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        <div className="relative bg-background rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className={`px-6 py-5 border-b ${isSuccess ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30' : 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50'}`}>
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
 
-          <div className="p-6">
-            {/* Header */}
-            <div className="text-center mb-6">
-              {isSuccess && (
-                <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            <div className="flex items-center gap-3">
+              {isSuccess ? (
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Code className="h-5 w-5 text-primary" />
                 </div>
               )}
-              <h2 className="text-2xl font-semibold">
-                {isSuccess ? 'Your cancel flow is ready!' : 'Integration Code'}
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Add the following code to your website to enable the cancel flow
-              </p>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {isSuccess ? 'Flow Created Successfully' : 'Embed Your Flow'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {editingFlow.name}
+                </p>
+              </div>
             </div>
+          </div>
 
+          {/* Content */}
+          <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-180px)]">
             {/* Flow Summary (only on success) */}
             {isSuccess && (
-              <div className="p-4 bg-muted/50 rounded-lg mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">{editingFlow.name}</span>
-                  <Badge variant="default" className="bg-emerald-600">Active</Badge>
-                </div>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>Feedback options: {editingFlow.feedbackOptions.length}</p>
-                  <p>Alternative plans: {editingFlow.alternativePlans.length}</p>
-                  <p>Special offer: {editingFlow.discountPercent}% off for {editingFlow.discountDuration} months</p>
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50">
+                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">{editingFlow.feedbackOptions.length}</p>
+                    <p className="text-xs text-muted-foreground">Feedback Options</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">{editingFlow.alternativePlans.length}</p>
+                    <p className="text-xs text-muted-foreground">Alt Plans</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">{editingFlow.discountPercent}%</p>
+                    <p className="text-xs text-muted-foreground">Discount</p>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Integration Code */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Code className="h-4 w-4 text-muted-foreground" />
-                <label className="text-sm font-medium">Integration Code</label>
+            {/* Environment Tabs */}
+            <div>
+              <div className="flex p-1 bg-muted rounded-lg">
+                <button
+                  onClick={() => setCodeEnvironment('production')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    codeEnvironment === 'production'
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${codeEnvironment === 'production' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                  Production
+                </button>
+                <button
+                  onClick={() => setCodeEnvironment('staging')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    codeEnvironment === 'staging'
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${codeEnvironment === 'staging' ? 'bg-amber-500' : 'bg-gray-400'}`} />
+                  Staging
+                </button>
               </div>
-              <CodeSnippet code={getIntegrationCode(editingFlow.id)} />
-              <p className="text-xs text-muted-foreground">
-                Replace <code className="bg-muted px-1 rounded">CUSTOMER_ID</code> and <code className="bg-muted px-1 rounded">SUBSCRIPTION_ID</code> with the Stripe IDs from your backend.
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {codeEnvironment === 'production'
+                  ? 'Uses your live Stripe keys for real transactions'
+                  : 'Uses test Stripe keys for development & testing'
+                }
               </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-6">
-              {isSuccess ? (
-                <>
-                  <Button variant="outline" onClick={onClose} className="flex-1">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Continue Editing
-                  </Button>
-                  <Button onClick={handleBack} className="flex-1">
-                    Done
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={onClose} className="w-full">
+            {/* Code Block */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">HTML Snippet</span>
+              </div>
+              <CodeSnippet code={getIntegrationCode(editingFlow.id, codeEnvironment)} />
+            </div>
+
+            {/* Instructions */}
+            <div className={`p-4 rounded-lg ${codeEnvironment === 'staging' ? 'bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50' : 'bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800'}`}>
+              <h4 className={`text-sm font-medium mb-2 ${codeEnvironment === 'staging' ? 'text-amber-800 dark:text-amber-300' : ''}`}>
+                {codeEnvironment === 'staging' ? 'Testing Instructions' : 'Quick Start'}
+              </h4>
+              <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+                <li>Copy the code snippet above</li>
+                <li>Paste it into your website&apos;s HTML</li>
+                <li>Replace <code className="bg-muted px-1 py-0.5 rounded text-[11px]">stripeCustomerId</code> with your customer&apos;s ID</li>
+                <li>Replace <code className="bg-muted px-1 py-0.5 rounded text-[11px]">stripeSubscriptionId</code> with their subscription ID</li>
+                {codeEnvironment === 'staging' && (
+                  <li className="text-amber-700 dark:text-amber-400">Configure test Stripe keys in Settings → Stripe</li>
+                )}
+              </ol>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t bg-muted/30 flex gap-3">
+            {isSuccess ? (
+              <>
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Continue Editing
+                </Button>
+                <Button onClick={handleBack} className="flex-1">
                   Done
                 </Button>
-              )}
-            </div>
+              </>
+            ) : (
+              <Button onClick={onClose} className="w-full">
+                Done
+              </Button>
+            )}
           </div>
         </div>
       </div>

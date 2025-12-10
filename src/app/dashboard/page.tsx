@@ -22,7 +22,9 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts';
+import Flag from 'react-flagkit';
 
 // Types
 interface DashboardSummary {
@@ -73,6 +75,8 @@ interface DiscountAnalytics {
   activeDiscountsList: Array<{
     customerId: string;
     customerEmail: string | null;
+    customerName: string | null;
+    customerCountry: string | null;
     subscriptionId: string;
     discountPercent: number | null;
     couponName: string | null;
@@ -250,10 +254,16 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           {/* MRR Chart embedded in card */}
-                          <div className="h-[137px] w-full [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+                          <div className="h-[180px] w-full [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
                             {mrrHistory.length > 0 && (
                               <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={mrrHistory} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                                <LineChart data={mrrHistory} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                  <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke="#e5e5e5"
+                                    vertical={true}
+                                    horizontal={true}
+                                  />
                                   <XAxis
                                     dataKey="date"
                                     axisLine={false}
@@ -387,39 +397,50 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground rounded-t-md">
+                    <div className="grid grid-cols-[2fr_100px_1fr_1fr] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground rounded-t-md">
                       <div>Customer</div>
-                      <div>Plan</div>
+                      <div>Country</div>
                       <div>Discount</div>
                       <div>Expires</div>
                     </div>
                     <div className="divide-y">
                       {discountData.activeDiscountsList.slice(0, 5).map((discount) => (
-                        <div key={discount.subscriptionId} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
+                        <div key={discount.subscriptionId} className="grid grid-cols-[2fr_100px_1fr_1fr] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="text-xs">
-                                {discount.customerEmail ? getInitials(discount.customerEmail) : '??'}
+                                {discount.customerName
+                                  ? getInitials(discount.customerName)
+                                  : discount.customerEmail
+                                  ? getInitials(discount.customerEmail)
+                                  : '??'}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="text-sm font-medium">
-                                {discount.customerEmail || 'Unknown'}
+                                {discount.customerName || discount.customerEmail || 'Unknown'}
                               </p>
-                              <p className="text-xs text-muted-foreground">{discount.customerId}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {discount.customerName ? discount.customerEmail : discount.customerId}
+                              </p>
                             </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            {discount.customerCountry && (
+                              <>
+                                <Flag country={discount.customerCountry} size={16} />
+                                <span>{discount.customerCountry}</span>
+                              </>
+                            )}
+                            {!discount.customerCountry && <span className="text-muted-foreground">—</span>}
                           </div>
                           <div>
                             <p className="text-sm font-medium">
-                              {discount.planName || 'Subscription'}
+                              {discount.discountPercent}% off
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {discount.originalAmount ? formatCurrency(discount.originalAmount) : '—'}/mo
-                              {discount.currentAmount ? ` (now ${formatCurrency(discount.currentAmount)}/mo)` : ''}
+                              {discount.couponName || 'Discount'}
                             </p>
-                          </div>
-                          <div className="text-sm font-medium">
-                            {discount.discountPercent}% off
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {discount.endsAt

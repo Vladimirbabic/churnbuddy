@@ -7,9 +7,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { PLANS } from '@/models/Subscription';
-import { getServerSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-const DEFAULT_ORG_ID = 'demo-org-001';
+// Helper to get authenticated supabase client and user's organization ID
+async function getAuthenticatedClient() {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    return { supabase, orgId: user?.id || null };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return { supabase: null, orgId: null };
+  }
+}
 
 interface SubscriptionData {
   plan: string;
@@ -41,12 +64,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const supabase = getServerSupabase();
+    const { supabase, orgId } = await getAuthenticatedClient();
+
+    if (!orgId || !supabase) {
+      return NextResponse.json({
+        hasSubscription: false,
+        plan: null,
+        status: null,
+        error: 'Authentication required',
+      });
+    }
 
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('organization_id', DEFAULT_ORG_ID)
+      .eq('organization_id', orgId)
       .single();
 
     if (error || !data) {
@@ -58,19 +90,24 @@ export async function GET(request: NextRequest) {
     }
 
     const subscription = data as SubscriptionData;
-    const plan = PLANS[subscription.plan as keyof typeof PLANS];
+    // Handle both 'starter' (legacy) and 'basic' (new) plan names
+    const planKey = subscription.plan === 'starter' ? 'basic' : subscription.plan;
+    const plan = PLANS[planKey as keyof typeof PLANS];
 
     // Count actual cancel flows from the cancel_flows table
     const { count: cancelFlowsCount } = await supabase
       .from('cancel_flows')
       .select('*', { count: 'exact', head: true })
-      .eq('organization_id', DEFAULT_ORG_ID);
+      .eq('organization_id', orgId);
 
     const actualCancelFlowsUsed = cancelFlowsCount ?? 0;
 
+    // Determine if email sequences are enabled based on plan
+    const emailSequencesEnabled = plan?.emailSequencesEnabled ?? (planKey !== 'basic');
+
     return NextResponse.json({
       hasSubscription: true,
-      plan: subscription.plan,
+      plan: planKey, // Return normalized plan name
       planName: plan?.name,
       status: subscription.status,
       cancelFlowsLimit: subscription.cancel_flows_limit,
@@ -80,6 +117,7 @@ export async function GET(request: NextRequest) {
       trialEnd: subscription.trial_end,
       isTrialing: subscription.status === 'trialing',
       features: plan?.features || [],
+      emailSequencesEnabled,
       stripeSubscriptionId: subscription.stripe_subscription_id,
       stripeCustomerId: subscription.stripe_customer_id,
     });
@@ -112,12 +150,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getServerSupabase();
+    const { supabase, orgId } = await getAuthenticatedClient();
+
+    if (!orgId || !supabase) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('organization_id', DEFAULT_ORG_ID)
+      .eq('organization_id', orgId)
       .single();
 
     if (error || !data) {
@@ -146,7 +191,7 @@ export async function POST(request: NextRequest) {
         await (supabase as any)
           .from('subscriptions')
           .update({ cancel_at_period_end: true })
-          .eq('organization_id', DEFAULT_ORG_ID);
+          .eq('organization_id', orgId);
 
         return NextResponse.json({
           success: true,
@@ -170,7 +215,7 @@ export async function POST(request: NextRequest) {
         await (supabase as any)
           .from('subscriptions')
           .update({ cancel_at_period_end: false })
-          .eq('organization_id', DEFAULT_ORG_ID);
+          .eq('organization_id', orgId);
 
         return NextResponse.json({
           success: true,
@@ -240,7 +285,7 @@ export async function POST(request: NextRequest) {
             stripe_price_id: newPlanConfig.priceId,
             cancel_flows_limit: newPlanConfig.cancelFlowsLimit,
           })
-          .eq('organization_id', DEFAULT_ORG_ID);
+          .eq('organization_id', orgId);
 
         return NextResponse.json({
           success: true,

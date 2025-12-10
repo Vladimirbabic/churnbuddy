@@ -30,8 +30,8 @@ interface SubscriptionData {
 
 const plans = [
   {
-    id: 'starter',
-    name: 'Starter',
+    id: 'basic',
+    name: 'Basic',
     description: 'Perfect for small SaaS products just getting started',
     price: 9,
     interval: 'month',
@@ -40,11 +40,11 @@ const plans = [
     features: [
       '1 Cancel Flow',
       'Exit survey collection',
+      'Analytics',
       'Email support',
-      'Basic analytics',
     ],
     limitations: [
-      'Single product/app',
+      'No Email Sequences',
     ],
   },
   {
@@ -57,11 +57,10 @@ const plans = [
     tier: 2,
     features: [
       '5 Cancel Flows',
+      'Email Sequences',
       'Custom exit surveys',
-      'Priority email support',
-      'Advanced analytics',
-      'Custom branding',
-      'Slack notifications',
+      'Analytics',
+      'Priority support',
     ],
     limitations: [],
     popular: true,
@@ -76,14 +75,11 @@ const plans = [
     tier: 3,
     features: [
       'Unlimited Cancel Flows',
+      'Email Sequences',
       'Custom exit surveys',
-      'Priority support + Slack',
-      'Advanced analytics',
-      'Custom branding',
-      'Slack notifications',
+      'Analytics',
+      'Priority support',
       'API access',
-      'Custom integrations',
-      'Dedicated success manager',
     ],
     limitations: [],
   },

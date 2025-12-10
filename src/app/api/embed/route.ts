@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const flowId = searchParams.get('flow') || '';
+  const mode = searchParams.get('mode') || 'live'; // 'test' or 'live', defaults to 'live'
 
   // Determine base URL - prefer auto-detection from request headers for portability
   let baseUrl: string;
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
 
   var CONFIG = {
     flowId: '${flowId}',
-    configEndpoint: '${baseUrl}/api/flow-config?id=${flowId}',
+    mode: '${mode}',
+    configEndpoint: '${baseUrl}/api/flow-config?id=${flowId}&mode=${mode}',
     eventEndpoint: '${baseUrl}/api/cancel-flow',
     baseUrl: '${baseUrl}'
   };
@@ -1068,6 +1070,7 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify({
         eventType: eventType,
         flowId: CONFIG.flowId,
+        mode: CONFIG.mode,
         customerId: state.customerId,
         subscriptionId: state.subscriptionId,
         customerEmail: state.customerEmail,  // For auto-lookup
@@ -1491,6 +1494,7 @@ export async function GET(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             flowId: CONFIG.flowId,
+            mode: CONFIG.mode,
             subscriptionId: state.subscriptionId,
             newPriceId: plan.stripePriceId,
             customerId: state.customerId,
@@ -1581,6 +1585,7 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           eventType: 'offer_accepted',
           flowId: CONFIG.flowId,
+          mode: CONFIG.mode,
           customerId: state.customerId,
           subscriptionId: state.subscriptionId,
           customerEmail: state.customerEmail,  // For auto-lookup

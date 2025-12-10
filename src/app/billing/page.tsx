@@ -11,12 +11,20 @@ import {
   Calendar,
   Zap,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AppLayout } from '@/components/AppLayout';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface SubscriptionData {
   hasSubscription: boolean;
@@ -31,13 +39,40 @@ interface SubscriptionData {
   isTrialing: boolean;
   features: string[];
   demoMode?: boolean;
+  stripeSubscriptionId?: string | null;
+  stripeCustomerId?: string | null;
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ['1 Cancel Flow', 'Basic analytics', 'Email support'],
-  growth: ['5 Cancel Flows', 'Advanced analytics', 'Priority support', 'Custom branding', 'Slack notifications'],
-  scale: ['Unlimited Cancel Flows', 'Advanced analytics', 'Priority support', 'Custom branding', 'API access', 'Dedicated success manager'],
+  basic: ['1 Cancel Flow', 'Analytics', 'Email support'],
+  growth: ['5 Cancel Flows', 'Email Sequences', 'Analytics', 'Priority support'],
+  scale: ['Unlimited Cancel Flows', 'Email Sequences', 'Analytics', 'Priority support', 'API access'],
 };
+
+const PLANS = [
+  {
+    id: 'basic',
+    name: 'Basic',
+    price: 9,
+    description: 'For small teams getting started',
+    features: ['1 Cancel Flow', 'Analytics', 'Email support'],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    price: 19,
+    description: 'For growing businesses',
+    features: ['5 Cancel Flows', 'Email Sequences', 'Analytics', 'Priority support'],
+    popular: true,
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    price: 49,
+    description: 'For high-volume operations',
+    features: ['Unlimited Cancel Flows', 'Email Sequences', 'Analytics', 'Priority support', 'API access'],
+  },
+];
 
 function BillingPageContent() {
   const searchParams = useSearchParams();
@@ -45,6 +80,8 @@ function BillingPageContent() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for success/canceled params from Stripe redirect
@@ -144,6 +181,56 @@ function BillingPageContent() {
     }
   };
 
+  const handleUpgrade = async (newPlan: string) => {
+    setUpgradingPlan(newPlan);
+    try {
+      // If no Stripe subscription exists, use checkout to create one
+      if (!subscription?.stripeSubscriptionId) {
+        const response = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: newPlan,
+            successUrl: `${window.location.origin}/billing?success=true`,
+            cancelUrl: `${window.location.origin}/billing?canceled=true`,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+          return;
+        } else {
+          const data = await response.json();
+          setMessage({ type: 'error', text: data.error || 'Failed to start checkout' });
+          setUpgradingPlan(null);
+          return;
+        }
+      }
+
+      // Existing Stripe subscription - use upgrade flow
+      const response = await fetch('/api/billing/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upgrade', newPlan }),
+      });
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: `Successfully upgraded to ${newPlan} plan!` });
+        setShowUpgradeModal(false);
+        fetchSubscription();
+      } else {
+        const data = await response.json();
+        setMessage({ type: 'error', text: data.error || 'Failed to upgrade plan' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to upgrade plan' });
+    } finally {
+      setUpgradingPlan(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -237,7 +324,7 @@ function BillingPageContent() {
                     <div>
                       <p className="text-2xl font-bold capitalize">{subscription.planName || subscription.plan}</p>
                       <p className="text-sm text-muted-foreground">
-                        {subscription.plan === 'starter' && '$9/month'}
+                        {subscription.plan === 'basic' && '$9/month'}
                         {subscription.plan === 'growth' && '$19/month'}
                         {subscription.plan === 'scale' && '$49/month'}
                       </p>
@@ -312,8 +399,8 @@ function BillingPageContent() {
                     Manage Billing
                   </Button>
                   {subscription.plan !== 'scale' && (
-                    <Button asChild>
-                      <Link href="/pricing">Upgrade Plan</Link>
+                    <Button onClick={() => setShowUpgradeModal(true)}>
+                      Upgrade Plan
                     </Button>
                   )}
                   {subscription.cancelAtPeriodEnd ? (
@@ -362,6 +449,86 @@ function BillingPageContent() {
               </Card>
             </>
           )}
+
+          {/* Upgrade Plan Modal */}
+          <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+            <DialogContent className="sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Choose Your Plan</DialogTitle>
+                <DialogDescription>
+                  Select the plan that best fits your needs. You can upgrade or downgrade anytime.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid md:grid-cols-3 gap-4 py-4">
+                {PLANS.map((plan) => {
+                  const isCurrentPlan = subscription?.plan === plan.id;
+                  const isUpgrade = subscription?.plan &&
+                    PLANS.findIndex(p => p.id === plan.id) > PLANS.findIndex(p => p.id === subscription.plan);
+                  const isDowngrade = subscription?.plan &&
+                    PLANS.findIndex(p => p.id === plan.id) < PLANS.findIndex(p => p.id === subscription.plan);
+
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`relative rounded-xl border p-5 transition-all ${
+                        isCurrentPlan
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:border-primary/50 hover:shadow-md'
+                      } ${plan.popular ? 'ring-2 ring-primary' : ''}`}
+                    >
+                      {plan.popular && (
+                        <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary">
+                          Popular
+                        </Badge>
+                      )}
+                      {isCurrentPlan && (
+                        <Badge variant="secondary" className="absolute -top-2.5 right-3">
+                          Current
+                        </Badge>
+                      )}
+                      <div className="text-center mb-4">
+                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                        <div className="mt-3">
+                          <span className="text-3xl font-bold">${plan.price}</span>
+                          <span className="text-muted-foreground">/month</span>
+                        </div>
+                      </div>
+                      <ul className="space-y-2 mb-4">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2 text-sm">
+                            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className="w-full"
+                        variant={isCurrentPlan ? 'secondary' : isUpgrade ? 'default' : 'outline'}
+                        disabled={isCurrentPlan || upgradingPlan === plan.id}
+                        onClick={() => handleUpgrade(plan.id)}
+                      >
+                        {upgradingPlan === plan.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : isCurrentPlan ? (
+                          'Current Plan'
+                        ) : isUpgrade ? (
+                          'Upgrade'
+                        ) : isDowngrade ? (
+                          'Downgrade'
+                        ) : (
+                          'Select'
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </DialogContent>
+          </Dialog>
       </div>
     </AppLayout>
   );

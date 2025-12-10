@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       discountPercent,
       discountDurationMonths = 3, // Default 3 months discount
     } = body;
+    // Extract mode from request, default to 'live' for backwards compatibility
+    const mode: 'test' | 'live' = body.mode === 'test' ? 'test' : 'live';
 
     // Validate required fields
     if (!flowId || !subscriptionId || !newPriceId) {
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
       .eq('organization_id', organizationId)
       .single();
 
-    if (settingsError || !settings?.stripe_config?.secret_key) {
+    if (settingsError || !settings?.stripe_config) {
       console.error('Stripe not configured:', settingsError);
       return NextResponse.json(
         { error: 'Stripe not configured for this organization' },
@@ -100,8 +102,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the appropriate Stripe key based on mode
+    // Support both new (test/live) and old (flat) structures
+    const stripeConfig = settings.stripe_config;
+    let stripeSecretKey: string | null = null;
+
+    // Check for new structure (test/live keys)
+    const modeConfig = stripeConfig[mode] as { secret_key?: string } | undefined;
+    if (modeConfig?.secret_key) {
+      stripeSecretKey = modeConfig.secret_key;
+    }
+    // Fall back to old structure (single secret_key) - treat as live
+    else if (mode === 'live' && stripeConfig.secret_key) {
+      stripeSecretKey = stripeConfig.secret_key;
+    }
+
+    if (!stripeSecretKey) {
+      console.error(`No ${mode} Stripe key configured`);
+      return NextResponse.json(
+        { error: `Stripe ${mode} keys not configured for this organization` },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     // Create Stripe client with organization's key
-    const stripeClient = createStripeClient(settings.stripe_config.secret_key);
+    const stripeClient = createStripeClient(stripeSecretKey);
 
     // Switch the subscription
     const result = await switchSubscriptionPlan(
@@ -129,6 +154,7 @@ export async function POST(request: NextRequest) {
       subscription_id: subscriptionId,
       details: {
         flowId,
+        mode, // Track which Stripe environment was used
         newPriceId,
         planName,
         discountPercent,

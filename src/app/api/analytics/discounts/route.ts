@@ -133,6 +133,8 @@ export async function GET() {
     let activeDiscounts: Array<{
       customerId: string;
       customerEmail: string | null;
+      customerName: string | null;
+      customerCountry: string | null;
       subscriptionId: string;
       discountPercent: number | null;
       discountAmount: number | null;
@@ -179,7 +181,7 @@ export async function GET() {
         activeDiscounts = subscriptions.data
           .filter(sub => sub.discount)
           .map(sub => {
-            const customer = sub.customer as { id: string; email?: string | null };
+            const customer = sub.customer as Stripe.Customer;
             const discount = sub.discount!;
             // Calculate total subscription amount from items (this is the base/original price)
             const originalAmountCents = sub.items.data.reduce((total, item) => {
@@ -205,6 +207,8 @@ export async function GET() {
             return {
               customerId: typeof customer === 'string' ? customer : customer.id,
               customerEmail: typeof customer === 'string' ? null : (customer.email || null),
+              customerName: typeof customer === 'string' ? null : (customer.name || null),
+              customerCountry: typeof customer === 'string' ? null : (customer.address?.country || null),
               subscriptionId: sub.id,
               discountPercent: discount.coupon?.percent_off || null,
               discountAmount: discount.coupon?.amount_off || null,

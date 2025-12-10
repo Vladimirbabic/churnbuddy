@@ -22,46 +22,66 @@ export function createStripeClient(secretKey: string): Stripe {
   });
 }
 
+// Stripe mode type
+export type StripeMode = 'test' | 'live';
+
 // Get organization's Stripe key from settings
-export async function getOrganizationStripeKey(flowId: string): Promise<string | null> {
+// mode defaults to 'live' for backwards compatibility
+export async function getOrganizationStripeKey(flowId: string, mode: StripeMode = 'live'): Promise<string | null> {
   try {
     // Import supabase dynamically to avoid circular dependencies
     const { getServerSupabase, isSupabaseConfigured } = await import('@/lib/supabase');
-    
+
     if (!isSupabaseConfigured()) {
       return null;
     }
-    
+
     const supabase = getServerSupabase();
-    
+
     // First, get the organization_id from the cancel_flows table
     const { data: flow, error: flowError } = await (supabase as any)
       .from('cancel_flows')
       .select('organization_id')
       .eq('id', flowId)
       .single();
-    
+
     if (flowError || !flow) {
       console.error('Flow not found:', flowId);
       return null;
     }
-    
+
     const orgId = (flow as { organization_id: string }).organization_id;
-    
+
     // Then get the Stripe key from settings
     const { data: settings, error: settingsError } = await (supabase as any)
       .from('settings')
       .select('stripe_config')
       .eq('organization_id', orgId)
       .single();
-    
+
     if (settingsError || !settings) {
       console.error('Settings not found for org:', orgId);
       return null;
     }
-    
-    const stripeConfig = (settings as { stripe_config?: { secret_key?: string } }).stripe_config;
-    return stripeConfig?.secret_key || null;
+
+    const stripeConfig = (settings as { stripe_config?: Record<string, unknown> }).stripe_config;
+    if (!stripeConfig) return null;
+
+    // Check for new structure (test/live keys)
+    const modeConfig = stripeConfig[mode] as { secret_key?: string } | undefined;
+    if (modeConfig?.secret_key) {
+      console.log(`Using ${mode} Stripe key for org:`, orgId);
+      return modeConfig.secret_key;
+    }
+
+    // Fall back to old structure (single secret_key) - treat as live
+    if (mode === 'live' && stripeConfig.secret_key) {
+      console.log('Using legacy Stripe key for org:', orgId);
+      return stripeConfig.secret_key as string;
+    }
+
+    console.log(`No ${mode} Stripe key found for org:`, orgId);
+    return null;
   } catch (error) {
     console.error('Error fetching organization Stripe key:', error);
     return null;

@@ -115,6 +115,10 @@ export async function POST(request: NextRequest) {
 
     // Route event to appropriate handler
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
         break;
@@ -613,4 +617,83 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     console.log(`Attribution recorded: Winback sequence led to resubscription (${winbackEmailsSent.length} emails sent)`);
   }
+}
+
+/**
+ * Handle checkout.session.completed event
+ * Updates the organization's subscription record after successful checkout
+ */
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  console.log('Processing checkout.session.completed event:', session.id);
+
+  // Only handle subscription checkouts
+  if (session.mode !== 'subscription') {
+    console.log('Checkout mode is not subscription, skipping');
+    return;
+  }
+
+  const organizationId = session.metadata?.organizationId;
+  const plan = session.metadata?.plan;
+
+  if (!organizationId) {
+    console.error('No organizationId found in checkout session metadata');
+    return;
+  }
+
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id;
+
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : session.customer?.id;
+
+  if (!subscriptionId || !customerId) {
+    console.error('Missing subscription or customer ID in checkout session');
+    return;
+  }
+
+  // Fetch the full subscription details from Stripe
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const priceId = subscription.items.data[0]?.price.id;
+
+  // Determine plan limits based on plan type
+  const planLimits: Record<string, number> = {
+    starter: 1,
+    growth: 5,
+    scale: -1, // unlimited
+  };
+
+  const supabase = getServerSupabase();
+
+  // Update the subscription record in the database
+  const { error } = await (supabase as any)
+    .from('subscriptions')
+    .update({
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      stripe_price_id: priceId,
+      plan: plan || 'basic',
+      status: subscription.status,
+      cancel_flows_limit: planLimits[plan || 'basic'] ?? 1,
+      current_period_start: subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+      trial_end: subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : null,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    console.error('Failed to update subscription in database:', error);
+    return;
+  }
+
+  console.log(`Subscription updated for org ${organizationId}: plan=${plan}, status=${subscription.status}`);
 }

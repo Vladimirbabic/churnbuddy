@@ -76,7 +76,11 @@ export async function GET(request: NextRequest) {
         organization_id: orgId,
         onboarding_completed: false,
         onboarding_step: 0,
-        stripe_config: { is_connected: false, test_mode: true },
+        stripe_config: {
+          is_connected: false,
+          test: { secret_key: null, webhook_secret: null },
+          live: { secret_key: null, webhook_secret: null },
+        },
         email_config: { is_connected: false, provider: 'resend' },
         cancel_flow_config: {
           enabled: true,
@@ -85,20 +89,46 @@ export async function GET(request: NextRequest) {
           show_survey: true,
         },
         dunning_config: { enabled: true },
-        branding: { primary_color: '#3b82f6' },
+        branding: { primary_color: '#3b82f6', theme: 'light' },
         notifications: {},
       });
     }
 
     // Don't expose sensitive keys in response
     const settingsData = settings as Record<string, unknown>;
+    const stripeConfig = settingsData.stripe_config as Record<string, unknown> || {};
+
+    // Handle both old (flat) and new (test/live) stripe_config structures
+    const hasNewStructure = stripeConfig.test || stripeConfig.live;
+    const testConfig = (stripeConfig.test as Record<string, unknown>) || {};
+    const liveConfig = (stripeConfig.live as Record<string, unknown>) || {};
+
+    // Build safe stripe config - convert old structure to new if needed
+    const safeStripeConfig = hasNewStructure
+      ? {
+          is_connected: stripeConfig.is_connected || false,
+          test: {
+            secret_key: testConfig.secret_key ? '••••••••' : null,
+            webhook_secret: testConfig.webhook_secret ? '••••••••' : null,
+          },
+          live: {
+            secret_key: liveConfig.secret_key ? '••••••••' : null,
+            webhook_secret: liveConfig.webhook_secret ? '••••••••' : null,
+          },
+        }
+      : {
+          // Migrate old structure to new format in response
+          is_connected: stripeConfig.is_connected || false,
+          test: { secret_key: null, webhook_secret: null },
+          live: {
+            secret_key: stripeConfig.secret_key ? '••••••••' : null,
+            webhook_secret: stripeConfig.webhook_secret ? '••••••••' : null,
+          },
+        };
+
     const safeSettings = {
       ...settingsData,
-      stripe_config: {
-        ...(settingsData.stripe_config as Record<string, unknown>),
-        secret_key: (settingsData.stripe_config as Record<string, unknown>)?.secret_key ? '••••••••' : undefined,
-        webhook_secret: (settingsData.stripe_config as Record<string, unknown>)?.webhook_secret ? '••••••••' : undefined,
-      },
+      stripe_config: safeStripeConfig,
       email_config: {
         ...(settingsData.email_config as Record<string, unknown>),
         api_key: (settingsData.email_config as Record<string, unknown>)?.api_key ? '••••••••' : undefined,
@@ -182,20 +212,45 @@ export async function POST(request: NextRequest) {
       updateData.onboarding_step = body.onboarding_step;
     }
 
-    // Handle Stripe settings - preserve existing keys if masked value sent
+    // Handle Stripe settings - support both test and live keys
     if (body.stripe) {
+      // Get existing test/live configs (handle both old and new structure)
+      const existingTestConfig = (existingStripeConfig.test as Record<string, unknown>) || {};
+      const existingLiveConfig = (existingStripeConfig.live as Record<string, unknown>) || {};
+
+      // For backwards compatibility: if old structure exists, migrate to live
+      const migratedLiveSecretKey = existingStripeConfig.secret_key || existingLiveConfig.secret_key;
+      const migratedLiveWebhookSecret = existingStripeConfig.webhook_secret || existingLiveConfig.webhook_secret;
+
+      // Build test config
+      const testSecretKey = body.stripe.test?.secretKey && body.stripe.test.secretKey !== '••••••••'
+        ? body.stripe.test.secretKey
+        : existingTestConfig.secret_key;
+      const testWebhookSecret = body.stripe.test?.webhookSecret && body.stripe.test.webhookSecret !== '••••••••'
+        ? body.stripe.test.webhookSecret
+        : existingTestConfig.webhook_secret;
+
+      // Build live config
+      const liveSecretKey = body.stripe.live?.secretKey && body.stripe.live.secretKey !== '••••••••'
+        ? body.stripe.live.secretKey
+        : migratedLiveSecretKey;
+      const liveWebhookSecret = body.stripe.live?.webhookSecret && body.stripe.live.webhookSecret !== '••••••••'
+        ? body.stripe.live.webhookSecret
+        : migratedLiveWebhookSecret;
+
+      // Determine if connected (at least live keys are set)
+      const isConnected = !!liveSecretKey;
+
       updateData.stripe_config = {
-        test_mode: body.stripe.testMode ?? true,
-        is_connected: true,
-        // Preserve existing secret_key if masked value '••••••••' is sent
-        secret_key: body.stripe.secretKey && body.stripe.secretKey !== '••••••••'
-          ? body.stripe.secretKey
-          : existingStripeConfig.secret_key,
-        // Preserve existing webhook_secret if masked value '••••••••' is sent
-        webhook_secret: body.stripe.webhookSecret && body.stripe.webhookSecret !== '••••••••'
-          ? body.stripe.webhookSecret
-          : existingStripeConfig.webhook_secret,
-        publishable_key: body.stripe.publishableKey || existingStripeConfig.publishable_key,
+        is_connected: isConnected,
+        test: {
+          secret_key: testSecretKey || null,
+          webhook_secret: testWebhookSecret || null,
+        },
+        live: {
+          secret_key: liveSecretKey || null,
+          webhook_secret: liveWebhookSecret || null,
+        },
       };
     }
 
@@ -230,9 +285,28 @@ export async function POST(request: NextRequest) {
     if (body.branding) {
       updateData.branding = {
         company_name: body.branding.companyName,
+        full_name: body.branding.fullName,
+        website: body.branding.website,
         primary_color: body.branding.primaryColor || '#3b82f6',
         logo_url: body.branding.logoUrl,
         modal_theme: body.branding.modalTheme,
+        theme: body.branding.theme || 'light',
+      };
+    }
+
+    // Handle theme-only updates (for quick theme switching)
+    if (body.theme && !body.branding) {
+      // Fetch existing branding to preserve other settings
+      const { data: existingSettings } = await (supabase as any)
+        .from('settings')
+        .select('branding')
+        .eq('organization_id', orgId)
+        .single();
+
+      const existingBranding = (existingSettings?.branding as Record<string, unknown>) || {};
+      updateData.branding = {
+        ...existingBranding,
+        theme: body.theme,
       };
     }
 

@@ -22,7 +22,7 @@ function getPlanFromPriceId(priceId: string): PlanType {
       return planKey as PlanType;
     }
   }
-  return 'starter'; // default
+  return 'basic'; // default
 }
 
 export async function POST(request: NextRequest) {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           );
 
           const organizationId = session.metadata?.organizationId || 'demo-org-001';
-          const plan = session.metadata?.plan as PlanType || 'starter';
+          const plan = session.metadata?.plan as PlanType || 'basic';
           const planConfig = PLANS[plan];
 
           // Upsert subscription in Supabase

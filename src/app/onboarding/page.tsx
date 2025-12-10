@@ -16,6 +16,8 @@ import {
   Eye,
   EyeOff,
   Sparkles,
+  Mail,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +28,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 // Types
 interface OnboardingData {
   company: {
+    fullName: string;
     name: string;
     website: string;
   };
@@ -34,12 +37,18 @@ interface OnboardingData {
     webhookSecret: string;
     testMode: boolean;
   };
+  resend: {
+    apiKey: string;
+    fromEmail: string;
+    fromName: string;
+  };
 }
 
 const STEPS = [
   { id: 'welcome', title: 'Welcome', icon: Sparkles },
   { id: 'company', title: 'Company Info', icon: Building2 },
   { id: 'stripe', title: 'Connect Stripe', icon: CreditCard },
+  { id: 'resend', title: 'Connect Resend', icon: Mail },
   { id: 'complete', title: 'Complete', icon: Check },
 ];
 
@@ -55,13 +64,19 @@ export default function OnboardingPage() {
 
   const [data, setData] = useState<OnboardingData>({
     company: {
+      fullName: '',
       name: '',
       website: '',
     },
     stripe: {
       secretKey: '',
       webhookSecret: '',
-      testMode: true,
+      testMode: false,
+    },
+    resend: {
+      apiKey: '',
+      fromEmail: '',
+      fromName: '',
     },
   });
 
@@ -92,6 +107,10 @@ export default function OnboardingPage() {
 
     switch (STEPS[currentStep].id) {
       case 'company':
+        if (!data.company.fullName.trim()) {
+          setError('Please enter your full name');
+          return false;
+        }
         if (!data.company.name.trim()) {
           setError('Please enter your company name');
           return false;
@@ -115,6 +134,24 @@ export default function OnboardingPage() {
           return false;
         }
         break;
+      case 'resend':
+        if (!data.resend.apiKey) {
+          setError('Please enter your Resend API Key');
+          return false;
+        }
+        if (!data.resend.apiKey.startsWith('re_')) {
+          setError('Invalid Resend API Key format. It should start with re_');
+          return false;
+        }
+        if (!data.resend.fromEmail) {
+          setError('Please enter your from email address');
+          return false;
+        }
+        if (!data.resend.fromEmail.includes('@')) {
+          setError('Please enter a valid email address');
+          return false;
+        }
+        break;
     }
 
     return true;
@@ -131,12 +168,23 @@ export default function OnboardingPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            companyName: data.company.name,
-            companyWebsite: data.company.website,
-            stripeSecretKey: data.stripe.secretKey,
-            stripeWebhookSecret: data.stripe.webhookSecret,
-            stripeTestMode: data.stripe.testMode,
-            onboardingCompleted: true,
+            onboarding_completed: true,
+            branding: {
+              companyName: data.company.name,
+              fullName: data.company.fullName,
+              website: data.company.website,
+            },
+            stripe: {
+              secretKey: data.stripe.secretKey,
+              webhookSecret: data.stripe.webhookSecret,
+              testMode: data.stripe.testMode,
+            },
+            email: {
+              provider: 'resend',
+              apiKey: data.resend.apiKey,
+              fromEmail: data.resend.fromEmail,
+              fromName: data.resend.fromName || data.company.name,
+            },
           }),
         });
 
@@ -162,9 +210,9 @@ export default function OnboardingPage() {
 
   return (
     <AuthGuard>
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
@@ -182,23 +230,30 @@ export default function OnboardingPage() {
               className="h-6 w-auto hidden dark:block"
             />
           </div>
-          <Badge variant="secondary">Setup Wizard</Badge>
+          <Badge variant="secondary" className="bg-primary/10 text-primary border-0">Setup Wizard</Badge>
         </div>
       </header>
 
-      <main className="container max-w-3xl py-12">
+      <main className="container max-w-3xl py-12 px-4">
         {/* Progress */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground font-medium">
               Step {currentStep + 1} of {STEPS.length}
             </span>
-            <span className="text-sm font-medium">{STEPS[currentStep].title}</span>
+            <span className="text-sm font-semibold text-primary">{STEPS[currentStep].title}</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-2 bg-muted/50" />
 
-          {/* Step indicators */}
-          <div className="flex justify-between mt-4">
+          {/* Step indicators with connecting lines */}
+          <div className="relative flex justify-between mt-8">
+            {/* Connecting line */}
+            <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted mx-12" />
+            <div
+              className="absolute top-5 left-0 h-0.5 bg-primary mx-12 transition-all duration-500"
+              style={{ width: `calc(${(currentStep / (STEPS.length - 1)) * 100}% - 6rem)` }}
+            />
+
             {STEPS.map((step, index) => {
               const Icon = step.icon;
               const isComplete = index < currentStep;
@@ -207,26 +262,28 @@ export default function OnboardingPage() {
               return (
                 <div
                   key={step.id}
-                  className={`flex flex-col items-center gap-1 ${
+                  className={`relative flex flex-col items-center gap-2 transition-all duration-300 ${
                     index <= currentStep ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-background shadow-sm ${
                       isComplete
-                        ? 'bg-primary border-primary text-primary-foreground'
+                        ? 'bg-primary border-primary text-primary-foreground shadow-primary/25'
                         : isCurrent
-                        ? 'border-primary bg-primary/10'
-                        : 'border-muted'
+                        ? 'border-primary bg-primary/10 shadow-primary/20 ring-4 ring-primary/10'
+                        : 'border-muted hover:border-muted-foreground/50'
                     }`}
                   >
                     {isComplete ? (
                       <Check className="h-5 w-5" />
                     ) : (
-                      <Icon className="h-5 w-5" />
+                      <Icon className={`h-5 w-5 ${isCurrent ? 'animate-pulse' : ''}`} />
                     )}
                   </div>
-                  <span className="text-xs hidden sm:block">{step.title}</span>
+                  <span className={`text-xs hidden sm:block font-medium transition-colors ${isCurrent ? 'text-primary' : ''}`}>
+                    {step.title}
+                  </span>
                 </div>
               );
             })}
@@ -242,47 +299,59 @@ export default function OnboardingPage() {
         )}
 
         {/* Step Content */}
-        <Card>
+        <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
           {/* Welcome Step */}
           {STEPS[currentStep].id === 'welcome' && (
             <>
-              <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-8 w-8 text-primary" />
+              <CardHeader className="text-center pb-2 pt-8">
+                <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-lg shadow-primary/10 ring-1 ring-primary/10">
+                  <Sparkles className="h-10 w-10 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">Welcome to Exit Loop!</CardTitle>
-                <CardDescription className="text-base">
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">Welcome to Exit Loop!</CardTitle>
+                <CardDescription className="text-base mt-2">
                   Let's get you set up in just a few minutes
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4">
-                  <div className="flex items-start gap-4 p-4 rounded-lg border">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                      <Building2 className="h-5 w-5 text-blue-600" />
+              <CardContent className="space-y-6 pb-8">
+                <div className="grid gap-3">
+                  <div className="flex items-start gap-4 p-4 rounded-xl border bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20 hover:shadow-md transition-all duration-200 group">
+                    <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Tell us about your company</h3>
-                      <p className="text-sm text-muted-foreground">
-                        We'll personalize your cancel flows and communications
+                      <h3 className="font-semibold text-foreground">Tell us about you</h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Your name and company details for personalization
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-4 rounded-lg border">
-                    <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5 text-purple-600" />
+                  <div className="flex items-start gap-4 p-4 rounded-xl border bg-gradient-to-r from-purple-50/50 to-transparent dark:from-purple-950/20 hover:shadow-md transition-all duration-200 group">
+                    <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <CreditCard className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Connect Stripe</h3>
-                      <p className="text-sm text-muted-foreground">
-                        We'll guide you through setting up webhooks and API keys
+                      <h3 className="font-semibold text-foreground">Connect Stripe</h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Set up webhooks and API keys for subscription management
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-4 rounded-xl border bg-gradient-to-r from-emerald-50/50 to-transparent dark:from-emerald-950/20 hover:shadow-md transition-all duration-200 group">
+                    <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Mail className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Connect Resend</h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Enable automated email sequences to recover customers
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-center text-sm text-muted-foreground">
+                <p className="text-center text-sm text-muted-foreground pt-2">
                   This should take about 5 minutes. You can always change these settings later.
                 </p>
               </CardContent>
@@ -293,12 +362,26 @@ export default function OnboardingPage() {
           {STEPS[currentStep].id === 'company' && (
             <>
               <CardHeader>
-                <CardTitle>Company Information</CardTitle>
+                <CardTitle>Tell us about yourself</CardTitle>
                 <CardDescription>
-                  Tell us about your company so we can personalize your experience
+                  This information helps us personalize your experience
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Full Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={data.company.fullName}
+                    onChange={(e) => updateData('company', 'fullName', e.target.value)}
+                    placeholder="John Smith"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
                 {/* Company Name */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
@@ -348,23 +431,23 @@ export default function OnboardingPage() {
                   <div className="flex-1">
                     <p className="font-medium">Mode</p>
                     <p className="text-sm text-muted-foreground">
-                      Start with test mode to verify your integration
+                      Use live mode for production, or test mode to try things out
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={data.stripe.testMode ? 'default' : 'outline'}
-                      onClick={() => updateData('stripe', 'testMode', true)}
-                    >
-                      Test
-                    </Button>
                     <Button
                       size="sm"
                       variant={!data.stripe.testMode ? 'default' : 'outline'}
                       onClick={() => updateData('stripe', 'testMode', false)}
                     >
                       Live
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={data.stripe.testMode ? 'default' : 'outline'}
+                      onClick={() => updateData('stripe', 'testMode', true)}
+                    >
+                      Test
                     </Button>
                   </div>
                 </div>
@@ -548,6 +631,148 @@ export default function OnboardingPage() {
             </>
           )}
 
+          {/* Resend Step */}
+          {STEPS[currentStep].id === 'resend' && (
+            <>
+              <CardHeader>
+                <CardTitle>Connect Resend</CardTitle>
+                <CardDescription>
+                  Set up Resend to send automated email sequences to your customers
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Step 1: Get API Key */}
+                <div className="space-y-4 p-4 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                      1
+                    </div>
+                    <h3 className="font-medium">Get your Resend API Key</h3>
+                  </div>
+
+                  <ol className="space-y-3 text-sm text-muted-foreground ml-8">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary font-medium">a.</span>
+                      <span>
+                        Go to{' '}
+                        <a
+                          href="https://resend.com/api-keys"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Resend API Keys <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary font-medium">b.</span>
+                      <span>Click <strong>"Create API Key"</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary font-medium">c.</span>
+                      <span>Give it a name (e.g., "Exit Loop") and set permissions to <strong>"Full access"</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary font-medium">d.</span>
+                      <span>Copy the API key that starts with <code className="bg-muted px-1 rounded">re_</code></span>
+                    </li>
+                  </ol>
+                </div>
+
+                {/* API Key Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Resend API Key <span className="text-destructive">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSecrets['resendKey'] ? 'text' : 'password'}
+                      value={data.resend.apiKey}
+                      onChange={(e) => updateData('resend', 'apiKey', e.target.value)}
+                      placeholder="re_..."
+                      className="w-full px-3 py-2 pr-10 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleSecret('resendKey')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSecrets['resendKey'] ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step 2: Configure sender */}
+                <div className="space-y-4 p-4 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                      2
+                    </div>
+                    <h3 className="font-medium">Configure your sender details</h3>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground ml-8">
+                    Make sure you've verified your domain in Resend before using a custom from email.
+                    <a
+                      href="https://resend.com/domains"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline inline-flex items-center gap-1 ml-1"
+                    >
+                      Manage domains <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </p>
+                </div>
+
+                {/* From Email */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    From Email <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={data.resend.fromEmail}
+                    onChange={(e) => updateData('resend', 'fromEmail', e.target.value)}
+                    placeholder="hello@yourcompany.com"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The email address your customers will see in their inbox
+                  </p>
+                </div>
+
+                {/* From Name */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    From Name
+                  </label>
+                  <input
+                    type="text"
+                    value={data.resend.fromName}
+                    onChange={(e) => updateData('resend', 'fromName', e.target.value)}
+                    placeholder={data.company.name || 'Your Company'}
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Defaults to your company name if left empty
+                  </p>
+                </div>
+
+                {/* Info Note */}
+                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                    <strong>Tip:</strong> Resend offers 3,000 free emails per month. This is enough for most SaaS businesses starting out.
+                  </p>
+                </div>
+              </CardContent>
+            </>
+          )}
+
           {/* Complete Step */}
           {STEPS[currentStep].id === 'complete' && (
             <>
@@ -569,6 +794,10 @@ export default function OnboardingPage() {
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
                     <Check className="h-5 w-5" />
                     <span>Stripe connected</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">
+                    <Check className="h-5 w-5" />
+                    <span>Resend connected</span>
                   </div>
                 </div>
 
@@ -604,16 +833,22 @@ export default function OnboardingPage() {
 
           {/* Navigation */}
           {STEPS[currentStep].id !== 'complete' && (
-            <div className="flex items-center justify-between p-6 pt-0">
+            <div className="flex items-center justify-between p-6 pt-0 border-t bg-muted/30">
               <Button
                 variant="ghost"
                 onClick={prevStep}
                 disabled={currentStep === 0}
+                className="hover:bg-background"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <Button onClick={nextStep} disabled={isLoading}>
+              <Button
+                onClick={nextStep}
+                disabled={isLoading}
+                size="lg"
+                className="px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              >
                 {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}

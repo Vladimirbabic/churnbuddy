@@ -19,7 +19,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           stripe_price_id: string | null
-          plan: 'starter' | 'growth' | 'scale'
+          plan: 'basic' | 'growth' | 'scale'
           status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'
           cancel_flows_limit: number
           cancel_flows_used: number
@@ -36,7 +36,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_price_id?: string | null
-          plan?: 'starter' | 'growth' | 'scale'
+          plan?: 'basic' | 'growth' | 'scale'
           status?: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'
           cancel_flows_limit?: number
           cancel_flows_used?: number
@@ -53,7 +53,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_price_id?: string | null
-          plan?: 'starter' | 'growth' | 'scale'
+          plan?: 'basic' | 'growth' | 'scale'
           status?: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'
           cancel_flows_limit?: number
           cancel_flows_used?: number
@@ -296,7 +296,7 @@ export type Database = {
       }
     }
     Enums: {
-      subscription_plan: 'starter' | 'growth' | 'scale'
+      subscription_plan: 'basic' | 'growth' | 'scale'
       subscription_status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'
       cancel_flow_target_type: 'all' | 'product' | 'plan' | 'custom'
       cancel_flow_theme: 'minimal' | 'gradient' | 'soft' | 'bold' | 'glass' | 'dark'

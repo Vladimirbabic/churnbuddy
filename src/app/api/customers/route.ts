@@ -62,6 +62,7 @@ interface CustomerData {
   id: string;
   email: string;
   name: string;
+  country: string | null;
   subscriptionStatus: 'active' | 'canceled' | 'past_due' | 'trialing' | 'none';
   subscriptionId: string | null;
   mrr: number;
@@ -173,7 +174,8 @@ export async function GET(request: NextRequest) {
       return {
         id: customer.id,
         email: customer.email || 'No email',
-        name: customer.name || customer.email?.split('@')[0] || 'Unknown',
+        name: customer.name || '',
+        country: customer.address?.country || null,
         subscriptionStatus,
         subscriptionId: subscription?.id || null,
         mrr,

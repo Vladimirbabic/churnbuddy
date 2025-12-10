@@ -25,7 +25,10 @@ import {
   CheckCircle,
   MousePointerClick,
   MailOpen,
+  Lock,
+  ArrowRight,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -443,10 +446,10 @@ function SequenceCard({
   const getTemplateForType = (type: string) => templates.find(t => t.type === type);
 
   return (
-    <Card className={`overflow-hidden transition-all ${!isEnabled ? 'opacity-60' : ''}`}>
+    <div className={`overflow-hidden transition-all ${!isEnabled ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div
-        className={`px-6 py-4 ${sequence.bgColor} border-b ${sequence.borderColor} ${!alwaysExpanded ? 'cursor-pointer' : ''}`}
+        className={`px-6 py-4 ${sequence.bgColor} border-b ${!alwaysExpanded ? 'cursor-pointer' : ''}`}
         onClick={() => !alwaysExpanded && setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
@@ -481,7 +484,7 @@ function SequenceCard({
 
       {/* Workflow */}
       {isExpanded && (
-        <CardContent className="p-6">
+        <div className="p-6">
           <div className="max-w-md mx-auto">
             {/* Trigger */}
             <WorkflowNode
@@ -608,10 +611,16 @@ function SequenceCard({
               );
             })}
           </div>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
+}
+
+interface SubscriptionData {
+  hasSubscription: boolean;
+  plan: string | null;
+  emailSequencesEnabled: boolean;
 }
 
 export default function EmailSequencesPage() {
@@ -628,6 +637,7 @@ export default function EmailSequencesPage() {
   const [selectedSequence, setSelectedSequence] = useState<string>('dunning');
   const [emailLogs, setEmailLogs] = useState<EmailLogEntry[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -639,9 +649,26 @@ export default function EmailSequencesPage() {
   });
 
   useEffect(() => {
+    fetchSubscription();
     fetchTemplates();
     fetchSequenceSettings();
   }, []);
+
+  const fetchSubscription = async () => {
+    try {
+      const response = await fetch('/api/billing/subscription');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription({
+          hasSubscription: data.hasSubscription,
+          plan: data.plan,
+          emailSequencesEnabled: data.emailSequencesEnabled ?? (data.plan !== 'basic' && data.plan !== 'starter'),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch subscription:', err);
+    }
+  };
 
   const fetchTemplates = async () => {
     try {
@@ -820,6 +847,52 @@ export default function EmailSequencesPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="text-muted-foreground">Loading sequences...</p>
           </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Check if email sequences are available on user's plan
+  if (subscription && !subscription.emailSequencesEnabled) {
+    return (
+      <AppLayout title="Email Sequences" description="Automated email workflows for customer retention">
+        <div className="flex items-center justify-center py-16">
+          <Card className="max-w-md text-center">
+            <CardHeader>
+              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Lock className="h-8 w-8 text-amber-600" />
+              </div>
+              <CardTitle className="text-2xl">Upgrade to Access Email Sequences</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Email Sequences are available on Growth and Scale plans. Automate your customer retention with powerful email workflows.
+              </p>
+              <div className="space-y-2 text-left bg-muted/50 rounded-lg p-4">
+                <p className="font-medium text-sm">With Email Sequences you can:</p>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    Recover failed payments automatically
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    Win back cancelled customers
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    Save customers who abandon cancellation
+                  </li>
+                </ul>
+              </div>
+              <Button asChild className="w-full">
+                <Link href="/billing">
+                  Upgrade Now
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -1005,120 +1078,100 @@ export default function EmailSequencesPage() {
 
   // Main view - Sidebar Layout
   return (
-    <AppLayout title="Email Sequences" description="Automated email workflows for customer retention">
-      <div className="flex gap-6 h-[calc(100vh-180px)]">
-        {/* Left Sidebar - Sequence List */}
-        <div className="w-72 shrink-0">
-          <div className="space-y-2">
-            {Object.values(SEQUENCES).map((sequence) => {
-              const Icon = sequence.icon;
-              const isSelected = selectedSequence === sequence.id;
-              const isEnabled = sequenceSettings
-                ? (sequenceSettings as unknown as Record<string, boolean>)[sequence.enabledField]
-                : false;
+    <AppLayout
+      title="Email Sequences"
+      description="Automated email workflows for customer retention"
+      actions={
+        <Button
+          variant={selectedSequence === 'activity' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSelectedSequence(selectedSequence === 'activity' ? 'dunning' : 'activity')}
+          className="gap-2"
+        >
+          <Activity className="h-4 w-4" />
+          Activity Log
+        </Button>
+      }
+    >
+      {/* Single card container with no gap */}
+      <div className="bg-card border rounded-xl overflow-hidden h-[calc(100vh-180px)]">
+        <div className="flex h-full">
+          {/* Left Sidebar - Sequence List */}
+          <div className="w-72 shrink-0 border-r overflow-y-auto">
+            <div className="divide-y">
+              {Object.values(SEQUENCES).map((sequence) => {
+                const Icon = sequence.icon;
+                const isSelected = selectedSequence === sequence.id;
+                const isEnabled = sequenceSettings
+                  ? (sequenceSettings as unknown as Record<string, boolean>)[sequence.enabledField]
+                  : false;
 
-              return (
-                <button
-                  key={sequence.id}
-                  onClick={() => setSelectedSequence(sequence.id)}
-                  className={`w-full p-4 rounded-xl border text-left transition-all ${
-                    isSelected
-                      ? `${sequence.bgColor} ${sequence.borderColor} shadow-sm`
-                      : 'bg-card hover:bg-muted/50 border-border'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${isSelected ? 'bg-white/80 dark:bg-gray-900/50' : sequence.bgColor} flex items-center justify-center`}>
-                      <Icon className={`h-5 w-5 ${sequence.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className={`font-medium truncate ${isSelected ? '' : 'text-foreground'}`}>
-                          {sequence.name.replace(' Sequence', '')}
-                        </p>
-                        <Badge
-                          variant={isEnabled ? 'default' : 'secondary'}
-                          className={`ml-2 text-xs ${isEnabled ? 'bg-emerald-600' : ''}`}
-                        >
-                          {isEnabled ? 'On' : 'Off'}
-                        </Badge>
+                return (
+                  <button
+                    key={sequence.id}
+                    onClick={() => setSelectedSequence(sequence.id)}
+                    className={`w-full px-4 py-3 text-left transition-all ${
+                      isSelected
+                        ? sequence.bgColor
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg ${isSelected ? 'bg-white/80 dark:bg-gray-900/50' : sequence.bgColor} flex items-center justify-center`}>
+                        <Icon className={`h-4 w-4 ${sequence.color}`} />
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {sequence.steps.length + (sequence.extraSteps?.length || 0)} emails
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`font-medium text-sm truncate ${isSelected ? '' : 'text-foreground'}`}>
+                            {sequence.name.replace(' Sequence', '')}
+                          </p>
+                          <Badge
+                            variant={isEnabled ? 'default' : 'secondary'}
+                            className={`ml-2 text-xs ${isEnabled ? 'bg-emerald-600' : ''}`}
+                          >
+                            {isEnabled ? 'On' : 'Off'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {sequence.steps.length + (sequence.extraSteps?.length || 0)} emails
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Activity Tab */}
-          <div className="mt-4 pt-4 border-t">
-            <button
-              onClick={() => setSelectedSequence('activity')}
-              className={`w-full p-4 rounded-xl border text-left transition-all ${
-                selectedSequence === 'activity'
-                  ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 shadow-sm'
-                  : 'bg-card hover:bg-muted/50 border-border'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${selectedSequence === 'activity' ? 'bg-white/80 dark:bg-gray-900/50' : 'bg-violet-50 dark:bg-violet-950/30'} flex items-center justify-center`}>
-                  <Activity className="h-5 w-5 text-violet-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">Activity Log</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    All sent emails
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-
-          {/* Info */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-xl">
-            <div className="flex items-start gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                Select a sequence to configure timing and customize email templates.
-              </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
 
-        {/* Right Side - Selected Sequence Details or Activity Log */}
-        <div className="flex-1 overflow-y-auto">
+          {/* Right Side - Selected Sequence Details or Activity Log */}
+          <div className="flex-1 overflow-y-auto">
           {selectedSequence === 'activity' ? (
             // Activity Log View
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-violet-600" />
-                      Email Activity Log
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      All emails sent by your sequences
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchEmailLogs}
-                    disabled={loadingLogs}
-                  >
-                    {loadingLogs ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Refresh'
-                    )}
-                  </Button>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-violet-600" />
+                    Email Activity Log
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    All emails sent by your sequences
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchEmailLogs}
+                  disabled={loadingLogs}
+                >
+                  {loadingLogs ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Refresh'
+                  )}
+                </Button>
+              </div>
+              <div>
                 {loadingLogs ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -1185,8 +1238,8 @@ export default function EmailSequencesPage() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ) : currentSequence ? (
             <SequenceCard
               sequence={currentSequence}
@@ -1199,6 +1252,7 @@ export default function EmailSequencesPage() {
               alwaysExpanded
             />
           ) : null}
+          </div>
         </div>
       </div>
     </AppLayout>
