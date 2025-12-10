@@ -342,6 +342,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Update the subscription with the new price
+        // Also remove cancellation if it was set - upgrading means they want to stay
         await stripe.subscriptions.update(subscription.stripe_subscription_id, {
           items: [
             {
@@ -350,6 +351,7 @@ export async function POST(request: NextRequest) {
             },
           ],
           proration_behavior: 'create_prorations',
+          cancel_at_period_end: false, // Remove cancellation on upgrade
         });
 
         // Update local database
@@ -359,6 +361,7 @@ export async function POST(request: NextRequest) {
             plan: getPlanForDb(newPlan),
             stripe_price_id: newPlanConfig.priceId,
             cancel_flows_limit: newPlanConfig.cancelFlowsLimit,
+            cancel_at_period_end: false, // Remove cancellation on upgrade
           })
           .eq('organization_id', orgId);
 
