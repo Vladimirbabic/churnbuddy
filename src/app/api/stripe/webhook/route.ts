@@ -569,6 +569,47 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      // =========================================================================
+      // CUSTOMER DELETED (Full customer removal)
+      // =========================================================================
+      case 'customer.deleted': {
+        const customer = event.data.object as Stripe.Customer;
+        const customerId = customer.id;
+
+        console.log(`[Stripe Webhook] Customer deleted: ${customerId}`);
+
+        // Find and reset the subscription record for this customer
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingSub } = await (supabase as any)
+          .from('subscriptions')
+          .select('organization_id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+
+        if (existingSub) {
+          // Reset the subscription to allow re-subscribing
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('subscriptions')
+            .update({
+              stripe_customer_id: null,
+              stripe_subscription_id: null,
+              stripe_price_id: null,
+              status: 'canceled',
+              plan: 'basic',
+              cancel_flows_limit: 1,
+              current_period_start: null,
+              current_period_end: null,
+              cancel_at_period_end: false,
+              trial_end: null,
+            })
+            .eq('stripe_customer_id', customerId);
+
+          console.log(`[DB] Subscription reset for deleted customer: ${customerId}`);
+        }
+        break;
+      }
+
       default:
         console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }

@@ -90,6 +90,76 @@ export async function GET(request: NextRequest) {
     }
 
     const subscription = data as SubscriptionData;
+
+    // If we have a Stripe subscription ID, verify it's still valid
+    if (subscription.stripe_subscription_id && stripe) {
+      try {
+        const stripeSubscription = await stripe.subscriptions.retrieve(
+          subscription.stripe_subscription_id
+        );
+
+        // If subscription is canceled or doesn't exist, return no subscription
+        if (stripeSubscription.status === 'canceled' ||
+            stripeSubscription.status === 'incomplete_expired') {
+          // Update DB to reflect canceled status
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'canceled',
+              stripe_subscription_id: null,
+              stripe_customer_id: null,
+            })
+            .eq('organization_id', orgId);
+
+          return NextResponse.json({
+            hasSubscription: false,
+            plan: null,
+            status: null,
+            message: 'Your subscription has ended. Choose a plan to continue.',
+          });
+        }
+
+        // Sync status from Stripe if different
+        if (stripeSubscription.status !== subscription.status) {
+          await supabase
+            .from('subscriptions')
+            .update({ status: stripeSubscription.status })
+            .eq('organization_id', orgId);
+          subscription.status = stripeSubscription.status;
+        }
+      } catch (stripeError: any) {
+        // Subscription doesn't exist in Stripe
+        if (stripeError.code === 'resource_missing') {
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'canceled',
+              stripe_subscription_id: null,
+              stripe_customer_id: null,
+            })
+            .eq('organization_id', orgId);
+
+          return NextResponse.json({
+            hasSubscription: false,
+            plan: null,
+            status: null,
+            message: 'Your subscription has ended. Choose a plan to continue.',
+          });
+        }
+        console.error('Failed to verify Stripe subscription:', stripeError.message);
+      }
+    }
+
+    // If status is canceled and no active Stripe subscription, show no subscription
+    if (subscription.status === 'canceled' && !subscription.stripe_subscription_id) {
+      return NextResponse.json({
+        hasSubscription: false,
+        plan: null,
+        status: null,
+        message: 'Your subscription has ended. Choose a plan to continue.',
+      });
+    }
+
     // Handle both 'starter' (legacy) and 'basic' (new) plan names
     const planKey = subscription.plan === 'starter' ? 'basic' : subscription.plan;
     const plan = PLANS[planKey as keyof typeof PLANS];
