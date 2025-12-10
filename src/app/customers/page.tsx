@@ -784,16 +784,16 @@ export default function CustomersPage() {
                                 <p className="text-xs text-muted-foreground">
                                   {formatDateTime(event.date)}
                                 </p>
-                                {event.details?.cancellation_reason && (
+                                {event.details?.cancellation_reason ? (
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Reason: {String(event.details.cancellation_reason)}
                                   </p>
-                                )}
-                                {event.details?.cancellation_feedback && (
+                                ) : null}
+                                {event.details?.cancellation_feedback ? (
                                   <p className="text-xs text-muted-foreground mt-1 italic">
                                     &ldquo;{String(event.details.cancellation_feedback)}&rdquo;
                                   </p>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           );
