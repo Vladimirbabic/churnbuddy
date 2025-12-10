@@ -34,6 +34,11 @@ async function getAuthenticatedClient() {
   }
 }
 
+// Helper to convert plan name for DB (DB enum still uses 'starter' not 'basic')
+function getPlanForDb(plan: string): string {
+  return plan === 'basic' ? 'starter' : plan;
+}
+
 interface SubscriptionData {
   plan: string;
   status: string;
@@ -351,7 +356,7 @@ export async function POST(request: NextRequest) {
         await (supabase as any)
           .from('subscriptions')
           .update({
-            plan: newPlan,
+            plan: getPlanForDb(newPlan),
             stripe_price_id: newPlanConfig.priceId,
             cancel_flows_limit: newPlanConfig.cancelFlowsLimit,
           })

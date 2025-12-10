@@ -38,6 +38,11 @@ function getPlanFromPriceId(priceId: string): PlanType {
   return 'basic';
 }
 
+// Helper to convert plan name for DB (DB enum still uses 'starter' not 'basic')
+function getPlanForDb(plan: string): string {
+  return plan === 'basic' ? 'starter' : plan;
+}
+
 // Get organization ID from customer ID
 async function getOrganizationFromCustomer(customerId: string): Promise<string | null> {
   if (!isSupabaseConfigured()) return null;
@@ -164,7 +169,7 @@ export async function POST(request: NextRequest) {
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: subscription.id,
               stripe_price_id: subscription.items.data[0]?.price.id,
-              plan,
+              plan: getPlanForDb(plan),
               status: subscription.status,
               cancel_flows_limit: planConfig.cancelFlowsLimit,
               current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
@@ -198,7 +203,7 @@ export async function POST(request: NextRequest) {
           .from('subscriptions')
           .update({
             stripe_price_id: priceId,
-            plan,
+            plan: getPlanForDb(plan),
             status: subscription.status,
             cancel_flows_limit: planConfig.cancelFlowsLimit,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
@@ -596,7 +601,7 @@ export async function POST(request: NextRequest) {
               stripe_subscription_id: null,
               stripe_price_id: null,
               status: 'canceled',
-              plan: 'basic',
+              plan: 'starter', // DB enum still uses 'starter'
               cancel_flows_limit: 1,
               current_period_start: null,
               current_period_end: null,
