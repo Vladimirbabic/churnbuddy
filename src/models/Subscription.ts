@@ -26,7 +26,8 @@ export const PLANS = {
   basic: {
     name: 'Basic',
     price: 900, // in cents
-    priceId: process.env.STRIPE_PRICE_BASIC || 'price_basic',
+    // Support both new (BASIC) and legacy (STARTER) env var names
+    priceId: process.env.STRIPE_PRICE_BASIC || process.env.STRIPE_PRICE_STARTER || 'price_basic',
     cancelFlowsLimit: 1,
     emailSequencesEnabled: false,
     features: ['1 Cancel Flow', 'Analytics', 'Email support'],
