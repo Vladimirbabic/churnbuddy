@@ -288,11 +288,9 @@ function BillingPageContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
-                <Button size="lg" asChild>
-                  <Link href="/pricing">
-                    View Plans
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+                <Button size="lg" onClick={() => setShowUpgradeModal(true)}>
+                  View Plans
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>
