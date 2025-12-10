@@ -292,9 +292,13 @@ export async function POST(request: NextRequest) {
                   customerId,
                   customerEmail,
                   sequenceType: 'dunning',
-                  recoveredAmount: monthlyAmount,
-                  currency: subscription.currency,
+                  conversionType: 'payment_recovered',
                   emailsSent: dunningEmailsSent.length,
+                  subscriptionId: subscription.id,
+                  details: {
+                    recoveredAmount: monthlyAmount,
+                    currency: subscription.currency,
+                  },
                 });
               }
 
