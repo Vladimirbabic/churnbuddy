@@ -170,9 +170,9 @@ export function AppSidebar() {
             <Image
               src="/img/logo-no-text.svg"
               alt="Exit Loop"
-              width={40}
-              height={40}
-              className="h-10 w-10"
+              width={32}
+              height={32}
+              className="h-8 w-8"
             />
           ) : (
             // Full logo when expanded
