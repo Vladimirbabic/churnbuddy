@@ -46,13 +46,13 @@ function ThemeSyncer() {
       try {
         // Get CSRF token
         const csrfResponse = await fetch('/api/csrf');
-        const { csrfToken } = await csrfResponse.json();
+        const { token } = await csrfResponse.json();
 
         await fetch('/api/settings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken,
+            'X-CSRF-Token': token,
           },
           body: JSON.stringify({ theme }),
         });

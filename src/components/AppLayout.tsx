@@ -63,13 +63,13 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
 
     try {
       const csrfResponse = await fetch('/api/csrf');
-      const { csrfToken } = await csrfResponse.json();
+      const { token } = await csrfResponse.json();
 
       await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          'X-CSRF-Token': token,
         },
         body: JSON.stringify({ sidebar_state: open ? 'expanded' : 'collapsed' }),
       });
