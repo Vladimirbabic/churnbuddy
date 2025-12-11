@@ -2446,9 +2446,9 @@ function CancelFlowsInner() {
                                       <span className="truncate text-amber-900 dark:text-amber-100">{label}</span>
                                       <span className="text-amber-700 dark:text-amber-300 ml-2">{count} ({percent}%)</span>
                                     </div>
-                                    <div className="h-1.5 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
+                                    <div className="h-1.5 bg-amber-100/80 dark:bg-amber-950/50 rounded-full overflow-hidden">
                                       <div
-                                        className="h-full bg-amber-500 dark:bg-amber-400 rounded-full"
+                                        className="h-full bg-amber-800 dark:bg-amber-200 rounded-full"
                                         style={{ width: `${percent}%` }}
                                       />
                                     </div>
