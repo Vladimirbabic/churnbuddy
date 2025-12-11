@@ -52,7 +52,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 // Custom icon component for SVG images
-function CustomIcon({ src, srcDark, alt, size = 20, bgColor }: { src: string; srcDark?: string; alt: string; size?: number; bgColor?: string }) {
+function CustomIcon({ src, srcDark, alt, size = 24, bgColor }: { src: string; srcDark?: string; alt: string; size?: number; bgColor?: string }) {
   const actualSize = size;
   const containerSize = size + 16; // 8px padding on each side
 
