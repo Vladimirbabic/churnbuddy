@@ -25,10 +25,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        // Failed to get session (network error, etc.) - continue as logged out
+        console.warn('Failed to get auth session:', error);
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getInitialSession();

@@ -13,6 +13,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Radar,
   LucideIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -27,6 +28,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -41,15 +43,89 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
 
+// Helper to convert hex to rgba
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Custom icon component for SVG images
-function CustomIcon({ src, alt, size = 20 }: { src: string; alt: string; size?: number }) {
+function CustomIcon({ src, srcDark, alt, size = 28, bgColor }: { src: string; srcDark?: string; alt: string; size?: number; bgColor?: string }) {
+  const actualSize = size;
+  const containerSize = 36;
+
+  if (bgColor) {
+    return (
+      <>
+        {/* Light mode */}
+        <div
+          className="flex items-center justify-center dark:hidden"
+          style={{
+            width: containerSize,
+            height: containerSize,
+            backgroundColor: bgColor,
+            borderRadius: 6,
+          }}
+        >
+          <Image
+            src={src}
+            alt={alt}
+            width={actualSize}
+            height={actualSize}
+          />
+        </div>
+        {/* Dark mode - 15% opacity background */}
+        <div
+          className="hidden dark:flex items-center justify-center"
+          style={{
+            width: containerSize,
+            height: containerSize,
+            backgroundColor: hexToRgba(bgColor, 0.15),
+            borderRadius: 6,
+          }}
+        >
+          <Image
+            src={srcDark || src}
+            alt={alt}
+            width={actualSize}
+            height={actualSize}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Workspace items without background color
+  if (srcDark) {
+    return (
+      <>
+        <Image
+          src={src}
+          alt={alt}
+          width={actualSize}
+          height={actualSize}
+          className="dark:hidden"
+        />
+        <Image
+          src={srcDark}
+          alt={alt}
+          width={actualSize}
+          height={actualSize}
+          className="hidden dark:block"
+        />
+      </>
+    );
+  }
+
   return (
     <Image
       src={src}
       alt={alt}
-      width={size}
-      height={size}
-      className="rounded"
+      width={actualSize}
+      height={actualSize}
+      className="rounded text-zinc-700 dark:text-zinc-300"
     />
   );
 }
@@ -59,46 +135,65 @@ interface NavItem {
   label: string;
   icon?: LucideIcon;
   customIcon?: string;
+  customIconDark?: string; // Dark mode icon variant
+  bgColor?: string; // Background color (15% opacity in dark mode)
 }
 
 // Automation section - core product features
 const AUTOMATION_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', customIcon: '/img/dashboard.svg' },
-  { href: '/cancel-flows', label: 'Cancel Flows', customIcon: '/img/cancel-flows.svg' },
-  { href: '/email-sequences', label: 'Email Sequences', customIcon: '/img/email-templates.svg' },
+  { href: '/dashboard', label: 'Dashboard', customIcon: '/img/dashboard.svg', customIconDark: '/img/dark-mode-dashbaord.svg', bgColor: '#E1DDF4' },
+  { href: '/cancel-flows', label: 'Cancel Flows', customIcon: '/img/cancel-flows.svg', customIconDark: '/img/dark-mode-cancel-flows.svg', bgColor: '#C4F9C8' },
+  { href: '/email-sequences', label: 'Email Sequences', customIcon: '/img/email-templates.svg', customIconDark: '/img/dark-mode-email-templates.svg', bgColor: '#F9E9C4' },
+  { href: '/churn-radar', label: 'Churn Radar', customIcon: '/img/churn.svg', customIconDark: '/img/dark-mode-churn.svg', bgColor: '#F9D6C4' },
 ];
 
 // Workspace section - account management
 const WORKSPACE_ITEMS: NavItem[] = [
-  { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/billing', label: 'Billing', icon: CreditCard },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/customers', label: 'Customers', customIcon: '/img/customers.svg', customIconDark: '/img/dark-mode-customers.svg' },
+  { href: '/billing', label: 'Billing', customIcon: '/img/billing.svg', customIconDark: '/img/dark-mode-billing.svg' },
+  { href: '/settings', label: 'Settings', customIcon: '/img/settings.svg', customIconDark: '/img/dark-mode-settings.svg' },
 ];
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   return (
     <Sidebar collapsible="icon">
       {/* Header with Logo */}
       <SidebarHeader className="p-4">
         <Link href="/dashboard">
-          <Image
-            src="/img/logo.svg"
-            alt="Exit Loop"
-            width={90}
-            height={24}
-            className="h-6 w-auto dark:hidden"
-          />
-          <Image
-            src="/img/logo-dark-mode.svg"
-            alt="Exit Loop"
-            width={90}
-            height={24}
-            className="h-6 w-auto hidden dark:block"
-          />
+          {isCollapsed ? (
+            // Logo without text when collapsed
+            <Image
+              src="/img/logo-no-text.svg"
+              alt="Exit Loop"
+              width={40}
+              height={40}
+              className="h-10 w-10"
+            />
+          ) : (
+            // Full logo when expanded
+            <>
+              <Image
+                src="/img/logo.svg"
+                alt="Exit Loop"
+                width={90}
+                height={24}
+                className="h-6 w-auto dark:hidden"
+              />
+              <Image
+                src="/img/logo-dark-mode.svg"
+                alt="Exit Loop"
+                width={90}
+                height={24}
+                className="h-6 w-auto hidden dark:block"
+              />
+            </>
+          )}
         </Link>
       </SidebarHeader>
 
@@ -114,12 +209,12 @@ export function AppSidebar() {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} className="p-1">
                       <Link href={item.href}>
                         {item.customIcon ? (
-                          <CustomIcon src={item.customIcon} alt={item.label} size={24} />
+                          <CustomIcon src={item.customIcon} srcDark={item.customIconDark} alt={item.label} bgColor={item.bgColor} />
                         ) : Icon ? (
-                          <Icon />
+                          <Icon className="h-7 w-7" />
                         ) : null}
                         <span>{item.label}</span>
                       </Link>
@@ -144,9 +239,9 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                       <Link href={item.href}>
                         {item.customIcon ? (
-                          <CustomIcon src={item.customIcon} alt={item.label} />
+                          <CustomIcon src={item.customIcon} srcDark={item.customIconDark} alt={item.label} />
                         ) : Icon ? (
-                          <Icon />
+                          <Icon className="h-7 w-7" />
                         ) : null}
                         <span>{item.label}</span>
                       </Link>
@@ -205,9 +300,11 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer">
-                    <Sun className="mr-2 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute ml-0 mr-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="ml-6">Theme</span>
+                    <div className="relative mr-2 h-4 w-4">
+                      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 absolute inset-0" />
+                      <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 absolute inset-0" />
+                    </div>
+                    Theme
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>

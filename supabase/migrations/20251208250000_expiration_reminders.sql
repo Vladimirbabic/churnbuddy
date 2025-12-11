@@ -42,16 +42,19 @@ CREATE INDEX IF NOT EXISTS idx_expiration_reminders_sent_lookup ON expiration_re
 -- Enable Row Level Security
 ALTER TABLE expiration_reminders_sent ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (drop first to make idempotent)
+DROP POLICY IF EXISTS "Users can view their own expiration reminders sent" ON expiration_reminders_sent;
 CREATE POLICY "Users can view their own expiration reminders sent"
   ON expiration_reminders_sent FOR SELECT
   USING (auth.uid()::text = organization_id);
 
+DROP POLICY IF EXISTS "Users can insert their own expiration reminders sent" ON expiration_reminders_sent;
 CREATE POLICY "Users can insert their own expiration reminders sent"
   ON expiration_reminders_sent FOR INSERT
   WITH CHECK (auth.uid()::text = organization_id);
 
 -- Service role policy for cron jobs
+DROP POLICY IF EXISTS "Service role can manage all expiration reminders" ON expiration_reminders_sent;
 CREATE POLICY "Service role can manage all expiration reminders"
   ON expiration_reminders_sent FOR ALL
   USING (auth.role() = 'service_role');

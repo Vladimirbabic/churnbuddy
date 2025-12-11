@@ -6,6 +6,10 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 export const metadata: Metadata = {
   title: 'Exit Loop - Reduce Customer Churn',
   description: 'Churn reduction toolkit for SaaS founders. Handle failed payments, intercept cancellations, and save more customers.',
+  icons: {
+    icon: '/img/favicon.png',
+    apple: '/img/favicon.png',
+  },
 };
 
 export default function RootLayout({

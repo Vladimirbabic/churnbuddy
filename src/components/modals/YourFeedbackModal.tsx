@@ -115,8 +115,9 @@ export function YourFeedbackModal({
         <div
           className={`flex items-center justify-between ${sc.header.padding} ${sc.header.background} ${sc.header.border}`}
           style={useColorsProp && designStyle !== 9 ? {
-            backgroundColor: designStyle === 3 ? 'rgba(255,255,255,0.7)' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#f3f4f6' : (designStyle === 8 ? undefined : colors.background)))),
-            background: designStyle === 8 ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)` : undefined,
+            background: designStyle === 8
+              ? `linear-gradient(90deg, ${colors.primary}, #a855f7, #06b6d4)`
+              : (designStyle === 3 ? 'rgba(255,255,255,0.7)' : (designStyle === 4 ? colors.primary : (designStyle === 5 ? '#1f2937' : (designStyle === 7 ? '#f3f4f6' : colors.background)))),
             backdropFilter: designStyle === 3 ? 'blur(10px)' : undefined,
           } : undefined}
         >

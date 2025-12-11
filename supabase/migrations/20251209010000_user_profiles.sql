@@ -26,23 +26,27 @@ CREATE TRIGGER update_user_profiles_updated_at
 -- Enable Row Level Security
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (drop first to make idempotent)
 -- Users can view their own profile
+DROP POLICY IF EXISTS "Users can view their own profile" ON user_profiles;
 CREATE POLICY "Users can view their own profile"
   ON user_profiles FOR SELECT
   USING (auth.uid() = id);
 
 -- Users can update their own profile (but not is_admin)
+DROP POLICY IF EXISTS "Users can update their own profile" ON user_profiles;
 CREATE POLICY "Users can update their own profile"
   ON user_profiles FOR UPDATE
   USING (auth.uid() = id);
 
 -- Service role can manage all profiles
+DROP POLICY IF EXISTS "Service role can manage all profiles" ON user_profiles;
 CREATE POLICY "Service role can manage all profiles"
   ON user_profiles FOR ALL
   USING (auth.role() = 'service_role');
 
 -- Admins can view all profiles
+DROP POLICY IF EXISTS "Admins can view all profiles" ON user_profiles;
 CREATE POLICY "Admins can view all profiles"
   ON user_profiles FOR SELECT
   USING (

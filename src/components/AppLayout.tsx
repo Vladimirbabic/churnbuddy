@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -11,6 +11,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { useAuth } from '@/context/AuthContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,61 @@ interface AppLayoutProps {
 export function AppLayout({ children, title, description, actions }: AppLayoutProps) {
   const headerRef = useRef<HTMLElement>(null);
   const [isSticky, setIsSticky] = useState(false);
+  const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
+  const lastSavedState = useRef<boolean | null>(null);
+
+  // Load sidebar state from database
+  useEffect(() => {
+    if (!user || hasLoadedSettings) return;
+
+    const loadSidebarState = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const settings = await response.json();
+          const dbState = settings?.sidebar_state;
+          if (dbState) {
+            const isOpen = dbState === 'expanded';
+            setSidebarOpen(isOpen);
+            lastSavedState.current = isOpen;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load sidebar state:', error);
+      } finally {
+        setHasLoadedSettings(true);
+      }
+    };
+
+    loadSidebarState();
+  }, [user, hasLoadedSettings]);
+
+  // Save sidebar state to database when it changes
+  const handleSidebarOpenChange = useCallback(async (open: boolean) => {
+    setSidebarOpen(open);
+
+    if (!user || !hasLoadedSettings) return;
+    if (lastSavedState.current === open) return;
+
+    try {
+      const csrfResponse = await fetch('/api/csrf');
+      const { csrfToken } = await csrfResponse.json();
+
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ sidebar_state: open ? 'expanded' : 'collapsed' }),
+      });
+      lastSavedState.current = open;
+    } catch (error) {
+      console.error('Failed to save sidebar state:', error);
+    }
+  }, [user, hasLoadedSettings]);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -40,7 +96,7 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
 
   return (
     <AuthGuard>
-      <SidebarProvider>
+      <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
         <AppSidebar />
         {/* Wrapper with 8px padding on top, right, bottom */}
         <div className="flex-1 p-2 pl-0 dark:bg-sidebar">

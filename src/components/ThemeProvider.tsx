@@ -20,7 +20,8 @@ function ThemeSyncer() {
         const response = await fetch('/api/settings');
         if (response.ok) {
           const settings = await response.json();
-          const dbTheme = settings?.branding?.theme;
+          // Read from dedicated theme column
+          const dbTheme = settings?.theme;
           if (dbTheme && dbTheme !== theme) {
             setTheme(dbTheme);
             lastSavedTheme.current = dbTheme;

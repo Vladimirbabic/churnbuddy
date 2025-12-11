@@ -210,7 +210,7 @@ export default function OnboardingPage() {
 
   return (
     <AuthGuard>
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen" style={{ backgroundImage: 'url(/img/bg.png)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundAttachment: 'fixed' }}>
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">

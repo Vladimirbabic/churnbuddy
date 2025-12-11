@@ -89,7 +89,9 @@ export async function GET(request: NextRequest) {
           show_survey: true,
         },
         dunning_config: { enabled: true },
-        branding: { primary_color: '#3b82f6', theme: 'light' },
+        branding: { primary_color: '#3b82f6' },
+        theme: 'light',
+        sidebar_state: 'expanded',
         notifications: {},
       });
     }
@@ -294,20 +296,14 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Handle theme-only updates (for quick theme switching)
-    if (body.theme && !body.branding) {
-      // Fetch existing branding to preserve other settings
-      const { data: existingSettings } = await (supabase as any)
-        .from('settings')
-        .select('branding')
-        .eq('organization_id', orgId)
-        .single();
+    // Handle theme updates (save to dedicated theme column)
+    if (body.theme) {
+      updateData.theme = body.theme;
+    }
 
-      const existingBranding = (existingSettings?.branding as Record<string, unknown>) || {};
-      updateData.branding = {
-        ...existingBranding,
-        theme: body.theme,
-      };
+    // Handle sidebar state updates
+    if (body.sidebar_state) {
+      updateData.sidebar_state = body.sidebar_state;
     }
 
     // Handle Dunning settings

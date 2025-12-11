@@ -46,16 +46,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Flag from 'react-flagkit';
+import { Input } from '@/components/ui/input';
 
-interface Coupon {
-  id: string;
-  name: string;
-  type: 'percent' | 'amount';
-  value: number;
-  currency: string;
-  duration: string;
-  durationInMonths: number | null;
-}
 
 interface Customer {
   id: string;
@@ -178,9 +170,10 @@ export default function CustomersPage() {
 
   // Discount dialog state
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [couponsLoading, setCouponsLoading] = useState(false);
-  const [selectedCouponId, setSelectedCouponId] = useState<string>('');
+  const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
+  const [discountValue, setDiscountValue] = useState<string>('');
+  const [discountDuration, setDiscountDuration] = useState<'once' | 'repeating' | 'forever'>('once');
+  const [discountDurationMonths, setDiscountDurationMonths] = useState<string>('3');
   const [applyingDiscount, setApplyingDiscount] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
 
@@ -202,30 +195,26 @@ export default function CustomersPage() {
     fetchCustomers();
   }, []);
 
-  const fetchCoupons = async () => {
-    setCouponsLoading(true);
-    try {
-      const response = await fetch('/api/coupons');
-      if (response.ok) {
-        const data = await response.json();
-        setCoupons(data.coupons || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch coupons:', error);
-    } finally {
-      setCouponsLoading(false);
-    }
-  };
-
   const openDiscountDialog = () => {
     setDiscountDialogOpen(true);
-    setSelectedCouponId('');
+    setDiscountType('percent');
+    setDiscountValue('');
+    setDiscountDuration('once');
+    setDiscountDurationMonths('3');
     setDiscountError(null);
-    fetchCoupons();
   };
 
   const applyDiscount = async () => {
-    if (!selectedCouponId || !selectedCustomerId) return;
+    const value = parseFloat(discountValue);
+    if (!discountValue || isNaN(value) || value <= 0 || !selectedCustomerId) {
+      setDiscountError('Please enter a valid discount value');
+      return;
+    }
+
+    if (discountType === 'percent' && value > 100) {
+      setDiscountError('Percent discount cannot exceed 100%');
+      return;
+    }
 
     setApplyingDiscount(true);
     setDiscountError(null);
@@ -234,7 +223,12 @@ export default function CustomersPage() {
       const response = await fetch(`/api/customers/${selectedCustomerId}/discount`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponId: selectedCouponId }),
+        body: JSON.stringify({
+          discountType,
+          discountValue: value,
+          duration: discountDuration,
+          durationInMonths: discountDuration === 'repeating' ? parseInt(discountDurationMonths) : undefined,
+        }),
       });
 
       const data = await response.json();
@@ -824,51 +818,79 @@ export default function CustomersPage() {
           <DialogHeader>
             <DialogTitle>Apply Discount</DialogTitle>
             <DialogDescription>
-              Select a coupon to apply to this customer&apos;s subscription.
+              Create and apply a discount to this customer&apos;s subscription.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            {couponsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            ) : coupons.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No coupons available.</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Create coupons in your Stripe dashboard first.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Select value={selectedCouponId} onValueChange={setSelectedCouponId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a coupon" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {coupons.map((coupon) => (
-                      <SelectItem key={coupon.id} value={coupon.id}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{coupon.name}</span>
-                          <span className="text-muted-foreground">
-                            ({coupon.type === 'percent' ? `${coupon.value}% off` : `$${coupon.value} off`})
-                          </span>
-                          {coupon.duration !== 'forever' && (
-                            <span className="text-xs text-muted-foreground">
-                              - {coupon.duration === 'once' ? 'once' : `${coupon.durationInMonths} months`}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="py-4 space-y-4">
+            {/* Discount Type */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Discount Type</label>
+              <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percent' | 'amount')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Percentage off</SelectItem>
+                  <SelectItem value="amount">Fixed amount off</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {discountError && (
-                  <p className="text-sm text-destructive">{discountError}</p>
-                )}
+            {/* Discount Value */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {discountType === 'percent' ? 'Percentage' : 'Amount'}
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {discountType === 'percent' ? '%' : '$'}
+                </span>
+                <Input
+                  type="number"
+                  min="0"
+                  max={discountType === 'percent' ? '100' : undefined}
+                  step={discountType === 'percent' ? '1' : '0.01'}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  placeholder={discountType === 'percent' ? '10' : '5.00'}
+                  className="pl-8"
+                />
               </div>
+            </div>
+
+            {/* Duration */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Duration</label>
+              <Select value={discountDuration} onValueChange={(v) => setDiscountDuration(v as 'once' | 'repeating' | 'forever')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="once">Once (next invoice only)</SelectItem>
+                  <SelectItem value="repeating">Multiple months</SelectItem>
+                  <SelectItem value="forever">Forever</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Duration in months (only for repeating) */}
+            {discountDuration === 'repeating' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Number of months</label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="36"
+                  value={discountDurationMonths}
+                  onChange={(e) => setDiscountDurationMonths(e.target.value)}
+                  placeholder="3"
+                />
+              </div>
+            )}
+
+            {discountError && (
+              <p className="text-sm text-destructive">{discountError}</p>
             )}
           </div>
 
@@ -878,7 +900,7 @@ export default function CustomersPage() {
             </Button>
             <Button
               onClick={applyDiscount}
-              disabled={!selectedCouponId || applyingDiscount}
+              disabled={!discountValue || applyingDiscount}
             >
               {applyingDiscount ? 'Applying...' : 'Apply Discount'}
             </Button>

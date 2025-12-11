@@ -223,13 +223,29 @@ export default function DashboardPage() {
             <>
               {/* Stripe connection banner */}
               {!stripeConnected && (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                  <CreditCard className="h-5 w-5 text-amber-600" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Connect Stripe to see real data</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">Add your Stripe API keys in Settings to fetch live subscription and payment data.</p>
+                <div className="relative flex items-center gap-6 px-6 py-5 rounded-xl bg-white dark:bg-card border border-gray-200 dark:border-border overflow-hidden">
+                  {/* Decorative gradient blur */}
+                  <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-violet-200/40 via-purple-200/30 to-indigo-200/20 dark:from-violet-900/20 dark:via-purple-900/10 dark:to-indigo-900/10 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* Stripe logo */}
+                  <div className="relative shrink-0">
+                    <Image
+                      src="/img/stripe-logo.svg"
+                      alt="Stripe"
+                      width={93}
+                      height={44}
+                      className="h-11 w-auto"
+                    />
                   </div>
-                  <Button size="sm" variant="outline" asChild>
+
+                  {/* Content */}
+                  <div className="relative flex-1 min-w-0">
+                    <p className="text-base font-semibold text-gray-900 dark:text-foreground">Connect Stripe to see real data</p>
+                    <p className="text-sm text-gray-500 dark:text-muted-foreground mt-0.5">Add your Stripe API keys in Settings to fetch live subscription and payment data.</p>
+                  </div>
+
+                  {/* Action button */}
+                  <Button size="sm" className="relative shrink-0" asChild>
                     <Link href="/settings">Connect Stripe</Link>
                   </Button>
                 </div>

@@ -55,7 +55,7 @@ async function getStripeClient(supabase: ReturnType<typeof createServerClient>, 
   }
 }
 
-// POST - Apply a coupon to customer's subscription
+// POST - Apply a discount to customer's subscription
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ customerId: string }> }
@@ -63,11 +63,33 @@ export async function POST(
   try {
     const { customerId } = await params;
     const body = await request.json();
-    const { couponId } = body;
+    const { discountType, discountValue, duration, durationInMonths } = body;
 
-    if (!couponId) {
+    // Validate input
+    if (!discountType || discountValue === undefined || discountValue === null) {
       return NextResponse.json(
-        { error: 'Coupon ID is required' },
+        { error: 'Discount type and value are required' },
+        { status: 400 }
+      );
+    }
+
+    if (discountType !== 'percent' && discountType !== 'amount') {
+      return NextResponse.json(
+        { error: 'Discount type must be "percent" or "amount"' },
+        { status: 400 }
+      );
+    }
+
+    if (discountType === 'percent' && (discountValue < 1 || discountValue > 100)) {
+      return NextResponse.json(
+        { error: 'Percent discount must be between 1 and 100' },
+        { status: 400 }
+      );
+    }
+
+    if (discountType === 'amount' && discountValue < 0.01) {
+      return NextResponse.json(
+        { error: 'Amount discount must be at least $0.01' },
         { status: 400 }
       );
     }
@@ -112,13 +134,32 @@ export async function POST(
       );
     }
 
-    // Apply the coupon to the subscription
-    const updatedSubscription = await stripe.subscriptions.update(activeSubscription.id, {
-      coupon: couponId,
-    });
+    // Get subscription currency for amount discounts
+    const currency = activeSubscription.currency || 'usd';
 
-    // Get coupon details for the response
-    const coupon = await stripe.coupons.retrieve(couponId);
+    // Create a coupon first
+    const couponParams: Stripe.CouponCreateParams = {
+      duration: duration || 'once',
+      name: `${discountType === 'percent' ? `${discountValue}%` : `$${discountValue}`} off`,
+    };
+
+    if (discountType === 'percent') {
+      couponParams.percent_off = discountValue;
+    } else {
+      couponParams.amount_off = Math.round(discountValue * 100); // Convert to cents
+      couponParams.currency = currency;
+    }
+
+    if (duration === 'repeating' && durationInMonths) {
+      couponParams.duration_in_months = durationInMonths;
+    }
+
+    const coupon = await stripe.coupons.create(couponParams);
+
+    // Apply the discount using the discounts array (works with flexible billing)
+    const updatedSubscription = await stripe.subscriptions.update(activeSubscription.id, {
+      discounts: [{ coupon: coupon.id }],
+    });
 
     return NextResponse.json({
       success: true,
@@ -129,8 +170,8 @@ export async function POST(
       discount: {
         couponId: coupon.id,
         name: coupon.name || coupon.id,
-        type: coupon.percent_off ? 'percent' : 'amount',
-        value: coupon.percent_off || (coupon.amount_off ? coupon.amount_off / 100 : 0),
+        type: discountType,
+        value: discountValue,
       },
     });
   } catch (error) {
