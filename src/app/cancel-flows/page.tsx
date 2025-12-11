@@ -2313,70 +2313,10 @@ function CancelFlowsInner() {
                 : 0;
 
               return (
-                <Card key={flow.id} className={`${!flow.isActive ? 'opacity-60' : ''} relative overflow-visible`}>
-                  {/* Sticky Note - All Feedback Responses (positioned at top right) */}
-                  {(Object.keys(flow.feedbackResults || {}).length > 0 || (flow.otherFeedback && flow.otherFeedback.length > 0)) && (
-                    <div
-                      className="absolute -top-2 -right-3 w-[300px] p-4 bg-amber-100 dark:bg-amber-200 rounded shadow-lg z-10"
-                      style={{ transform: 'rotate(3deg)' }}
-                    >
-                      <p className="text-xs font-semibold text-amber-800 mb-3">
-                        Feedback Responses
-                      </p>
-
-                      {/* Feedback Reasons with Progress Bars (including Other) */}
-                      <div className="space-y-2">
-                        {(() => {
-                          const results = { ...flow.feedbackResults };
-                          // Add "Other" to the results if there are other responses
-                          const otherCount = flow.otherFeedback?.length || 0;
-                          if (otherCount > 0) {
-                            results['other'] = otherCount;
-                          }
-                          const total = Object.values(results).reduce((a, b) => a + b, 0);
-                          const sortedReasons = Object.entries(results)
-                            .sort(([, a], [, b]) => b - a);
-
-                          return sortedReasons.map(([reason, count]) => {
-                            const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                            const option = flow.feedbackOptions.find(o => o.id === reason);
-                            const label = reason === 'other' ? 'Other' : (option?.label || reason.replace(/_/g, ' '));
-
-                            return (
-                              <div key={reason}>
-                                <div className="flex items-center justify-between text-xs mb-0.5">
-                                  <span className="truncate text-amber-900">{label}</span>
-                                  <span className="text-amber-700 ml-2">{count} ({percent}%)</span>
-                                </div>
-                                <div className="h-1.5 bg-amber-200 dark:bg-amber-300 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-amber-600 rounded-full"
-                                    style={{ width: `${percent}%` }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-
-                      {/* See Results Button */}
-                      <div className="pt-3 mt-3 border-t border-amber-300">
-                        <button
-                          onClick={() => {
-                            setSelectedFlowForResults(flow);
-                            setShowResultsModal(true);
-                          }}
-                          className="w-full text-xs font-medium text-amber-800 hover:text-amber-900 flex items-center justify-center gap-1.5 py-1.5 rounded hover:bg-amber-200/50 transition-colors"
-                        >
-                          <BarChart3 className="h-3.5 w-3.5" />
-                          See Results
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <Card key={flow.id} className={`${!flow.isActive ? 'opacity-60' : ''}`}>
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-6">
+                      {/* Left side - Flow details */}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-lg">{flow.name}</h3>
@@ -2475,9 +2415,68 @@ function CancelFlowsInner() {
                         </div>
                       </div>
 
+                      {/* Right side - Feedback Responses */}
+                      {(Object.keys(flow.feedbackResults || {}).length > 0 || (flow.otherFeedback && flow.otherFeedback.length > 0)) && (
+                        <div className="w-[280px] shrink-0 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-3">
+                            Feedback Responses
+                          </p>
+
+                          {/* Feedback Reasons with Progress Bars (including Other) */}
+                          <div className="space-y-2">
+                            {(() => {
+                              const results = { ...flow.feedbackResults };
+                              // Add "Other" to the results if there are other responses
+                              const otherCount = flow.otherFeedback?.length || 0;
+                              if (otherCount > 0) {
+                                results['other'] = otherCount;
+                              }
+                              const total = Object.values(results).reduce((a, b) => a + b, 0);
+                              const sortedReasons = Object.entries(results)
+                                .sort(([, a], [, b]) => b - a);
+
+                              return sortedReasons.map(([reason, count]) => {
+                                const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                                const option = flow.feedbackOptions.find(o => o.id === reason);
+                                const label = reason === 'other' ? 'Other' : (option?.label || reason.replace(/_/g, ' '));
+
+                                return (
+                                  <div key={reason}>
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                      <span className="truncate text-amber-900 dark:text-amber-100">{label}</span>
+                                      <span className="text-amber-700 dark:text-amber-300 ml-2">{count} ({percent}%)</span>
+                                    </div>
+                                    <div className="h-1.5 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-amber-500 dark:bg-amber-400 rounded-full"
+                                        style={{ width: `${percent}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+
+                          {/* See Results Button */}
+                          <div className="pt-3 mt-3 border-t border-amber-200 dark:border-amber-700">
+                            <button
+                              onClick={() => {
+                                setSelectedFlowForResults(flow);
+                                setShowResultsModal(true);
+                              }}
+                              className="w-full text-xs font-medium text-amber-800 dark:text-amber-200 hover:text-amber-900 dark:hover:text-amber-100 flex items-center justify-center gap-1.5 py-1.5 rounded hover:bg-amber-200/50 dark:hover:bg-amber-800/50 transition-colors"
+                            >
+                              <BarChart3 className="h-3.5 w-3.5" />
+                              See Results
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Additional Actions */}
                       {!flow.isDefault && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
