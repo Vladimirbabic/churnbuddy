@@ -97,32 +97,35 @@ function CustomIcon({ src, srcDark, alt, size = 24, bgColor }: { src: string; sr
   if (srcDark) {
     return (
       <>
-        <Image
-          src={src}
-          alt={alt}
-          width={actualSize}
-          height={actualSize}
-          className="dark:hidden"
-        />
-        <Image
-          src={srcDark}
-          alt={alt}
-          width={actualSize}
-          height={actualSize}
-          className="hidden dark:block"
-        />
+        <div className="flex items-center justify-center shrink-0 p-0.5 dark:hidden">
+          <Image
+            src={src}
+            alt={alt}
+            width={actualSize}
+            height={actualSize}
+          />
+        </div>
+        <div className="hidden dark:flex items-center justify-center shrink-0 p-0.5">
+          <Image
+            src={srcDark}
+            alt={alt}
+            width={actualSize}
+            height={actualSize}
+          />
+        </div>
       </>
     );
   }
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={actualSize}
-      height={actualSize}
-      className="rounded text-zinc-700 dark:text-zinc-300"
-    />
+    <div className="flex items-center justify-center shrink-0 p-0.5">
+      <Image
+        src={src}
+        alt={alt}
+        width={actualSize}
+        height={actualSize}
+      />
+    </div>
   );
 }
 
