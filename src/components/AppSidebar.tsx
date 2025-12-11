@@ -61,7 +61,7 @@ function CustomIcon({ src, srcDark, alt, size = 24, bgColor }: { src: string; sr
       <>
         {/* Light mode */}
         <div
-          className="flex items-center justify-center shrink-0 p-1 dark:hidden"
+          className="flex items-center justify-center shrink-0 p-0.5 dark:hidden"
           style={{
             backgroundColor: bgColor,
             borderRadius: '6px',
@@ -76,7 +76,7 @@ function CustomIcon({ src, srcDark, alt, size = 24, bgColor }: { src: string; sr
         </div>
         {/* Dark mode - 15% opacity background */}
         <div
-          className="hidden dark:flex items-center justify-center shrink-0 p-1"
+          className="hidden dark:flex items-center justify-center shrink-0 p-0.5"
           style={{
             backgroundColor: hexToRgba(bgColor, 0.15),
             borderRadius: '6px',
