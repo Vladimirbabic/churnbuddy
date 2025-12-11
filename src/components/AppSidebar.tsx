@@ -61,7 +61,7 @@ function CustomIcon({ src, srcDark, alt, size = 28, bgColor }: { src: string; sr
       <>
         {/* Light mode */}
         <div
-          className="flex items-center justify-center rounded-md dark:hidden"
+          className="flex items-center justify-center rounded-xl dark:hidden"
           style={{
             width: containerSize,
             height: containerSize,
@@ -77,7 +77,7 @@ function CustomIcon({ src, srcDark, alt, size = 28, bgColor }: { src: string; sr
         </div>
         {/* Dark mode - 15% opacity background */}
         <div
-          className="hidden dark:flex items-center justify-center rounded-md"
+          className="hidden dark:flex items-center justify-center rounded-xl"
           style={{
             width: containerSize,
             height: containerSize,
