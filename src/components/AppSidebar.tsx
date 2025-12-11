@@ -235,7 +235,7 @@ export function AppSidebar() {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} className="py-0">
                       <Link href={item.href}>
                         {item.customIcon ? (
                           <CustomIcon src={item.customIcon} srcDark={item.customIconDark} alt={item.label} />
