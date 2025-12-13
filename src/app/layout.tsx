@@ -1,7 +1,19 @@
 import type { Metadata } from 'next';
+import { Anton, Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
+
+const anton = Anton({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-anton',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
   title: 'Exit Loop - Reduce Customer Churn',
@@ -19,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans">
+      <body className={`${inter.variable} ${anton.variable} font-sans`}>
         <AuthProvider>
           <ThemeProvider
             attribute="class"

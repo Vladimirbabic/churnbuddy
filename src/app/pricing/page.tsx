@@ -288,7 +288,7 @@ function PricingPageContent() {
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           {subscription?.hasSubscription
             ? 'Upgrade or downgrade at any time. Changes take effect immediately.'
-            : 'Start reducing churn today. All plans include a 14-day free trial.'}
+            : 'Start reducing churn today. All plans include a 7-day free trial.'}
         </p>
       </section>
 
@@ -425,7 +425,7 @@ function PricingPageContent() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Yes! All plans come with a 14-day free trial. You'll have full access to all
+                  Yes! All plans come with a 7-day free trial. You'll have full access to all
                   features in your chosen plan during the trial.
                 </p>
               </CardContent>

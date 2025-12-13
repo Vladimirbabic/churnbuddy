@@ -6,26 +6,19 @@ import Image from 'next/image';
 import {
   ArrowRight,
   Check,
-  Zap,
   Menu,
   X,
   Play,
-  ChevronDown,
-  Users,
-  CreditCard,
-  TrendingUp,
-  PieChart,
-  RefreshCcw,
-  Rocket,
-  HeartHandshake,
-  Layers,
-  CircleSlash,
-  Brain,
-  Target,
-  MessageSquare,
-  Globe,
+  Zap,
+  Shield,
+  BarChart3,
   Mail,
+  Users,
+  Target,
+  CircleSlash,
+  RefreshCcw,
   Building2,
+  TrendingUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -35,134 +28,58 @@ import { useAuth } from '@/context/AuthContext';
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const { user } = useAuth();
 
   const handleDemoClick = () => {
     setShowDemoModal(true);
   };
 
-  const features = [
-    {
-      title: "Cancellation Flows",
-      description: "Intercept cancellations with customizable flows. Offer alternatives like discounts, pauses, or downgrades before users leave.",
-      icon: CircleSlash,
-      color: 'purple', // purple accent
-    },
-    {
-      title: "Email Sequences",
-      description: "Automated email campaigns to win back churned users and re-engage at-risk customers with personalized messaging.",
-      icon: Mail,
-      color: 'green', // green accent
-    },
-    {
-      title: "Churn Radar",
-      description: "AI-powered early warning system that identifies at-risk customers before they cancel, so you can act proactively.",
-      icon: Target,
-      color: 'amber', // yellow/amber accent
-    },
-    {
-      title: "Customer Intelligence",
-      description: "Complete customer profiles with billing history, engagement data, and churn risk scores - all in one place.",
-      icon: Users,
-      color: 'purple', // purple accent
-    },
-  ];
-
-  const faqs = [
-    {
-      question: "What Kind Of Teams Use ExitLoop?",
-      answer: "SaaS startups and growing subscription businesses use ExitLoop to reduce churn and retain more customers. If you have a cancel button, you need ExitLoop."
-    },
-    {
-      question: "Does ExitLoop Work With Quick And Advanced Stacks?",
-      answer: "We integrate with popular billing and analytics tools and can start simple even if your stack is messy. Start small, improve over time."
-    },
-    {
-      question: "Is There A Free Trial?",
-      answer: "Yes! You can start with our free tier to test ExitLoop with your cancel flows. No credit card required to get started."
-    },
-    {
-      question: "What Is The ROI?",
-      answer: "Most teams see positive ROI within the first month. Even saving one customer typically pays for ExitLoop many times over."
-    },
-    {
-      question: "Can I Collaborate With My Engineering Team Inside ExitLoop?",
-      answer: "You might need a dev once to connect billing or events. After that, product or growth can manage flows and copy without code."
-    },
-    {
-      question: "Does ExitLoop Support Multi-Channel Communication?",
-      answer: "Yes, ExitLoop can trigger follow-up emails, in-app messages, and integrate with your existing communication tools."
-    },
-    {
-      question: "Can I Customize How ExitLoop Works For My Team?",
-      answer: "ExitLoop is fully customizable - from the look and feel of modals to the retention offers and targeting rules."
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-white font-sans text-black selection:bg-black selection:text-white">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 w-full">
-        <div className="container mx-auto px-6 lg:px-[120px] flex h-24 items-center justify-between">
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/img/logo.svg"
-              alt="ExitLoop"
-              width={140}
-              height={28}
-              priority
-            />
-          </Link>
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-display font-bold text-xl">
+                E
+              </div>
+              <span className="font-display font-bold text-xl tracking-tight uppercase">ExitLoop</span>
+            </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Features</Link>
-            <Link href="#how-it-works" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">How it works</Link>
-            <Link href="#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link>
-            <Link href="#faq" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">FAQ</Link>
-          </nav>
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="#features" className="text-sm font-medium hover:text-gray-600 transition-colors">Product</Link>
+              <Link href="#pricing" className="text-sm font-medium hover:text-gray-600 transition-colors">Pricing</Link>
+              <Link href="#company" className="text-sm font-medium hover:text-gray-600 transition-colors">Company</Link>
+            </nav>
 
-          <div className="hidden md:flex items-center gap-4">
-            <Globe className="h-5 w-5 text-gray-500" />
+          <div className="flex items-center gap-4">
             {user ? (
-              <Button asChild className="bg-white text-gray-900 hover:bg-gray-100 border border-gray-200 rounded-full px-6">
+              <Button asChild className="bg-black text-white hover:bg-gray-800 rounded-none px-6 font-medium h-9">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
             ) : (
-              <Button asChild className="bg-white text-gray-900 hover:bg-gray-100 border border-gray-200 rounded-full px-6">
-                <Link href="/login">Login</Link>
-              </Button>
+              <>
+                <Link href="/login" className="text-sm font-medium hover:text-gray-600 hidden md:block">Login</Link>
+                <Button asChild className="bg-black text-white hover:bg-gray-800 rounded-none px-6 font-medium h-9">
+                  <Link href="/signup">Get Started</Link>
+                </Button>
+              </>
             )}
+            <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
-
-          {/* Mobile Menu Toggle */}
-          <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t p-4 bg-white absolute w-full shadow-lg">
+          <div className="md:hidden border-t p-4 bg-white absolute w-full shadow-xl">
             <div className="flex flex-col space-y-4">
-              <Link href="#features" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Features</Link>
-              <Link href="#how-it-works" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>How it works</Link>
+              <Link href="#features" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Product</Link>
               <Link href="#pricing" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
-              <Link href="#faq" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
               <div className="pt-4 border-t flex flex-col gap-3">
-                {user ? (
-                  <Button asChild className="w-full">
-                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>Go to Dashboard</Link>
-                  </Button>
-                ) : (
-                  <>
-                    <Link href="/login" className="text-sm font-medium text-center" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-                    <Button asChild className="w-full">
-                      <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Start free</Link>
-                    </Button>
-                  </>
-                )}
+                <Link href="/login" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Login</Link>
+                <Link href="/signup" className="text-sm font-medium font-bold" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
               </div>
             </div>
           </div>
@@ -170,729 +87,530 @@ export default function HomePage() {
       </header>
 
       <main>
-        {/* Hero Section */}
-        <section className="relative min-h-[1200px] overflow-hidden">
-          {/* Hero Image Placeholder - Top portion */}
-          <div className="absolute top-0 left-0 right-0 h-[900px] bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50">
-            {/* Placeholder for hero background image */}
-            <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-              <span className="text-sm">[Hero Background Image Placeholder]</span>
-            </div>
-          </div>
-
-          {/* Curved white background overlay */}
-          <div className="absolute top-[188px] left-0 right-0 bottom-0">
-            <svg
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-[1720px] h-[802px]"
-              viewBox="0 0 1720 802"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <ellipse cx="860" cy="802" rx="860" ry="802" fill="white" />
-            </svg>
-            <div className="absolute top-[133px] left-0 right-0 bottom-0 bg-white" />
-          </div>
-
-          {/* Content */}
-          <div className="relative z-10 pt-[176px] px-6 lg:px-[120px]">
-            <div className="max-w-[984px] mx-auto text-center">
-              {/* Social Proof Badge */}
-              <div className="flex items-center justify-center gap-3 mb-8">
-                <div className="flex -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 border-2 border-white" />
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-white" />
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-white" />
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 border-2 border-white" />
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 border-2 border-white" />
-                </div>
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className={`w-4 h-4 ${i < 4 ? 'text-amber-400' : 'text-amber-400/50'}`} fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-gray-500 text-sm italic">Loved by 1,400+ SaaS founders</span>
-              </div>
-
-              {/* Main Title */}
-              <h1 className="text-5xl md:text-6xl lg:text-[68px] font-bold tracking-tight leading-[1.1] text-gray-900 mb-6">
-                Grow Without
-                <br />
-                <span className="bg-gradient-to-r from-violet-600 via-emerald-500 to-amber-500 bg-clip-text text-transparent">Leaks.</span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-xl text-gray-500 max-w-[780px] mx-auto mb-10 leading-relaxed">
-                ExitLoop intercepts cancellations in real time and guides customers toward smarter options like downgrading or staying. <span className="underline decoration-2 underline-offset-4">Save more customers, keep more MRR.</span>
-              </p>
-
-              {/* CTA Button */}
-              <div className="flex justify-center">
-                <Button size="lg" className="bg-violet-500 hover:bg-violet-600 text-white rounded-full px-8 h-12 text-base" asChild>
-                  <Link href="/signup">Start 7-day free trial</Link>
+        {/* HERO SECTION */}
+        <section className="pt-24 pb-12 md:pt-32 md:pb-24 px-6 text-center">
+          <div className="max-w-5xl mx-auto">
+            <h1 className="font-display font-black text-6xl md:text-8xl lg:text-[100px] leading-[0.9] tracking-tight uppercase mb-8">
+              The Revenue Operating
+              <br />
+              System Is Here.
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+              Stop bleeding revenue. ExitLoop automates retention, recovers failed payments, 
+              and turns cancellations into conversations. Finally, every dollar works together.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16">
+              <Button size="lg" className="bg-black hover:bg-gray-800 text-white rounded-sm h-14 px-8 text-base font-bold uppercase tracking-wide" asChild>
+                <Link href="/signup">Start Free Trial</Link>
+                </Button>
+              <Button size="lg" variant="outline" className="border-2 border-black text-black hover:bg-gray-50 rounded-sm h-14 px-8 text-base font-bold uppercase tracking-wide" onClick={handleDemoClick}>
+                  <Play className="w-4 h-4 mr-2" />
+                See How It Works
                 </Button>
               </div>
             </div>
 
-            {/* Browser Mockup */}
-            <div className="mt-16 max-w-[1128px] mx-auto">
-              <div className="relative rounded-xl overflow-hidden shadow-2xl bg-white border border-gray-200">
-                {/* Browser Chrome */}
-                <div className="bg-gray-100 px-4 py-3 flex items-center gap-3 border-b border-gray-200">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
+          {/* Hero Visual - Keyboard/Hand placeholder style */}
+          <div className="w-full max-w-[1400px] mx-auto h-[400px] md:h-[600px] bg-gray-900 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[url('/img/bg.png')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
+            {/* Abstract overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+            <div className="absolute bottom-10 left-6 md:left-12 text-left">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-white text-xs font-medium mb-4">
+                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                 Live System Active
                   </div>
-                  <div className="flex-1 flex justify-center">
-                    <div className="bg-white rounded-full px-4 py-1.5 flex items-center gap-2 text-sm text-gray-500 border border-gray-200 min-w-[300px] justify-center">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                      </svg>
-                      yourdomain.com
+              <h3 className="text-white font-display text-3xl uppercase tracking-tight">Retention Autopilot: <span className="text-green-400">ON</span></h3>
                     </div>
+            {/* Play button overlay */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 cursor-pointer group-hover:scale-110 transition-transform duration-300">
+               <Play className="w-8 h-8 text-white fill-white" />
                   </div>
-                  <div className="flex gap-3 text-gray-400">
-                    <div className="w-5 h-5" />
-                    <div className="w-5 h-5" />
-                    <div className="w-5 h-5" />
                   </div>
-                </div>
+        </section>
 
-                {/* Browser Content - Placeholder */}
-                <div className="aspect-[1112/695] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="w-24 h-24 mx-auto mb-4 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <Play className="w-10 h-10 text-gray-400" />
+        {/* VALUES GRID SECTION - Beige */}
+        <section className="py-24 bg-[#F8F7F4] border-t border-black/5">
+          <div className="container mx-auto px-6 lg:px-12">
+          <div className="max-w-2xl mb-16">
+            <h2 className="font-display font-black text-4xl md:text-5xl uppercase leading-[0.95] tracking-tight mb-6">
+              Win more with less friction.
+              <span className="text-gray-400 block mt-2">ExitLoop streamlines retention, recovery, and insights so you can focus on building.</span>
+            </h2>
+          </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+              {/* Column 1 */}
+              <div className="space-y-6">
+                <h3 className="font-bold text-lg border-b border-black/10 pb-2">Retention</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Custom Cancel Flows
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Dynamic Offers
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Exit Surveys
+                  </li>
+                </ul>
                     </div>
-                    <p className="text-gray-400 text-lg">[Product Screenshot / Demo Video Placeholder]</p>
-                    <p className="text-gray-300 text-sm mt-2">1112 x 695 px recommended</p>
+
+              {/* Column 2 */}
+              <div className="space-y-6">
+                <h3 className="font-bold text-lg border-b border-black/10 pb-2">Recovery</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Dunning Emails
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Card Updates
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Payment Retries
+                  </li>
+                </ul>
+                      </div>
+
+              {/* Column 3 */}
+              <div className="space-y-6">
+                <h3 className="font-bold text-lg border-b border-black/10 pb-2">Intelligence</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Churn Radar
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Risk Scoring
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Health Snapshots
+                  </li>
+                </ul>
+                        </div>
+
+              {/* Column 4 */}
+              <div className="space-y-6">
+                <h3 className="font-bold text-lg border-b border-black/10 pb-2">Platform</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Stripe Integration
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0" />
+                    API Access
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0" />
+                    Webhooks
+                  </li>
+                </ul>
                   </div>
+            </div>
+          </div>
+        </section>
+
+        {/* DARK SECTION - "Dinosaur" */}
+        <section className="py-24 bg-black text-white">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-3 h-3 bg-white"></div>
+              <span className="font-mono text-xs uppercase">The Old Way</span>
+            </div>
+
+            <h2 className="font-display font-black text-4xl md:text-6xl uppercase leading-[0.95] tracking-tight mb-16 max-w-3xl">
+              Your retention stack is a dinosaur. 
+              <span className="text-gray-500 block">Scattered scripts, manual emails, and guessing games.</span>
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Card 1 */}
+              <div className="group relative aspect-square bg-[#111] border border-white/10 p-8 overflow-hidden">
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1629757509637-bdc9f58f4138?q=80&w=2929&auto=format&fit=crop')] bg-cover bg-center opacity-20 grayscale group-hover:grayscale-0 transition-all duration-500"></div>
+                <div className="relative z-10 h-full flex flex-col justify-end">
+                  <h3 className="font-bold text-xl mb-2">The Spreadsheet Nightmare</h3>
+                  <p className="text-gray-400 text-sm">Manually tracking cancellations in Excel while customers slip away.</p>
+                </div>
+                </div>
+              
+              {/* Card 2 */}
+              <div className="group relative aspect-square bg-[#111] border border-white/10 p-8 overflow-hidden">
+                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 grayscale group-hover:grayscale-0 transition-all duration-500"></div>
+                 <div className="relative z-10 h-full flex flex-col justify-end">
+                  <h3 className="font-bold text-xl mb-2">The "Support Ticket"</h3>
+                  <p className="text-gray-400 text-sm">Forcing users to email support to cancel. They just get angry.</p>
+                </div>
+              </div>
+
+              {/* Card 3 */}
+              <div className="group relative aspect-square bg-[#111] border border-white/10 p-8 overflow-hidden">
+                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1531297461136-82lw9b283285?q=80&w=2690&auto=format&fit=crop')] bg-cover bg-center opacity-20 grayscale group-hover:grayscale-0 transition-all duration-500"></div>
+                 <div className="relative z-10 h-full flex flex-col justify-end">
+                  <h3 className="font-bold text-xl mb-2">The Silent Churn</h3>
+                  <p className="text-gray-400 text-sm">Failed payments that go unnoticed until the subscription expires.</p>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* White to section transition */}
-          <div className="absolute bottom-0 left-0 right-0 h-[322px] bg-white" />
         </section>
 
-        {/* Logos Section */}
-        <section className="py-12 bg-white">
-          <div className="container mx-auto px-6 lg:px-[120px]">
-            <p className="text-center text-gray-500 text-lg mb-10">
-              Trusted by scrappy SaaS teams, including yours
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60">
-              {/* Logo placeholders */}
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-300 rounded-lg flex items-center justify-center">
-                    <span className="text-gray-500 text-xs">Logo</span>
+        {/* FEATURE 1 - ORANGE */}
+        <section className="py-24 border-b border-black/5">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div>
+                <div className="inline-block bg-orange-100 text-orange-600 px-3 py-1 text-xs font-bold uppercase mb-6">Retention Flows</div>
+                <h2 className="font-display font-black text-5xl md:text-7xl uppercase leading-[0.9] tracking-tight mb-8">
+                  Zero in on the<br />
+                  buyers who<br />
+                  matter.
+                </h2>
+                <p className="text-lg text-gray-600 max-w-md mb-8">
+                  Not all churn is equal. Identify high-value customers and offer them personalized incentives to stay.
+              </p>
+                <Button variant="outline" className="border-black text-black rounded-none h-12 px-6 uppercase font-bold text-sm hover:bg-black hover:text-white transition-colors">
+                  Explore Flows
+                </Button>
+            </div>
+
+              <div className="relative aspect-square md:aspect-[4/3] bg-orange-500 p-8 md:p-12 flex items-center justify-center">
+                {/* Abstract UI representation */}
+                <div className="w-full h-full bg-white shadow-2xl relative overflow-hidden flex flex-col">
+                  <div className="h-8 bg-gray-50 border-b flex items-center px-4 gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                    <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                      </div>
+                  <div className="p-6 flex-1 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+                     <div className="bg-white border border-gray-200 shadow-sm p-4 max-w-xs mx-auto mt-4 rounded-lg">
+                       <div className="flex items-center gap-3 mb-3">
+                         <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                           <CircleSlash size={20} />
+                                </div>
+                         <div>
+                           <div className="text-sm font-bold">Cancellation Attempt</div>
+                           <div className="text-xs text-gray-500">High Value Customer</div>
+                         </div>
+                              </div>
+                              <div className="space-y-2">
+                         <div className="h-2 bg-gray-100 rounded w-full"></div>
+                         <div className="h-2 bg-gray-100 rounded w-3/4"></div>
+                                  </div>
+                       <div className="mt-4 flex gap-2">
+                         <div className="flex-1 bg-black text-white text-xs py-2 text-center font-bold rounded">Offer 20% Off</div>
+                         <div className="flex-1 bg-gray-100 text-gray-600 text-xs py-2 text-center font-bold rounded">Pause</div>
+                                </div>
+                                  </div>
+                                </div>
+                              </div>
+                {/* Decorative sticker */}
+                <div className="absolute -bottom-6 -right-6 bg-white border-2 border-black p-4 rotate-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="font-mono text-xs font-bold uppercase">Saved $42,000 MRR</p>
+                            </div>
+                                </div>
+                              </div>
+                            </div>
+        </section>
+
+        {/* FEATURE 2 - PINK */}
+        <section className="py-24 border-b border-black/5 bg-[#FDF2F8]/30">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="order-2 lg:order-1 relative aspect-square md:aspect-[4/3] bg-pink-500 p-8 md:p-12 flex items-center justify-center">
+                 <div className="w-full h-full bg-white shadow-2xl relative overflow-hidden flex flex-col">
+                  <div className="p-8 flex flex-col h-full justify-between bg-[url('/img/grid.svg')]">
+                    <div className="space-y-4">
+                      {/* Email items */}
+                      <div className="bg-white border border-gray-100 shadow-sm p-4 flex items-center gap-4 transform -rotate-1 hover:rotate-0 transition-transform">
+                        <div className="w-10 h-10 bg-pink-100 flex items-center justify-center rounded-full text-pink-600"><Mail size={18} /></div>
+                                  <div>
+                          <div className="font-bold text-sm">Payment Failed</div>
+                          <div className="text-xs text-gray-500">Sent immediately</div>
+                                  </div>
+                        <div className="ml-auto text-xs font-mono bg-gray-100 px-2 py-1">Open: 68%</div>
+                                </div>
+                      
+                      <div className="bg-white border border-gray-100 shadow-sm p-4 flex items-center gap-4 transform rotate-1 hover:rotate-0 transition-transform ml-8">
+                         <div className="w-10 h-10 bg-purple-100 flex items-center justify-center rounded-full text-purple-600"><Mail size={18} /></div>
+                                  <div>
+                          <div className="font-bold text-sm">Last Chance</div>
+                          <div className="text-xs text-gray-500">Sent day 3</div>
+                                  </div>
+                         <div className="ml-auto text-xs font-mono bg-gray-100 px-2 py-1">Recovered</div>
+                                </div>
+                              </div>
+
+                    <div className="mt-8">
+                       <div className="text-xs font-bold uppercase text-gray-400 mb-2">Campaign Performance</div>
+                       <div className="h-32 flex items-end gap-2">
+                         <div className="flex-1 bg-pink-200 h-[40%] rounded-t-sm"></div>
+                         <div className="flex-1 bg-pink-300 h-[65%] rounded-t-sm"></div>
+                         <div className="flex-1 bg-pink-400 h-[50%] rounded-t-sm"></div>
+                         <div className="flex-1 bg-pink-500 h-[85%] rounded-t-sm"></div>
+                         <div className="flex-1 bg-pink-600 h-[70%] rounded-t-sm"></div>
+                              </div>
+                                  </div>
+                                </div>
+                                  </div>
+                                </div>
+              
+              <div className="order-1 lg:order-2">
+                <div className="inline-block bg-pink-100 text-pink-600 px-3 py-1 text-xs font-bold uppercase mb-6">Recovery Automation</div>
+                <h2 className="font-display font-black text-5xl md:text-7xl uppercase leading-[0.9] tracking-tight mb-8">
+                  Recover Revenue<br />
+                  Without The<br />
+                  Patchwork.
+                </h2>
+                <p className="text-lg text-gray-600 max-w-md mb-8">
+                  Automated dunning that actually sounds human. Recover failed payments and re-engage churned users with zero manual effort.
+                </p>
+                <Button variant="outline" className="border-black text-black rounded-none h-12 px-6 uppercase font-bold text-sm hover:bg-black hover:text-white transition-colors">
+                  See Automations
+                </Button>
+                                </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FEATURE 3 - GREEN */}
+        <section className="py-24 border-b border-black/5">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div>
+                <div className="inline-block bg-green-100 text-green-700 px-3 py-1 text-xs font-bold uppercase mb-6">Churn Radar</div>
+                <h2 className="font-display font-black text-5xl md:text-7xl uppercase leading-[0.9] tracking-tight mb-8">
+                  Turn Signals<br />
+                  Into<br />
+                  Saves.
+                </h2>
+                <p className="text-lg text-gray-600 max-w-md mb-8">
+                  Predict churn before it happens. Our AI analyzes usage patterns to flag at-risk customers so you can intervene.
+              </p>
+                <Button variant="outline" className="border-black text-black rounded-none h-12 px-6 uppercase font-bold text-sm hover:bg-black hover:text-white transition-colors">
+                  View Radar
+                </Button>
+            </div>
+              
+              <div className="relative aspect-square md:aspect-[4/3] bg-green-500 p-8 md:p-12 flex items-center justify-center">
+                <div className="w-full h-full bg-black shadow-2xl relative overflow-hidden flex flex-col p-6">
+                   <div className="flex items-center justify-between mb-6">
+                     <div className="text-white font-mono text-sm">LIVE FEED</div>
+                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+
+                   <div className="space-y-4">
+                     {[1, 2, 3].map((i) => (
+                       <div key={i} className="bg-[#222] p-4 border-l-4 border-green-500 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white text-xs">U{i}</div>
+                           <div>
+                             <div className="text-white text-sm font-bold">User {i}249</div>
+                             <div className="text-gray-400 text-xs">Usage dropped 40%</div>
+                </div>
+              </div>
+                         <div className="text-green-400 text-xs font-bold uppercase tracking-wide">High Risk</div>
+                </div>
+                     ))}
+              </div>
+
+                   <div className="mt-auto bg-[#222] p-4">
+                      <div className="flex justify-between text-xs text-gray-400 mb-2">
+                        <span>Health Score</span>
+                        <span>84/100</span>
+                </div>
+                      <div className="h-1 bg-gray-700 w-full overflow-hidden">
+                        <div className="h-full bg-green-500 w-[84%]"></div>
+              </div>
+            </div>
+          </div>
+                 {/* Decorative sticker */}
+                <div className="absolute -top-6 -left-6 bg-yellow-400 border-2 border-black p-3 -rotate-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10">
+                  <p className="font-display text-lg font-black uppercase">Early Warning</p>
+            </div>
+                </div>
                   </div>
-                  <span className="font-semibold text-gray-700">Company {i}</span>
+                </div>
+        </section>
+
+        {/* FEATURE 4 - YELLOW */}
+        <section className="py-24 border-b border-black/5 bg-[#FEFCE8]/50">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="order-2 lg:order-1 relative aspect-square md:aspect-[4/3] bg-yellow-400 p-8 md:p-12 flex items-center justify-center">
+                 <div className="w-full h-full bg-white shadow-2xl relative overflow-hidden flex flex-col p-8">
+                   <div className="font-display font-black text-2xl uppercase mb-6">Revenue saved</div>
+                   <div className="flex-1 flex items-end gap-4 pb-4 border-b-2 border-black">
+                     <div className="w-1/5 bg-gray-200 h-[20%] relative group">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">$1.2k</div>
+              </div>
+                     <div className="w-1/5 bg-gray-300 h-[35%] relative group">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">$2.4k</div>
+                </div>
+                     <div className="w-1/5 bg-gray-400 h-[45%] relative group">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">$3.1k</div>
+                </div>
+                     <div className="w-1/5 bg-black h-[70%] relative group">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">$5.8k</div>
+                  </div>
+                     <div className="w-1/5 bg-yellow-500 h-[90%] relative group">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">$8.2k</div>
+                </div>
+              </div>
+                   <div className="flex justify-between mt-4 text-sm font-bold">
+                     <span>Jan</span>
+                     <span>Feb</span>
+                     <span>Mar</span>
+                     <span>Apr</span>
+                     <span>May</span>
+                </div>
+                  </div>
+                </div>
+
+              <div className="order-1 lg:order-2">
+                <div className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 text-xs font-bold uppercase mb-6">Analytics</div>
+                <h2 className="font-display font-black text-5xl md:text-7xl uppercase leading-[0.9] tracking-tight mb-8">
+                  Operate From A<br />
+                  Single Source<br />
+                  Of Truth.
+                </h2>
+                <p className="text-lg text-gray-600 max-w-md mb-8">
+                  No more arguing over spreadsheets. See exactly how much revenue you've saved, recovered, and retained in real-time.
+                </p>
+                <Button variant="outline" className="border-black text-black rounded-none h-12 px-6 uppercase font-bold text-sm hover:bg-black hover:text-white transition-colors">
+                  See Dashboard
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TESTIMONIALS */}
+        <section className="py-24 bg-[#F8F7F4]">
+          <div className="container mx-auto px-6 lg:px-12">
+            <h2 className="font-display font-black text-4xl md:text-5xl uppercase leading-[0.9] tracking-tight mb-16 max-w-2xl">
+              Built by outsiders.<br />
+              Loved by insiders.<br />
+              Feared by dinosaurs.
+            </h2>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  quote: "We reduced churn by 34% in the first 60 days. ExitLoop paid for itself within the first week.",
+                  author: "Jason Martinez",
+                  role: "Founder, CloudMetrics",
+                  image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070&auto=format&fit=crop"
+                },
+                {
+                  quote: "Our save rate went from 8% to 31%. That's an extra $4,200 MRR we would have lost every month.",
+                  author: "Sarah Chen",
+                  role: "Head of Growth, DataSync",
+                  image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop"
+                },
+                {
+                  quote: "Setup took 20 minutes. Within a week, we had real data on why customers leave. The insights alone are worth it.",
+                  author: "Michael Roberts",
+                  role: "CTO, InvoiceFlow",
+                  image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop"
+                }
+              ].map((t, i) => (
+                <div key={i} className="bg-white p-8 border border-black/5 shadow-sm">
+                  <div className="w-12 h-12 mb-6 grayscale relative overflow-hidden bg-gray-200">
+                    <Image src={t.image} alt={t.author} fill className="object-cover" />
+                </div>
+                  <p className="text-lg font-medium leading-relaxed mb-6">"{t.quote}"</p>
+                  <div>
+                    <div className="font-bold">{t.author}</div>
+                    <div className="text-sm text-gray-500">{t.role}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 bg-white">
-          <div className="container mx-auto px-6 lg:px-[120px]">
-            {/* Section Header */}
-            <div className="text-center max-w-[801px] mx-auto mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-6">
-                Deliver instant support everywhere.
-                <br />
-                From one place
-              </h2>
-              <p className="text-xl text-gray-500">
-                No enterprise pricing, no engineering marathon. Start saving customers in minutes, not months.
-              </p>
-            </div>
+        {/* FINAL CTA SPLIT */}
+        <section className="py-0">
+          <div className="grid md:grid-cols-2">
+          <div className="bg-white px-6 py-24 md:p-24 flex flex-col justify-center">
+            <h2 className="font-display font-black text-5xl md:text-6xl uppercase leading-[0.9] tracking-tight mb-8">
+              Your "AI Tools"<br />
+              Are Guessing.<br />
+              ExitLoop Actually<br />
+              Knows.
+            </h2>
+            <p className="text-lg text-gray-600 max-w-md mb-8">
+              Stop relying on generic chat bots. Use retention flows trained on thousands of successful saves.
+            </p>
+            <div className="h-1 w-24 bg-black"></div>
+          </div>
 
-            {/* Features Grid - 2x2 */}
-            <div className="grid md:grid-cols-2 gap-8 max-w-[1240px] mx-auto">
-              {features.map((feature, index) => {
-                const colorClasses = {
-                  purple: {
-                    bg: 'from-violet-50/50 to-purple-50/30',
-                    circle1: 'from-violet-100/50',
-                    circle2: 'from-purple-100/50',
-                    icon: 'text-violet-500',
-                    iconBg: 'bg-violet-100',
-                    avatarBg: 'bg-violet-200',
-                    avatarText: 'text-violet-700',
-                  },
-                  green: {
-                    bg: 'from-emerald-50/50 to-green-50/30',
-                    circle1: 'from-emerald-100/50',
-                    circle2: 'from-green-100/50',
-                    icon: 'text-emerald-500',
-                    iconBg: 'bg-emerald-100',
-                    avatarBg: 'bg-emerald-200',
-                    avatarText: 'text-emerald-700',
-                  },
-                  amber: {
-                    bg: 'from-amber-50/50 to-yellow-50/30',
-                    circle1: 'from-amber-100/50',
-                    circle2: 'from-yellow-100/50',
-                    icon: 'text-amber-500',
-                    iconBg: 'bg-amber-100',
-                    avatarBg: 'bg-amber-200',
-                    avatarText: 'text-amber-700',
-                  },
-                };
-                const colors = colorClasses[feature.color as keyof typeof colorClasses];
-
-                return (
-                  <div
-                    key={index}
-                    className={`relative bg-gradient-to-br ${colors.bg} rounded-2xl p-10 min-h-[520px] overflow-hidden`}
-                  >
-                    {/* Decorative circles */}
-                    <div className={`absolute -top-[200px] -left-[100px] w-[400px] h-[400px] rounded-full bg-gradient-to-br ${colors.circle1} to-transparent`} />
-                    <div className={`absolute -bottom-[200px] -right-[100px] w-[400px] h-[400px] rounded-full bg-gradient-to-br ${colors.circle2} to-transparent`} />
-
-                    <div className="relative z-10 h-full flex flex-col">
-                      <div className="mb-6">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                        <p className="text-gray-500 max-w-[400px]">{feature.description}</p>
+            <div className="bg-[#FF4F00] p-12 md:p-24 flex items-center justify-center relative overflow-hidden">
+               <div className="absolute inset-0 bg-[url('/img/grid.svg')] opacity-20"></div>
+               <div className="bg-white p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 border-black max-w-sm w-full relative z-10 transform rotate-1">
+                 <div className="flex items-start gap-3 mb-4">
+                   <div className="w-8 h-8 bg-gray-100 rounded-full flex-shrink-0"></div>
+                   <div className="bg-gray-100 p-3 rounded-tr-lg rounded-br-lg rounded-bl-lg text-sm">
+                     I want to cancel my subscription.
                       </div>
-
-                      {/* Feature visual - different for each feature */}
-                      <div className="flex-1 flex items-center justify-center relative">
-                        {index === 0 && (
-                          /* Cancellation Flows - Modal preview */
-                          <div className="relative w-full max-w-[320px]">
-                            <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
-                              <div className="text-center mb-4">
-                                <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                  <CircleSlash className="w-5 h-5 text-violet-500" />
-                                </div>
-                                <h4 className="font-semibold text-gray-900 text-sm">Before you go...</h4>
-                                <p className="text-xs text-gray-500 mt-1">Would you consider an alternative?</p>
-                              </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-3 p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
-                                  <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <Check className="w-3 h-3 text-emerald-600" />
-                                  </div>
-                                  <span className="text-xs font-medium text-gray-700">50% off for 3 months</span>
-                                </div>
-                                <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                                  <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <RefreshCcw className="w-3 h-3 text-gray-600" />
-                                  </div>
-                                  <span className="text-xs text-gray-600">Pause subscription</span>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Cursor with comment */}
-                            <div className="absolute -bottom-2 -right-4">
-                              <div className="flex items-end gap-1">
-                                <svg className="w-4 h-4 text-violet-500" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87c.28 0 .5-.22.5-.5V3.21c0-.28-.22-.5-.5-.5H6c-.28 0-.5.22-.5.5Z"/>
-                                </svg>
-                                <div className="bg-violet-500 text-white text-[10px] px-2 py-1 rounded-lg rounded-bl-none shadow-sm">
-                                  Saved! 🎉
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {index === 1 && (
-                          /* Email Sequences - Email cards */
-                          <div className="relative w-full max-w-[320px]">
-                            <div className="space-y-3">
-                              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 transform -rotate-2">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <Mail className="w-4 h-4 text-emerald-600" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold text-gray-900">Day 1: We miss you!</p>
-                                    <p className="text-[10px] text-gray-500">Sent • 89% open rate</p>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 transform rotate-1 ml-4">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                                    <Mail className="w-4 h-4 text-amber-600" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold text-gray-900">Day 3: Special offer inside</p>
-                                    <p className="text-[10px] text-gray-500">Scheduled • 2:00 PM</p>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 transform -rotate-1 ml-2">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
-                                    <Mail className="w-4 h-4 text-violet-600" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold text-gray-900">Day 7: Last chance</p>
-                                    <p className="text-[10px] text-gray-500">Draft</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {index === 2 && (
-                          /* Churn Radar - Risk indicators */
-                          <div className="relative w-full max-w-[320px]">
-                            <div className="bg-white rounded-xl shadow-xl p-5 border border-gray-100">
-                              <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs font-semibold text-gray-700">At-Risk Customers</span>
-                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">3 alerts</span>
-                              </div>
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-3 p-2 rounded-lg bg-red-50 border border-red-100">
-                                  <div className="w-8 h-8 bg-red-200 rounded-full flex items-center justify-center text-xs font-semibold text-red-700">JK</div>
-                                  <div className="flex-1">
-                                    <p className="text-xs font-medium text-gray-900">John K.</p>
-                                    <p className="text-[10px] text-red-600">High risk • No login 14 days</p>
-                                  </div>
-                                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                </div>
-                                <div className="flex items-center gap-3 p-2 rounded-lg bg-amber-50 border border-amber-100">
-                                  <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-xs font-semibold text-amber-700">SM</div>
-                                  <div className="flex-1">
-                                    <p className="text-xs font-medium text-gray-900">Sarah M.</p>
-                                    <p className="text-[10px] text-amber-600">Medium risk • Usage down 60%</p>
-                                  </div>
-                                  <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                                </div>
-                                <div className="flex items-center gap-3 p-2 rounded-lg bg-amber-50 border border-amber-100">
-                                  <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-xs font-semibold text-amber-700">RT</div>
-                                  <div className="flex-1">
-                                    <p className="text-xs font-medium text-gray-900">Robert T.</p>
-                                    <p className="text-[10px] text-amber-600">Medium risk • Payment failed</p>
-                                  </div>
-                                  <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {index === 3 && (
-                          /* Customer Intelligence - Customer profile */
-                          <div className="relative w-full max-w-[320px]">
-                            <div className="bg-white rounded-xl shadow-xl p-5 border border-gray-100">
-                              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                                <div className="w-12 h-12 bg-violet-200 rounded-full flex items-center justify-center text-sm font-semibold text-violet-700">AJ</div>
-                                <div>
-                                  <p className="font-semibold text-gray-900 text-sm">Alex Johnson</p>
-                                  <p className="text-xs text-gray-500">alex@company.com</p>
-                                </div>
-                                <div className="ml-auto">
-                                  <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">Active</span>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-50 rounded-lg p-2.5">
-                                  <p className="text-[10px] text-gray-500">MRR</p>
-                                  <p className="text-sm font-semibold text-gray-900">$149/mo</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-2.5">
-                                  <p className="text-[10px] text-gray-500">Plan</p>
-                                  <p className="text-sm font-semibold text-gray-900">Growth</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-2.5">
-                                  <p className="text-[10px] text-gray-500">Customer Since</p>
-                                  <p className="text-sm font-semibold text-gray-900">8 months</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-2.5">
-                                  <p className="text-[10px] text-gray-500">Health Score</p>
-                                  <p className="text-sm font-semibold text-emerald-600">92/100</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   </div>
-                );
-              })}
+                 <div className="flex items-start gap-3 justify-end mb-4">
+                   <div className="bg-blue-600 text-white p-3 rounded-tl-lg rounded-bl-lg rounded-br-lg text-sm">
+                     I understand. Is it because of the price? We can offer you 50% off the next 3 months.
+              </div>
+                   <div className="w-8 h-8 bg-blue-600 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">AI</div>
+                 </div>
+                 <div className="flex gap-2 mt-4">
+                    <button className="flex-1 bg-black text-white py-2 text-xs font-bold uppercase">Accept Offer</button>
+                    <button className="flex-1 border border-black py-2 text-xs font-bold uppercase">No thanks</button>
+                 </div>
+               </div>
             </div>
           </div>
         </section>
 
-        {/* Integration Section with Stripe */}
-        <section id="how-it-works" className="py-24 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
-          {/* Dot Pattern Background */}
-          <div className="absolute inset-0 opacity-30">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `radial-gradient(circle, #d1d5db 1.5px, transparent 1.5px)`,
-                backgroundSize: '24px 24px',
-              }}
-            />
-          </div>
-
-          <div className="container mx-auto px-6 lg:px-[120px] relative z-10">
-            <div className="text-center max-w-[800px] mx-auto">
-              <div className="w-20 h-20 mx-auto mb-8 bg-[#635bff] rounded-2xl flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-                </svg>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-6">
-                Integrate effortlessly
-                <br />
-                with Stripe
-              </h2>
-              <p className="text-xl text-gray-500 max-w-[600px] mx-auto">
-                Connect your Stripe account in minutes. ExitLoop automatically syncs with your subscriptions, customers, and billing events.
-              </p>
-            </div>
+        {/* BOTTOM CTA */}
+        <section className="bg-white py-24 md:py-32 border-t border-black">
+          <div className="container mx-auto px-6 text-center">
+            <h2 className="font-display font-black text-6xl md:text-8xl lg:text-9xl uppercase leading-[0.9] tracking-tight mb-12">
+              Stop Managing Software.<br />
+              Start Showing Up Human.
+            </h2>
+            <Button size="lg" className="bg-black hover:bg-gray-800 text-white rounded-none h-16 px-12 text-xl font-bold uppercase tracking-wide" asChild>
+              <Link href="/signup">Start Free Trial</Link>
+            </Button>
+            <p className="mt-6 text-gray-500 font-medium">No credit card required • Cancel anytime</p>
           </div>
         </section>
 
-        {/* Pricing Section */}
-        <section id="pricing" className="py-24 bg-gradient-to-br from-violet-500 via-emerald-400 to-amber-400 relative overflow-hidden">
-          {/* Cloud-like decorations */}
-          <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-white/5 rounded-full blur-3xl" />
-
-          <div className="container mx-auto px-6 lg:px-[120px] relative z-10">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
-                Simple, Scalable Pricing
-              </h2>
-              <p className="text-xl text-white/80">
-                All plans include a 14-day free trial. No credit card required.
-              </p>
-            </div>
-
-            {/* Pricing Cards - 3 columns */}
-            <div className="grid md:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
-              {/* Basic Plan */}
-              <div className="bg-white rounded-2xl p-8 shadow-xl">
-                <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-violet-500" />
-                </div>
-                <div className="mb-6">
-                  <span className="text-lg font-semibold text-gray-900">Basic</span>
-                  <p className="text-sm text-gray-500 mt-1">Perfect for small SaaS products</p>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">$9</span>
-                    <span className="text-gray-500">/month</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 mb-8">
-                  {[
-                    '1 Cancel Flow',
-                    'Exit survey collection',
-                    'Analytics',
-                    'Email support',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-gray-600 text-sm">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                  <li className="flex items-center gap-3 text-gray-400 text-sm">
-                    <span className="w-5 h-5 flex-shrink-0 text-center">-</span>
-                    No Email Sequences
-                  </li>
-                </ul>
-
-                <Button variant="outline" className="w-full rounded-full h-11 border-gray-300" asChild>
-                  <Link href="/signup">Start Free Trial</Link>
-                </Button>
-              </div>
-
-              {/* Growth Plan - Popular */}
-              <div className="bg-white rounded-2xl p-8 shadow-xl relative border-2 border-violet-500 scale-105">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-violet-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                    Most Popular
-                  </span>
-                </div>
-                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-emerald-500" />
-                </div>
-                <div className="mb-6">
-                  <span className="text-lg font-semibold text-gray-900">Growth</span>
-                  <p className="text-sm text-gray-500 mt-1">For growing businesses</p>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">$19</span>
-                    <span className="text-gray-500">/month</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 mb-8">
-                  {[
-                    '5 Cancel Flows',
-                    'Email Sequences',
-                    'Custom exit surveys',
-                    'Analytics',
-                    'Priority support',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-gray-600 text-sm">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button className="w-full bg-violet-500 hover:bg-violet-600 text-white rounded-full h-11" asChild>
-                  <Link href="/signup">Start Free Trial</Link>
-                </Button>
-              </div>
-
-              {/* Scale Plan */}
-              <div className="bg-white rounded-2xl p-8 shadow-xl">
-                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mb-4">
-                  <Building2 className="w-6 h-6 text-amber-500" />
-                </div>
-                <div className="mb-6">
-                  <span className="text-lg font-semibold text-gray-900">Scale</span>
-                  <p className="text-sm text-gray-500 mt-1">Unlimited flexibility</p>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">$49</span>
-                    <span className="text-gray-500">/month</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 mb-8">
-                  {[
-                    'Unlimited Cancel Flows',
-                    'Email Sequences',
-                    'Custom exit surveys',
-                    'Analytics',
-                    'Priority support',
-                    'API access',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-gray-600 text-sm">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button variant="outline" className="w-full rounded-full h-11 border-gray-300" asChild>
-                  <Link href="/signup">Start Free Trial</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="py-24 bg-white">
-          <div className="container mx-auto px-6 lg:px-[120px]">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-4">
-                What Teams Are Saying
-              </h2>
-              <p className="text-xl text-gray-500">
-                Join hundreds of SaaS founders reducing churn with ExitLoop
-              </p>
-            </div>
-
-            {/* 3 Testimonials Grid */}
-            <div className="grid md:grid-cols-3 gap-8 max-w-[1200px] mx-auto">
-              {/* Testimonial 1 */}
-              <div className="bg-gray-50 rounded-2xl p-8">
-                <div className="flex gap-1 mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <blockquote className="text-gray-600 leading-relaxed mb-6">
-                  "We plugged in ExitLoop and within weeks we were saving accounts that would never have talked to us. It paid for itself almost immediately."
-                </blockquote>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center">
-                    <span className="text-violet-600 font-semibold">JD</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">Founder Name</div>
-                    <div className="text-sm text-gray-500">CEO, SaaS Company</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 2 */}
-              <div className="bg-gray-50 rounded-2xl p-8">
-                <div className="flex gap-1 mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <blockquote className="text-gray-600 leading-relaxed mb-6">
-                  "The cancel flow customization is incredible. We reduced our churn by 23% in the first month. The ROI was obvious from day one."
-                </blockquote>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <span className="text-emerald-600 font-semibold">SK</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">Founder Name</div>
-                    <div className="text-sm text-gray-500">Founder, Tech Startup</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 3 */}
-              <div className="bg-gray-50 rounded-2xl p-8">
-                <div className="flex gap-1 mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <blockquote className="text-gray-600 leading-relaxed mb-6">
-                  "Finally, a churn tool that doesn't require a dedicated engineer. Setup took 30 minutes and we were live. Highly recommend for any SaaS."
-                </blockquote>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-                    <span className="text-amber-600 font-semibold">MR</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">Founder Name</div>
-                    <div className="text-sm text-gray-500">CTO, Software Company</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ Section */}
-        <section id="faq" className="py-24 bg-gray-50">
-          <div className="container mx-auto px-6 lg:px-[120px]">
-            <div className="grid md:grid-cols-2 gap-16 max-w-[1200px] mx-auto">
-              <div>
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-4">
-                  Frequently Asked
-                  <br />
-                  Questions
-                </h2>
-                <p className="text-gray-500">
-                  Everything you need to know about ExitLoop and how it can help reduce your churn.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {faqs.map((faq, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-                  >
-                    <button
-                      className="w-full px-6 py-5 text-left flex items-center justify-between gap-4"
-                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                    >
-                      <span className="font-medium text-gray-900">{faq.question}</span>
-                      <ChevronDown
-                        className={`w-5 h-5 text-gray-500 transition-transform ${
-                          openFaqIndex === index ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-                    {openFaqIndex === index && (
-                      <div className="px-6 pb-5">
-                        <p className="text-gray-500">{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA Section */}
-        <section className="py-24 bg-gradient-to-br from-violet-500 via-emerald-400 to-amber-400 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
-          <div className="container mx-auto px-6 lg:px-[120px] relative z-10">
-            <div className="max-w-[800px] mx-auto text-center">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6">
-                Ready to get started?
-              </h2>
-              <p className="text-xl text-white/80 mb-10">
-                Ship your first cancel save flow, watch the first saved customer stay, and never look at your cancel button the same way again.
-              </p>
-              <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-8 h-12 text-base font-medium" asChild>
-                <Link href="/signup">Start 7-day free trial</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Footer */}
-      <footer className="py-16 bg-white border-t border-gray-100">
-        <div className="container mx-auto px-6 lg:px-[120px]">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            {/* Logo and description */}
-            <div className="md:col-span-1">
-              <Link href="/" className="inline-block mb-4">
-                <Image
-                  src="/img/logo.svg"
-                  alt="ExitLoop"
-                  width={120}
-                  height={24}
-                />
-              </Link>
-              <p className="text-sm text-gray-500">
-                Stop churn before it starts. Save more customers, keep more MRR.
-              </p>
+      <footer className="py-12 bg-white border-t border-gray-100">
+        <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-black flex items-center justify-center text-white font-display font-bold text-xs">E</div>
+            <span className="font-display font-bold tracking-tight uppercase">ExitLoop</span>
             </div>
 
-            {/* Links */}
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Product</h4>
-              <ul className="space-y-3">
-                <li><Link href="#features" className="text-sm text-gray-500 hover:text-gray-900">Features</Link></li>
-                <li><Link href="#pricing" className="text-sm text-gray-500 hover:text-gray-900">Pricing</Link></li>
-                <li><Link href="#how-it-works" className="text-sm text-gray-500 hover:text-gray-900">How it works</Link></li>
-              </ul>
+          <div className="flex flex-wrap justify-center gap-8 text-sm font-medium text-gray-600">
+            <Link href="#" className="hover:text-black">Terms</Link>
+            <Link href="#" className="hover:text-black">Privacy</Link>
+            <Link href="#" className="hover:text-black">Twitter</Link>
+            <Link href="#" className="hover:text-black">LinkedIn</Link>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
-              <ul className="space-y-3">
-                <li><Link href="/about" className="text-sm text-gray-500 hover:text-gray-900">About</Link></li>
-                <li><Link href="/blog" className="text-sm text-gray-500 hover:text-gray-900">Blog</Link></li>
-                <li><Link href="/contact" className="text-sm text-gray-500 hover:text-gray-900">Contact</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
-              <ul className="space-y-3">
-                <li><Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-900">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="text-sm text-gray-500 hover:text-gray-900">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} ExitLoop. All rights reserved.
-            </p>
+          <div className="text-sm text-gray-400 font-medium">
+            © {new Date().getFullYear()} ExitLoop Inc.
           </div>
         </div>
       </footer>

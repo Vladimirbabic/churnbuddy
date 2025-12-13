@@ -8,7 +8,12 @@ const nextConfig = {
 
   // Configure allowed image domains (if using next/image)
   images: {
-    domains: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
   },
 
   // Security headers

@@ -17,18 +17,8 @@ const config: Config = {
   	},
   	extend: {
   		fontFamily: {
-  			sans: [
-  				'-apple-system',
-  				'BlinkMacSystemFont',
-  				'Segoe UI',
-  				'Roboto',
-  				'Helvetica Neue',
-  				'Arial',
-  				'sans-serif',
-  				'Apple Color Emoji',
-  				'Segoe UI Emoji',
-  				'Segoe UI Symbol',
-  			],
+  			sans: ['var(--font-inter)', 'sans-serif'],
+        display: ['var(--font-anton)', 'sans-serif'],
   		},
   		colors: {
   			border: 'hsl(var(--border))',
